@@ -993,17 +993,6 @@ def display_results():
                         """.format(format_currency(excel_val)), unsafe_allow_html=True)
                     except:
                         pass
-                if excel_grand_total is not None:
-                    try:
-                        excel_val = float(excel_grand_total)
-                        st.markdown("""
-                        <div class="grandtotal-box">
-                            <div style="font-size: 0.9rem; color: #666; margin-bottom: 0.5rem;">📤 Grand Total (di Excel)</div>
-                            <div style="font-size: 1.5rem; font-weight: 700; color: #2e7d32;">{}</div>
-                        </div>
-                        """.format(format_currency(excel_val)), unsafe_allow_html=True)
-                    except:
-                        pass
             
             st.markdown("---")
     
