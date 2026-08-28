@@ -23,14 +23,11 @@ class RABChecker:
         # 3. Cek data kosong
         self.check_empty_data(data)
         
-        # 4. Cek subtotal
-        self.check_subtotal(data)
+        # 4. Cek per section
+        self.check_sections(data)
         
-        # 5. Cek PPN
-        self.check_ppn(data)
-        
-        # 6. Cek grand total
-        self.check_grand_total(data)
+        # 5. Cek grand total global
+        self.check_grand_total_global(data)
         
         return {
             'errors': self.errors,
@@ -44,8 +41,6 @@ class RABChecker:
     def check_multiplication(self, data: Dict[str, Any]) -> None:
         """Cek apakah Qty × Unit Price = Total"""
         items = data.get('items', [])
-        columns = data.get('columns', {})
-        total_col = columns.get('total', 10)
         
         for item in items:
             row = item.get('row')
@@ -53,15 +48,12 @@ class RABChecker:
             unit_price = item.get('unit_price')
             total_excel = item.get('total')
             
-            # Skip jika ada formula (sudah dicek di check_formulas)
             if item.get('has_formula'):
                 continue
             
-            # Validasi nilai
             if qty is None or unit_price is None or total_excel is None:
                 continue
                 
-            # Pastikan nilai numerik
             try:
                 qty_num = float(qty) if qty else 0
                 unit_price_num = float(unit_price) if unit_price else 0
@@ -69,11 +61,9 @@ class RABChecker:
             except (ValueError, TypeError):
                 continue
             
-            # Hitung total seharusnya
             expected_total = qty_num * unit_price_num
             
-            # Bandingkan dengan toleransi
-            tolerance = 1  # toleransi 1 rupiah
+            tolerance = 1
             if abs(expected_total - total_num) > tolerance:
                 self.errors.append({
                     'type': 'MULTIPLICATION_ERROR',
@@ -91,15 +81,12 @@ class RABChecker:
     def check_formulas(self, data: Dict[str, Any]) -> None:
         """Cek apakah kolom Total menggunakan formula"""
         items = data.get('items', [])
-        columns = data.get('columns', {})
-        total_col = columns.get('total', 10)
         
         for item in items:
             row = item.get('row')
             has_formula = item.get('has_formula', False)
             total_value = item.get('total')
             
-            # Jika total ada tapi tidak ada formula
             if total_value is not None and not has_formula:
                 self.warnings.append({
                     'type': 'FORMULA_MISSING',
@@ -121,7 +108,6 @@ class RABChecker:
             unit_price = item.get('unit_price')
             total = item.get('total')
             
-            # Cek qty kosong
             if qty is None or (isinstance(qty, str) and qty.strip() == ''):
                 self.errors.append({
                     'type': 'EMPTY_QTY',
@@ -132,7 +118,6 @@ class RABChecker:
                     'status': 'PERLU CEK'
                 })
             
-            # Cek unit price kosong
             if unit_price is None or (isinstance(unit_price, str) and unit_price.strip() == ''):
                 self.errors.append({
                     'type': 'EMPTY_UNIT_PRICE',
@@ -143,7 +128,6 @@ class RABChecker:
                     'status': 'PERLU CEK'
                 })
             
-            # Cek total kosong
             if total is None or (isinstance(total, str) and total.strip() == ''):
                 self.errors.append({
                     'type': 'EMPTY_TOTAL',
@@ -153,143 +137,144 @@ class RABChecker:
                     'detail': 'Total kosong',
                     'status': 'PERLU CEK'
                 })
+    
+    def check_sections(self, data: Dict[str, Any]) -> None:
+        """Cek perhitungan per section"""
+        sections = data.get('sections', {})
+        
+        for section_letter, section_data in sections.items():
+            items = section_data.get('items', [])
+            subtotal_excel = section_data.get('subtotal_value')
+            ppn_excel = section_data.get('ppn_value')
+            discount_excel = section_data.get('discount_value')
+            total_excel = section_data.get('total_value')
             
-            # Cek angka terbaca sebagai teks
-            if isinstance(qty, str) and qty.strip().isdigit():
-                self.warnings.append({
-                    'type': 'TEXT_AS_NUMBER',
+            # Hitung subtotal dari items
+            calculated_subtotal = 0
+            item_count = 0
+            for item in items:
+                total = item.get('total')
+                if total is not None:
+                    try:
+                        calculated_subtotal += float(total)
+                        item_count += 1
+                    except:
+                        pass
+            
+            # 1. Cek Subtotal (Jumlah X)
+            if subtotal_excel is not None:
+                try:
+                    subtotal_num = float(subtotal_excel)
+                    tolerance = 1
+                    if abs(calculated_subtotal - subtotal_num) > tolerance:
+                        self.errors.append({
+                            'type': 'SECTION_SUBTOTAL_ERROR',
+                            'sheet': data.get('sheet_name'),
+                            'row': section_data.get('subtotal_row'),
+                            'item_name': f'Subtotal Section {section_letter}',
+                            'detail': f'Subtotal Section {section_letter} tidak sesuai! {item_count} item',
+                            'calculation': f'Jumlah {item_count} item',
+                            'expected': calculated_subtotal,
+                            'actual': subtotal_num,
+                            'difference': calculated_subtotal - subtotal_num,
+                            'status': 'PERLU CEK',
+                            'section': section_letter
+                        })
+                except:
+                    pass
+            
+            # 2. Cek PPN per section
+            if ppn_excel is not None and subtotal_excel is not None:
+                try:
+                    subtotal_num = float(subtotal_excel)
+                    ppn_num = float(ppn_excel)
+                    expected_ppn = subtotal_num * 0.11
+                    tolerance = 1
+                    if abs(expected_ppn - ppn_num) > tolerance:
+                        self.errors.append({
+                            'type': 'SECTION_PPN_ERROR',
+                            'sheet': data.get('sheet_name'),
+                            'row': section_data.get('ppn_row'),
+                            'item_name': f'PPN Section {section_letter}',
+                            'detail': f'PPN Section {section_letter} tidak sesuai',
+                            'calculation': f'Subtotal ({subtotal_num}) × 11%',
+                            'expected': expected_ppn,
+                            'actual': ppn_num,
+                            'difference': expected_ppn - ppn_num,
+                            'status': 'PERLU CEK',
+                            'section': section_letter
+                        })
+                except:
+                    pass
+            
+            # 3. Cek Total Section (Subtotal + PPN - Diskon)
+            if total_excel is not None:
+                try:
+                    total_num = float(total_excel)
+                    base = float(subtotal_excel) if subtotal_excel else calculated_subtotal
+                    ppn = float(ppn_excel) if ppn_excel else 0
+                    discount = float(discount_excel) if discount_excel else 0
+                    
+                    expected_total = base + ppn - discount
+                    tolerance = 1
+                    if abs(expected_total - total_num) > tolerance:
+                        detail_parts = [f'Subtotal ({base:,.0f})']
+                        if ppn > 0:
+                            detail_parts.append(f'+ PPN ({ppn:,.0f})')
+                        if discount > 0:
+                            detail_parts.append(f'- Diskon ({discount:,.0f})')
+                        
+                        self.errors.append({
+                            'type': 'SECTION_TOTAL_ERROR',
+                            'sheet': data.get('sheet_name'),
+                            'row': section_data.get('total_row'),
+                            'item_name': f'Total Section {section_letter}',
+                            'detail': f'Total Section {section_letter} tidak sesuai',
+                            'calculation': ' + '.join(detail_parts),
+                            'expected': expected_total,
+                            'actual': total_num,
+                            'difference': expected_total - total_num,
+                            'status': 'PERLU CEK',
+                            'section': section_letter
+                        })
+                except:
+                    pass
+    
+    def check_grand_total_global(self, data: Dict[str, Any]) -> None:
+        """Cek Grand Total global"""
+        sections = data.get('sections', {})
+        grand_total_excel = data.get('grand_total_value')
+        
+        if grand_total_excel is None or len(sections) == 0:
+            return
+        
+        try:
+            grand_total_num = float(grand_total_excel)
+            
+            # Hitung total dari semua section
+            total_from_sections = 0
+            for section_letter, section_data in sections.items()
+:
+                # Prioritas: total_value > subtotal_value
+                section_total = section_data.get('total_value')
+                if section_total is None:
+                    section_total = section_data.get('subtotal_value')
+                if section_total is not None:
+                    total_from_sections += float(section_total)
+            
+            tolerance = 1
+            if abs(total_from_sections - grand_total_num) > tolerance:
+                self.errors.append({
+                    'type': 'GRAND_TOTAL_ERROR',
                     'sheet': data.get('sheet_name'),
-                    'row': row,
-                    'item_name': item.get('item_name', 'Unknown'),
-                    'detail': 'Qty terbaca sebagai teks',
-                    'value': qty,
+                    'row': data.get('grand_total_row'),
+                    'item_name': 'Grand Total',
+                    'detail': 'Grand Total tidak sesuai dengan jumlah semua section',
+                    'calculation': f'Jumlah {len(sections)} section',
+                    'expected': total_from_sections,
+                    'actual': grand_total_num,
+                    'difference': total_from_sections - grand_total_num,
                     'status': 'PERLU CEK'
                 })
-    
-    def check_subtotal(self, data: Dict[str, Any]) -> None:
-        """Cek subtotal"""
-        items = data.get('items', [])
-        subtotal_value = data.get('subtotal_value')
-        subtotal_row = data.get('subtotal_row')
-        
-        # Hitung total dari semua item
-        calculated_total = 0
-        item_count = 0
-        item_details = []
-        
-        for item in items:
-            total = item.get('total')
-            if total is not None:
-                try:
-                    total_num = float(total)
-                    calculated_total += total_num
-                    item_count += 1
-                    item_details.append(f"Baris {item.get('row')}: {total_num:,.0f}")
-                except (ValueError, TypeError):
-                    continue
-        
-        # Jika tidak ada subtotal di Excel, tidak perlu dicek
-        if subtotal_value is None:
-            return
-        
-        # Bandingkan
-        try:
-            subtotal_num = float(subtotal_value)
-        except (ValueError, TypeError):
-            return
-        
-        tolerance = 1
-        if abs(calculated_total - subtotal_num) > tolerance:
-            # Hitung selisih
-            difference = calculated_total - subtotal_num
-            
-            # Buat detail item untuk debugging
-            items_summary = "\n".join(item_details[:10])  # Tampilkan 10 item pertama
-            if len(item_details) > 10:
-                items_summary += f"\n... dan {len(item_details) - 10} item lainnya"
-            
-            self.errors.append({
-                'type': 'SUBTOTAL_ERROR',
-                'sheet': data.get('sheet_name'),
-                'row': subtotal_row,
-                'item_name': 'Subtotal / TOTAL',
-                'detail': f'TOTAL tidak sesuai! Ditemukan {item_count} item',
-                'calculation': f'Jumlah {item_count} item = {calculated_total:,.0f}',
-                'expected': calculated_total,
-                'actual': subtotal_num,
-                'difference': difference,
-                'status': 'PERLU CEK',
-                'item_count': item_count,
-                'items_summary': items_summary
-            })
-    
-    def check_ppn(self, data: Dict[str, Any]) -> None:
-        """Cek PPN (11%)"""
-        subtotal_value = data.get('subtotal_value')
-        ppn_value = data.get('ppn_value')
-        ppn_row = data.get('ppn_row')
-        
-        if subtotal_value is None or ppn_value is None:
-            return
-        
-        try:
-            subtotal_num = float(subtotal_value)
-            ppn_num = float(ppn_value)
-        except (ValueError, TypeError):
-            return
-        
-        # Hitung PPN 11%
-        expected_ppn = subtotal_num * 0.11
-        
-        tolerance = 1
-        if abs(expected_ppn - ppn_num) > tolerance:
-            self.errors.append({
-                'type': 'PPN_ERROR',
-                'sheet': data.get('sheet_name'),
-                'row': ppn_row,
-                'item_name': 'PPN (11%)',
-                'detail': 'PPN tidak sesuai',
-                'calculation': f'Subtotal ({subtotal_num}) × 11%',
-                'expected': expected_ppn,
-                'actual': ppn_num,
-                'difference': expected_ppn - ppn_num,
-                'status': 'PERLU CEK'
-            })
-    
-    def check_grand_total(self, data: Dict[str, Any]) -> None:
-        """Cek Grand Total"""
-        subtotal_value = data.get('subtotal_value')
-        ppn_value = data.get('ppn_value')
-        grand_total_value = data.get('grand_total_value')
-        grand_total_row = data.get('grand_total_row')
-        
-        if subtotal_value is None or grand_total_value is None:
-            return
-        
-        try:
-            subtotal_num = float(subtotal_value)
-            grand_total_num = float(grand_total_value)
-            
-            # Hitung grand total
-            ppn_num = 0
-            if ppn_value is not None:
-                ppn_num = float(ppn_value)
-            
-            expected_grand_total = subtotal_num + ppn_num
-        except (ValueError, TypeError):
-            return
-        
-        tolerance = 1
-        if abs(expected_grand_total - grand_total_num) > tolerance:
-            self.errors.append({
-                'type': 'GRAND_TOTAL_ERROR',
-                'sheet': data.get('sheet_name'),
-                'row': grand_total_row,
-                'item_name': 'Grand Total',
-                'detail': 'Grand Total tidak sesuai',
-                'calculation': f'Subtotal ({subtotal_num}) + PPN ({ppn_num})',
-                'expected': expected_grand_total,
-                'actual': grand_total_num,
-                'difference': expected_grand_total - grand_total_num,
-                'status': 'PERLU CEK'
-            })
+        except:
+            pass

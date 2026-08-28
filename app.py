@@ -861,6 +861,7 @@ def display_results():
                     section_items = section_data.get('items', [])
                     section_subtotal_excel = section_data.get('subtotal_value')
                     section_ppn_excel = section_data.get('ppn_value')
+                    section_discount_excel = section_data.get('discount_value')
                     section_total_excel = section_data.get('total_value')
                     
                     # Hitung subtotal dari items section ini
@@ -885,17 +886,17 @@ def display_results():
                     </div>
                     """, unsafe_allow_html=True)
                     
-                    # Subtotal Section
-                    if section_subtotal_excel is not None:
-                        col1, col2, col3 = st.columns([2, 1, 2])
-                        with col1:
-                            st.markdown("""
-                            <div class="subtotal-box">
-                                <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">📥 SUBTOTAL (DIHITUNG)</div>
-                                <div style="font-size: 1.6rem; font-weight: 800;">{}</div>
-                            </div>
-                            """.format(format_currency(section_calculated)), unsafe_allow_html=True)
-                        with col2:
+                    # Subtotal Section (Jumlah X)
+                    col1, col2, col3 = st.columns([2, 1, 2])
+                    with col1:
+                        st.markdown("""
+                        <div class="subtotal-box">
+                            <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">📥 JUMLAH (DIHITUNG)</div>
+                            <div style="font-size: 1.6rem; font-weight: 800;">{}</div>
+                        </div>
+                        """.format(format_currency(section_calculated)), unsafe_allow_html=True)
+                    with col2:
+                        if section_subtotal_excel is not None:
                             try:
                                 excel_val = float(section_subtotal_excel)
                                 difference = section_calculated - excel_val
@@ -916,10 +917,17 @@ def display_results():
                                     """, unsafe_allow_html=True)
                             except:
                                 pass
-                        with col3:
+                        else:
+                            st.markdown("""
+                            <div style="background: rgba(107, 114, 128, 0.3); border-radius: 12px; padding: 1rem; text-align: center;">
+                                <div style="color: #9ca3af;">Tidak ada subtotal</div>
+                            </div>
+                            """, unsafe_allow_html=True)
+                    with col3:
+                        if section_subtotal_excel is not None:
                             st.markdown("""
                             <div class="subtotal-box">
-                                <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">📤 SUBTOTAL (DI EXCEL)</div>
+                                <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">📤 JUMLAH (DI EXCEL)</div>
                                 <div style="font-size: 1.6rem; font-weight: 800;">{}</div>
                             </div>
                             """.format(format_currency(section_subtotal_excel)), unsafe_allow_html=True)
@@ -964,9 +972,44 @@ def display_results():
                             </div>
                             """.format(format_currency(section_ppn_excel)), unsafe_allow_html=True)
                     
-                    # Total Section (jika ada, misal "Total B" yang sudah termasuk PPN)
-                    if section_total_excel is not None and section_total_excel != section_subtotal_excel:
-                        section_calculated_total = section_calculated + (section_calculated * 0.11)
+                    # Diskon Section (jika ada)
+                    if section_discount_excel is not None:
+                        col1, col2, col3 = st.columns([2, 1, 2])
+                        with col1:
+                            st.markdown("""
+                            <div style="background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%); 
+                                        border-radius: 16px; padding: 1.5rem; text-align: center;
+                                        box-shadow: 0 10px 30px rgba(239, 68, 68, 0.3);
+                                        border: 1px solid rgba(255, 255, 255, 0.2); color: white;">
+                                <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">📥 DISKON (DI EXCEL)</div>
+                                <div style="font-size: 1.6rem; font-weight: 800;">{}</div>
+                            </div>
+                            """.format(format_currency(section_discount_excel)), unsafe_allow_html=True)
+                        with col2:
+                            st.markdown("""
+                            <div style="background: rgba(107, 114, 128, 0.3); border-radius: 12px; padding: 1rem; text-align: center; height: 100%;">
+                                <div style="color: #9ca3af;">Diskon</div>
+                            </div>
+                            """, unsafe_allow_html=True)
+                        with col3:
+                            st.markdown("""
+                            <div style="background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%); 
+                                        border-radius: 16px; padding: 1.5rem; text-align: center;
+                                        box-shadow: 0 10px 30px rgba(239, 68, 68, 0.3);
+                                        border: 1px solid rgba(255, 255, 255, 0.2); color: white;">
+                                <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">📤 DISKON (DI EXCEL)</div>
+                                <div style="font-size: 1.6rem; font-weight: 800;">{}</div>
+                            </div>
+                            """.format(format_currency(section_discount_excel)), unsafe_allow_html=True)
+                    
+                    # Total Section (Total X = Jumlah + PPN - Diskon)
+                    if section_total_excel is not None:
+                        # Hitung total seharusnya
+                        base = section_calculated
+                        ppn = section_calculated * 0.11 if section_ppn_excel is not None else 0
+                        discount = float(section_discount_excel) if section_discount_excel else 0
+                        section_calculated_total = base + ppn - discount
+                        
                         col1, col2, col3 = st.columns([2, 1, 2])
                         with col1:
                             st.markdown("""
@@ -1017,6 +1060,17 @@ def display_results():
                     </div>
                     """, unsafe_allow_html=True)
                     
+                    # Hitung grand total dari semua section totals
+                    calculated_grand_total = 0
+                    for sl in sorted(sections.keys()):
+                        sd = sections[sl]
+                        # Prioritas: total_value > subtotal_value
+                        sec_total = sd.get('total_value')
+                        if sec_total is None:
+                            sec_total = sd.get('subtotal_value')
+                        if sec_total is not None:
+                            calculated_grand_total += float(sec_total)
+                    
                     col1, col2, col3 = st.columns([2, 1, 2])
                     with col1:
                         st.markdown("""
@@ -1024,11 +1078,11 @@ def display_results():
                             <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">📥 GRAND TOTAL (DIHITUNG)</div>
                             <div style="font-size: 1.6rem; font-weight: 800;">{}</div>
                         </div>
-                        """.format(format_currency(calculated_total_items)), unsafe_allow_html=True)
+                        """.format(format_currency(calculated_grand_total)), unsafe_allow_html=True)
                     with col2:
                         try:
                             excel_val = float(excel_grand_total)
-                            difference = calculated_total_items - excel_val
+                            difference = calculated_grand_total - excel_val
                             if abs(difference) > 1:
                                 st.markdown("""
                                 <div class="selisih-box">

@@ -126,7 +126,7 @@ class ExcelReader:
             return total_cell_data.value
         elif total_cell_formula.value is not None:
             if isinstance(total_cell_formula.value, str) and total_cell_formula.value.startswith('='):
-                return None  # Formula without cached value
+                return None
             else:
                 return total_cell_formula.value
         return None
@@ -146,14 +146,40 @@ class ExcelReader:
         
         return None
     
+    def _detect_row_type(self, cell_str: str) -> str:
+        """Deteksi jenis baris: section_header, subtotal, ppn, discount, total, grand_total"""
+        cell_upper = cell_str.upper().strip()
+        
+        # Grand Total
+        if 'GRAND TOTAL' in cell_upper or re.search(r'TOTAL\s*\([A-Z]\+[A-Z]\)', cell_upper):
+            return 'grand_total'
+        
+        # Section header standalone (A, B, C)
+        if len(cell_upper) <= 2 and cell_upper.isalpha() and len(cell_upper) == 1:
+            return 'section_header'
+        
+        # PPN/Tax
+        if 'PPN' in cell_upper or 'TAX' in cell_upper or 'PAJAK' in cell_upper:
+            return 'ppn'
+        
+        # Discount/Diskon
+        if 'DISKON' in cell_upper or 'DISCOUNT' in cell_upper or 'POTONGAN' in cell_upper:
+            return 'discount'
+        
+        # Subtotal/Total section
+        if 'TOTAL' in cell_upper or 'SUBTOTAL' in cell_upper or 'JUMLAH' in cell_upper:
+            return 'subtotal'
+        
+        return 'unknown'
+    
     def read_data(self, sheet_name: str) -> Dict[str, Any]:
-        """Membaca data dari sheet dengan support multiple sections"""
+        """Membaca data dari sheet dengan support multiple sections dan flexible fields"""
         result = {
             'sheet_name': sheet_name,
             'header_row': None,
             'columns': None,
             'items': [],
-            'sections': {},  # {section_letter: {subtotal, ppn, total, items}}
+            'sections': {},
             'subtotal_row': None,
             'subtotal_value': None,
             'ppn_row': None,
@@ -175,21 +201,22 @@ class ExcelReader:
         result['columns'] = columns
         
         total_col = columns.get('total', 10)
-        current_section = None  # Track section aktif
-        pending_items = []  # Items yang belum ditentukan sectionnya
+        current_section = None
+        pending_items = []
+        section_order = []  # Track urutan section
         
         for row in range(header_row + 1, self.ws.max_row + 1):
             is_summary_row = False
-            is_section_header = False
             
             # Cek semua kolom untuk mencari label
             for col in range(1, min(self.ws.max_column + 1, 15)):
                 cell_value = self.ws.cell(row=row, column=col).value
                 if cell_value:
-                    cell_str = str(cell_value).upper().strip()
+                    cell_str = str(cell_value).strip()
+                    row_type = self._detect_row_type(cell_str)
                     
-                    # 1. Cek GRAND TOTAL dulu (paling prioritas)
-                    if 'GRAND TOTAL' in cell_str or re.search(r'TOTAL\s*\([A-Z]\+[A-Z]\)', cell_str):
+                    if row_type == 'grand_total':
+                        # Grand Total
                         grand_total_value = self._get_total_value(row, total_col)
                         if grand_total_value is not None:
                             result['grand_total_row'] = row
@@ -197,99 +224,124 @@ class ExcelReader:
                             is_summary_row = True
                             break
                     
-                    # 2. Cek standalone section header (A, B, C, dll) - hanya 1-2 karakter
-                    elif len(cell_str) <= 2 and cell_str.isalpha() and len(cell_str) == 1:
-                        # Ini adalah section header seperti "A", "B"
-                        section_letter = cell_str
+                    elif row_type == 'section_header':
+                        # Section header (A, B, C)
+                        section_letter = cell_str.upper()
                         current_section = section_letter
                         
-                        # Buat section baru jika belum ada
                         if section_letter not in result['sections']:
                             result['sections'][section_letter] = {
+                                'items': [],
                                 'subtotal_row': None,
                                 'subtotal_value': None,
                                 'ppn_row': None,
                                 'ppn_value': None,
+                                'discount_row': None,
+                                'discount_value': None,
                                 'total_row': None,
-                                'total_value': None,
-                                'items': []
+                                'total_value': None
                             }
+                            section_order.append(section_letter)
                         
                         # Pindahkan pending items ke section ini
                         if pending_items:
                             result['sections'][section_letter]['items'] = pending_items
                             pending_items = []
                         
-                        is_section_header = True
                         is_summary_row = True
                         break
                     
-                    # 3. Cek PPN
-                    elif 'PPN' in cell_str or 'TAX' in cell_str:
+                    elif row_type == 'ppn':
+                        # PPN - simpan ke section yang aktif
                         ppn_value = self._get_total_value(row, total_col)
                         if ppn_value is not None:
-                            # Simpan PPN ke section yang sedang aktif
                             if current_section and current_section in result['sections']:
                                 result['sections'][current_section]['ppn_value'] = ppn_value
                                 result['sections'][current_section]['ppn_row'] = row
-                            # Juga simpan sebagai global PPN
+                            # Global PPN fallback
                             if result['ppn_value'] is None:
                                 result['ppn_row'] = row
                                 result['ppn_value'] = ppn_value
                             is_summary_row = True
                             break
                     
-                    # 4. Cek TOTAL/Subtotal - bisa multiple sections
-                    elif 'TOTAL' in cell_str or 'SUBTOTAL' in cell_str or 'JUMLAH' in cell_str:
+                    elif row_type == 'discount':
+                        # Diskon - simpan ke section yang aktif
+                        discount_value = self._get_total_value(row, total_col)
+                        if discount_value is not None:
+                            if current_section and current_section in result['sections']:
+                                result['sections'][current_section]['discount_value'] = discount_value
+                                result['sections'][current_section]['discount_row'] = row
+                            is_summary_row = True
+                            break
+                    
+                    elif row_type == 'subtotal':
+                        # Subtotal/Total section
                         total_value = self._get_total_value(row, total_col)
                         if total_value is not None:
-                            # Deteksi section letter
                             section_letter = self._detect_section_letter(cell_str)
                             
                             if section_letter == 'GRAND':
-                                # Ini grand total
                                 result['grand_total_row'] = row
                                 result['grand_total_value'] = total_value
                             elif section_letter:
-                                # Ini subtotal section tertentu (A, B, C, dst)
+                                # Total dengan label section (Total A, Jumlah B)
                                 if section_letter not in result['sections']:
                                     result['sections'][section_letter] = {
-                                        'subtotal_row': row,
-                                        'subtotal_value': total_value,
+                                        'items': [],
+                                        'subtotal_row': None,
+                                        'subtotal_value': None,
                                         'ppn_row': None,
                                         'ppn_value': None,
-                                        'total_row': None,
-                                        'total_value': None,
-                                        'items': []
+                                        'discount_row': None,
+                                        'discount_value': None,
+                                        'total_row': row,
+                                        'total_value': total_value
                                     }
+                                    section_order.append(section_letter)
                                 else:
-                                    result['sections'][section_letter]['subtotal_row'] = row
-                                    result['sections'][section_letter]['subtotal_value'] = total_value
+                                    # Check apakah ini "Total X" (sudah termasuk PPN) atau "Jumlah X" (belum PPN)
+                                    cell_upper = cell_str.upper()
+                                    if 'TOTAL' in cell_upper and 'JUMLAH' not in cell_upper:
+                                        # Ini Total Section (sudah termasuk PPN/diskon)
+                                        result['sections'][section_letter]['total_row'] = row
+                                        result['sections'][section_letter]['total_value'] = total_value
+                                    else:
+                                        # Ini Jumlah/Subtotal (belum PPN)
+                                        result['sections'][section_letter]['subtotal_row'] = row
+                                        result['sections'][section_letter]['subtotal_value'] = total_value
                                 
                                 current_section = section_letter
                                 
-                                # Simpan sebagai global pertama
                                 if result['subtotal_value'] is None:
                                     result['subtotal_row'] = row
                                     result['subtotal_value'] = total_value
                             else:
-                                # Generic subtotal tanpa huruf - mungkin "Jumlah B"
-                                # Simpan ke section yang aktif atau buat default
+                                # Generic total tanpa label section
                                 if current_section:
-                                    result['sections'][current_section]['total_row'] = row
-                                    result['sections'][current_section]['total_value'] = total_value
+                                    # Check Total vs Jumlah
+                                    cell_upper = cell_str.upper()
+                                    if 'TOTAL' in cell_upper and 'JUMLAH' not in cell_upper:
+                                        result['sections'][current_section]['total_row'] = row
+                                        result['sections'][current_section]['total_value'] = total_value
+                                    else:
+                                        result['sections'][current_section]['subtotal_row'] = row
+                                        result['sections'][current_section]['subtotal_value'] = total_value
                                 else:
-                                    # Buat section default
+                                    # Belum ada section, buat default
                                     result['sections']['A'] = {
+                                        'items': [],
                                         'subtotal_row': row,
                                         'subtotal_value': total_value,
                                         'ppn_row': None,
                                         'ppn_value': None,
-                                        'total_row': row,
-                                        'total_value': total_value,
-                                        'items': []
+                                        'discount_row': None,
+                                        'discount_value': None,
+                                        'total_row': None,
+                                        'total_value': None
                                     }
                                     current_section = 'A'
+                                    section_order.append('A')
                                 
                                 if result['subtotal_value'] is None:
                                     result['subtotal_row'] = row
@@ -298,8 +350,8 @@ class ExcelReader:
                             is_summary_row = True
                             break
             
-            # Jika bukan baris summary dan bukan section header, baca sebagai item
-            if not is_summary_row and not is_section_header:
+            # Jika bukan baris summary, baca sebagai item
+            if not is_summary_row:
                 item = self.read_item(row, columns)
                 
                 unit_price = item.get('unit_price')
@@ -326,49 +378,52 @@ class ExcelReader:
                         pass
                 
                 if has_valid_data:
-                    # Tambahkan ke items global
                     result['items'].append(item)
                     
-                    # Tambahkan ke section yang sedang aktif atau pending
                     if current_section:
                         if current_section in result['sections']:
                             result['sections'][current_section]['items'].append(item)
                         else:
                             pending_items.append(item)
                     else:
-                        # Belum ada section, simpan ke pending
                         pending_items.append(item)
         
-        # Jika masih ada pending items, buat section default
+        # Handle pending items
         if pending_items:
             if not result['sections']:
                 result['sections']['A'] = {
+                    'items': pending_items,
                     'subtotal_row': None,
                     'subtotal_value': None,
                     'ppn_row': None,
                     'ppn_value': None,
+                    'discount_row': None,
+                    'discount_value': None,
                     'total_row': None,
-                    'total_value': None,
-                    'items': pending_items
+                    'total_value': None
                 }
             else:
-                # Masukkan ke section pertama
                 first_section = min(result['sections'].keys())
                 result['sections'][first_section]['items'].extend(pending_items)
         
-        # Hitung total items sebagai fallback
-        if result['subtotal_value'] is None:
-            total_items = sum(float(i.get('total', 0) or 0) for i in result['items'])
-            result['subtotal_value'] = total_items
+        # Hitung subtotal per section jika belum ada
+        for section_letter, section_data in result['sections'].items():
+            if section_data['subtotal_value'] is None:
+                calc_subtotal = sum(float(i.get('total', 0) or 0) for i in section_data['items'])
+                section_data['subtotal_value'] = calc_subtotal
         
-        # Jika ada multiple sections tapi belum ada grand total, hitung dari total sections
+        # Hitung total items global
+        if result['subtotal_value'] is None:
+            result['subtotal_value'] = sum(float(i.get('total', 0) or 0) for i in result['items'])
+        
+        # Hitung grand total dari sections jika belum ada
         if result['grand_total_value'] is None and len(result['sections']) > 1:
-            total_all_sections = 0
-            for section_letter, section_data in result['sections'].items():
-                section_total = section_data.get('total_value') or section_data.get('subtotal_value') or 0
-                total_all_sections += float(section_total or 0)
-            if total_all_sections > 0:
-                result['grand_total_value'] = total_all_sections
+            total_all = 0
+            for sl, sd in result['sections'].items():
+                section_total = sd.get('total_value') or sd.get('subtotal_value') or 0
+                total_all += float(section_total or 0)
+            if total_all > 0:
+                result['grand_total_value'] = total_all
         
         return result
     
