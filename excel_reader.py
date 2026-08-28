@@ -246,20 +246,31 @@ class ExcelReader:
                                     result['subtotal_row'] = row
                                     result['subtotal_value'] = total_value
                             else:
-                                # Tanpa label section - mungkin "Jumlah B" yang tidak ada huruf
-                                # Atau generic subtotal
-                                # Coba deteksi dari context
-                                
-                                # Cek apakah baris ini punya label Total + angka
-                                # Misalnya "Jumlah B" atau "Total B"
-                                # Kita perlu cek lebih detail
+                                # Tanpa label section - generic subtotal
+                                # Buat section default 'A' jika belum ada sections
+                                if not result['sections']:
+                                    result['sections']['A'] = {
+                                        'subtotal_row': row,
+                                        'subtotal_value': total_value,
+                                        'ppn_row': None,
+                                        'ppn_value': None,
+                                        'total_row': row,
+                                        'total_value': total_value,
+                                        'items': []
+                                    }
+                                    current_section = 'A'
+                                else:
+                                    # Sudah ada sections, update section terakhir
+                                    last_section = max(result['sections'].keys())
+                                    result['sections'][last_section]['total_row'] = row
+                                    result['sections'][last_section]['total_value'] = total_value
                                 
                                 # Simpan sebagai global jika belum ada
                                 if result['subtotal_value'] is None:
                                     result['subtotal_row'] = row
                                     result['subtotal_value'] = total_value
-                                    is_summary_row = True
-                                    break
+                                is_summary_row = True
+                                break
                             
                             is_summary_row = True
                             break
