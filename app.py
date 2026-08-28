@@ -657,13 +657,14 @@ def main():
                             # Baca data
                             data = reader.read_data(sheet_name)
                             
-                            # Simpan data Excel untuk perbandingan
+                            # Simpan data Excel untuk perbandingan (termasuk sections)
                             if 'excel_sheets_data' not in st.session_state:
                                 st.session_state.excel_sheets_data = {}
                             st.session_state.excel_sheets_data[sheet_name] = {
                                 'subtotal_value': data.get('subtotal_value'),
                                 'ppn_value': data.get('ppn_value'),
-                                'grand_total_value': data.get('grand_total_value')
+                                'grand_total_value': data.get('grand_total_value'),
+                                'sections': data.get('sections', {})
                             }
                             
                             # Lakukan pemeriksaan
@@ -831,12 +832,12 @@ def display_results():
             excel_subtotal = sheet_data.get('subtotal_value')
             excel_ppn = sheet_data.get('ppn_value')
             excel_grand_total = sheet_data.get('grand_total_value')
+            sections = sheet_data.get('sections', {})
             
-            # Hitung PPN dan Grand Total
-            calculated_ppn = sheet_total_calculated * 0.11
-            calculated_grand_total = sheet_total_calculated + calculated_ppn
+            # Hitung total items yang dibaca
+            calculated_total_items = sheet_total_calculated
             
-            # Tampilkan perbandingan dalam box menarik
+            # Header Ringkasan
             st.markdown("""
             <div style="background: linear-gradient(90deg, #1e40af 0%, #7c3aed 50%, #db2777 100%); 
                         color: white; 
@@ -850,149 +851,357 @@ def display_results():
             </div>
             """, unsafe_allow_html=True)
             
-            # Tampilkan perbandingan Subtotal
-            col1, col2, col3 = st.columns([2, 1, 2])
-            with col1:
-                st.markdown("""
-                <div class="subtotal-box">
-                    <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">📥 SUBTOTAL (DIHITUNG)</div>
-                    <div style="font-size: 1.6rem; font-weight: 800;">{}</div>
-                </div>
-                """.format(format_currency(sheet_total_calculated)), unsafe_allow_html=True)
-            with col2:
-                if excel_subtotal is not None:
-                    try:
-                        excel_val = float(excel_subtotal)
-                        difference = sheet_total_calculated - excel_val
-                        if abs(difference) > 1:
-                            st.markdown("""
-                            <div class="selisih-box">
-                                <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">❌</div>
-                                <div style="font-weight: 700; font-size: 0.9rem;">SELISIH</div>
-                                <div style="font-weight: 800; font-size: 1.2rem; margin-top: 0.3rem;">{}</div>
-                            </div>
-                            """.format(format_currency(difference)), unsafe_allow_html=True)
-                        else:
-                            st.markdown("""
-                            <div class="sesuai-box">
-                                <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">✅</div>
-                                <div style="font-weight: 700; font-size: 0.9rem;">SESUAI</div>
-                            </div>
-                            """, unsafe_allow_html=True)
-                    except:
-                        pass
-            with col3:
-                if excel_subtotal is not None:
-                    try:
-                        excel_val = float(excel_subtotal)
-                        st.markdown("""
-                        <div class="subtotal-box">
-                            <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">📤 SUBTOTAL (DI EXCEL)</div>
-                            <div style="font-size: 1.6rem; font-weight: 800;">{}</div>
-                        </div>
-                        """.format(format_currency(excel_val)), unsafe_allow_html=True)
-                    except:
-                        pass
+            # CEK APAKAH ADA MULTIPLE SECTIONS
+            has_multiple_sections = len(sections) > 1
             
-            # Tampilkan perbandingan PPN
-            col1, col2, col3 = st.columns([2, 1, 2])
-            with col1:
-                st.markdown("""
-                <div class="ppn-box">
-                    <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">📥 PPN 11% (DIHITUNG)</div>
-                    <div style="font-size: 1.6rem; font-weight: 800;">{}</div>
-                </div>
-                """.format(format_currency(calculated_ppn)), unsafe_allow_html=True)
-            with col2:
-                if excel_ppn is not None:
-                    try:
-                        excel_val = float(excel_ppn)
-                        difference = calculated_ppn - excel_val
-                        if abs(difference) > 1:
-                            st.markdown("""
-                            <div class="selisih-box">
-                                <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">❌</div>
-                                <div style="font-weight: 700; font-size: 0.9rem;">SELISIH</div>
-                                <div style="font-weight: 800; font-size: 1.2rem; margin-top: 0.3rem;">{}</div>
-                            </div>
-                            """.format(format_currency(difference)), unsafe_allow_html=True)
-                        else:
-                            st.markdown("""
-                            <div class="sesuai-box">
-                                <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">✅</div>
-                                <div style="font-weight: 700; font-size: 0.9rem;">SESUAI</div>
-                            </div>
-                            """, unsafe_allow_html=True)
-                    except:
-                        pass
-                else:
-                    st.markdown("""
-                    <div class="comparison-box" style="text-align: center; padding: 1.5rem;">
-                        <div style="font-size: 1.2rem; color: #9ca3af;">⚠️ Tidak ada data PPN</div>
+            if has_multiple_sections:
+                # TAMPILKAN PER SECTION
+                for section_letter in sorted(sections.keys()):
+                    section_data = sections[section_letter]
+                    section_items = section_data.get('items', [])
+                    section_subtotal_excel = section_data.get('subtotal_value')
+                    section_ppn_excel = section_data.get('ppn_value')
+                    section_total_excel = section_data.get('total_value')
+                    
+                    # Hitung subtotal dari items section ini
+                    section_calculated = 0
+                    for item in section_items:
+                        total_val = item.get('total')
+                        if total_val is not None:
+                            try:
+                                section_calculated += float(total_val)
+                            except:
+                                pass
+                    
+                    # Header Section
+                    st.markdown(f"""
+                    <div style="background: linear-gradient(135deg, #059669 0%, #10b981 100%); 
+                                color: white; 
+                                padding: 0.8rem; 
+                                border-radius: 12px; 
+                                text-align: center;
+                                margin: 1rem 0;">
+                        <h4 style="margin: 0; color: white;">📁 SECTION {section_letter}</h4>
                     </div>
                     """, unsafe_allow_html=True)
-            with col3:
-                if excel_ppn is not None:
-                    try:
-                        excel_val = float(excel_ppn)
-                        st.markdown("""
-                        <div class="ppn-box">
-                            <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">📤 PPN (DI EXCEL)</div>
-                            <div style="font-size: 1.6rem; font-weight: 800;">{}</div>
-                        </div>
-                        """.format(format_currency(excel_val)), unsafe_allow_html=True)
-                    except:
-                        pass
-            
-            # Tampilkan perbandingan Grand Total
-            col1, col2, col3 = st.columns([2, 1, 2])
-            with col1:
-                st.markdown("""
-                <div class="grandtotal-box">
-                    <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">📥 GRAND TOTAL (DIHITUNG)</div>
-                    <div style="font-size: 1.6rem; font-weight: 800;">{}</div>
-                </div>
-                """.format(format_currency(calculated_grand_total)), unsafe_allow_html=True)
-            with col2:
+                    
+                    # Subtotal Section
+                    if section_subtotal_excel is not None:
+                        col1, col2, col3 = st.columns([2, 1, 2])
+                        with col1:
+                            st.markdown("""
+                            <div class="subtotal-box">
+                                <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">📥 SUBTOTAL (DIHITUNG)</div>
+                                <div style="font-size: 1.6rem; font-weight: 800;">{}</div>
+                            </div>
+                            """.format(format_currency(section_calculated)), unsafe_allow_html=True)
+                        with col2:
+                            try:
+                                excel_val = float(section_subtotal_excel)
+                                difference = section_calculated - excel_val
+                                if abs(difference) > 1:
+                                    st.markdown("""
+                                    <div class="selisih-box">
+                                        <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">❌</div>
+                                        <div style="font-weight: 700; font-size: 0.9rem;">SELISIH</div>
+                                        <div style="font-weight: 800; font-size: 1.2rem; margin-top: 0.3rem;">{}</div>
+                                    </div>
+                                    """.format(format_currency(difference)), unsafe_allow_html=True)
+                                else:
+                                    st.markdown("""
+                                    <div class="sesuai-box">
+                                        <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">✅</div>
+                                        <div style="font-weight: 700; font-size: 0.9rem;">SESUAI</div>
+                                    </div>
+                                    """, unsafe_allow_html=True)
+                            except:
+                                pass
+                        with col3:
+                            st.markdown("""
+                            <div class="subtotal-box">
+                                <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">📤 SUBTOTAL (DI EXCEL)</div>
+                                <div style="font-size: 1.6rem; font-weight: 800;">{}</div>
+                            </div>
+                            """.format(format_currency(section_subtotal_excel)), unsafe_allow_html=True)
+                    
+                    # PPN Section (jika ada)
+                    if section_ppn_excel is not None:
+                        section_calculated_ppn = section_calculated * 0.11
+                        col1, col2, col3 = st.columns([2, 1, 2])
+                        with col1:
+                            st.markdown("""
+                            <div class="ppn-box">
+                                <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">📥 PPN 11% (DIHITUNG)</div>
+                                <div style="font-size: 1.6rem; font-weight: 800;">{}</div>
+                            </div>
+                            """.format(format_currency(section_calculated_ppn)), unsafe_allow_html=True)
+                        with col2:
+                            try:
+                                excel_val = float(section_ppn_excel)
+                                difference = section_calculated_ppn - excel_val
+                                if abs(difference) > 1:
+                                    st.markdown("""
+                                    <div class="selisih-box">
+                                        <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">❌</div>
+                                        <div style="font-weight: 700; font-size: 0.9rem;">SELISIH</div>
+                                        <div style="font-weight: 800; font-size: 1.2rem; margin-top: 0.3rem;">{}</div>
+                                    </div>
+                                    """.format(format_currency(difference)), unsafe_allow_html=True)
+                                else:
+                                    st.markdown("""
+                                    <div class="sesuai-box">
+                                        <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">✅</div>
+                                        <div style="font-weight: 700; font-size: 0.9rem;">SESUAI</div>
+                                    </div>
+                                    """, unsafe_allow_html=True)
+                            except:
+                                pass
+                        with col3:
+                            st.markdown("""
+                            <div class="ppn-box">
+                                <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">📤 PPN (DI EXCEL)</div>
+                                <div style="font-size: 1.6rem; font-weight: 800;">{}</div>
+                            </div>
+                            """.format(format_currency(section_ppn_excel)), unsafe_allow_html=True)
+                    
+                    # Total Section (jika ada, misal "Total B" yang sudah termasuk PPN)
+                    if section_total_excel is not None and section_total_excel != section_subtotal_excel:
+                        section_calculated_total = section_calculated + (section_calculated * 0.11)
+                        col1, col2, col3 = st.columns([2, 1, 2])
+                        with col1:
+                            st.markdown("""
+                            <div class="grandtotal-box">
+                                <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">📥 TOTAL SECTION (DIHITUNG)</div>
+                                <div style="font-size: 1.6rem; font-weight: 800;">{}</div>
+                            </div>
+                            """.format(format_currency(section_calculated_total)), unsafe_allow_html=True)
+                        with col2:
+                            try:
+                                excel_val = float(section_total_excel)
+                                difference = section_calculated_total - excel_val
+                                if abs(difference) > 1:
+                                    st.markdown("""
+                                    <div class="selisih-box">
+                                        <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">❌</div>
+                                        <div style="font-weight: 700; font-size: 0.9rem;">SELISIH</div>
+                                        <div style="font-weight: 800; font-size: 1.2rem; margin-top: 0.3rem;">{}</div>
+                                    </div>
+                                    """.format(format_currency(difference)), unsafe_allow_html=True)
+                                else:
+                                    st.markdown("""
+                                    <div class="sesuai-box">
+                                        <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">✅</div>
+                                        <div style="font-weight: 700; font-size: 0.9rem;">SESUAI</div>
+                                    </div>
+                                    """, unsafe_allow_html=True)
+                            except:
+                                pass
+                        with col3:
+                            st.markdown("""
+                            <div class="grandtotal-box">
+                                <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">📤 TOTAL SECTION (DI EXCEL)</div>
+                                <div style="font-size: 1.6rem; font-weight: 800;">{}</div>
+                            </div>
+                            """.format(format_currency(section_total_excel)), unsafe_allow_html=True)
+                
+                # GRAND TOTAL (Gabungan semua section)
                 if excel_grand_total is not None:
-                    try:
-                        excel_val = float(excel_grand_total)
-                        difference = calculated_grand_total - excel_val
-                        if abs(difference) > 1:
-                            st.markdown("""
-                            <div class="selisih-box">
-                                <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">❌</div>
-                                <div style="font-weight: 700; font-size: 0.9rem;">SELISIH</div>
-                                <div style="font-weight: 800; font-size: 1.2rem; margin-top: 0.3rem;">{}</div>
-                            </div>
-                            """.format(format_currency(difference)), unsafe_allow_html=True)
-                        else:
-                            st.markdown("""
-                            <div class="sesuai-box">
-                                <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">✅</div>
-                                <div style="font-weight: 700; font-size: 0.9rem;">SESUAI</div>
-                            </div>
-                            """, unsafe_allow_html=True)
-                    except:
-                        pass
-                else:
                     st.markdown("""
-                    <div class="comparison-box" style="text-align: center; padding: 1.5rem;">
-                        <div style="font-size: 1.2rem; color: #9ca3af;">⚠️ Tidak ada data Grand Total</div>
+                    <div style="background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%); 
+                                color: white; 
+                                padding: 0.8rem; 
+                                border-radius: 12px; 
+                                text-align: center;
+                                margin: 1rem 0;">
+                        <h4 style="margin: 0; color: white;">📊 GRAND TOTAL (SEMUA SECTION)</h4>
                     </div>
                     """, unsafe_allow_html=True)
-            with col3:
-                if excel_grand_total is not None:
-                    try:
-                        excel_val = float(excel_grand_total)
+                    
+                    col1, col2, col3 = st.columns([2, 1, 2])
+                    with col1:
+                        st.markdown("""
+                        <div class="grandtotal-box">
+                            <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">📥 GRAND TOTAL (DIHITUNG)</div>
+                            <div style="font-size: 1.6rem; font-weight: 800;">{}</div>
+                        </div>
+                        """.format(format_currency(calculated_total_items)), unsafe_allow_html=True)
+                    with col2:
+                        try:
+                            excel_val = float(excel_grand_total)
+                            difference = calculated_total_items - excel_val
+                            if abs(difference) > 1:
+                                st.markdown("""
+                                <div class="selisih-box">
+                                    <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">❌</div>
+                                    <div style="font-weight: 700; font-size: 0.9rem;">SELISIH</div>
+                                    <div style="font-weight: 800; font-size: 1.2rem; margin-top: 0.3rem;">{}</div>
+                                </div>
+                                """.format(format_currency(difference)), unsafe_allow_html=True)
+                            else:
+                                st.markdown("""
+                                <div class="sesuai-box">
+                                    <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">✅</div>
+                                    <div style="font-weight: 700; font-size: 0.9rem;">SESUAI</div>
+                                </div>
+                                """, unsafe_allow_html=True)
+                        except:
+                            pass
+                    with col3:
                         st.markdown("""
                         <div class="grandtotal-box">
                             <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">📤 GRAND TOTAL (DI EXCEL)</div>
                             <div style="font-size: 1.6rem; font-weight: 800;">{}</div>
                         </div>
-                        """.format(format_currency(excel_val)), unsafe_allow_html=True)
-                    except:
-                        pass
+                        """.format(format_currency(excel_grand_total)), unsafe_allow_html=True)
+            
+            else:
+                # SINGLE SECTION - Tampilan seperti sebelumnya
+                calculated_ppn = calculated_total_items * 0.11
+                calculated_grand_total = calculated_total_items + calculated_ppn
+                
+                # Subtotal
+                col1, col2, col3 = st.columns([2, 1, 2])
+                with col1:
+                    st.markdown("""
+                    <div class="subtotal-box">
+                        <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">📥 SUBTOTAL (DIHITUNG)</div>
+                        <div style="font-size: 1.6rem; font-weight: 800;">{}</div>
+                    </div>
+                    """.format(format_currency(calculated_total_items)), unsafe_allow_html=True)
+                with col2:
+                    if excel_subtotal is not None:
+                        try:
+                            excel_val = float(excel_subtotal)
+                            difference = calculated_total_items - excel_val
+                            if abs(difference) > 1:
+                                st.markdown("""
+                                <div class="selisih-box">
+                                    <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">❌</div>
+                                    <div style="font-weight: 700; font-size: 0.9rem;">SELISIH</div>
+                                    <div style="font-weight: 800; font-size: 1.2rem; margin-top: 0.3rem;">{}</div>
+                                </div>
+                                """.format(format_currency(difference)), unsafe_allow_html=True)
+                            else:
+                                st.markdown("""
+                                <div class="sesuai-box">
+                                    <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">✅</div>
+                                    <div style="font-weight: 700; font-size: 0.9rem;">SESUAI</div>
+                                </div>
+                                """, unsafe_allow_html=True)
+                        except:
+                            pass
+                with col3:
+                    if excel_subtotal is not None:
+                        try:
+                            excel_val = float(excel_subtotal)
+                            st.markdown("""
+                            <div class="subtotal-box">
+                                <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">📤 SUBTOTAL (DI EXCEL)</div>
+                                <div style="font-size: 1.6rem; font-weight: 800;">{}</div>
+                            </div>
+                            """.format(format_currency(excel_val)), unsafe_allow_html=True)
+                        except:
+                            pass
+                
+                # PPN
+                col1, col2, col3 = st.columns([2, 1, 2])
+                with col1:
+                    st.markdown("""
+                    <div class="ppn-box">
+                        <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">📥 PPN 11% (DIHITUNG)</div>
+                        <div style="font-size: 1.6rem; font-weight: 800;">{}</div>
+                    </div>
+                    """.format(format_currency(calculated_ppn)), unsafe_allow_html=True)
+                with col2:
+                    if excel_ppn is not None:
+                        try:
+                            excel_val = float(excel_ppn)
+                            difference = calculated_ppn - excel_val
+                            if abs(difference) > 1:
+                                st.markdown("""
+                                <div class="selisih-box">
+                                    <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">❌</div>
+                                    <div style="font-weight: 700; font-size: 0.9rem;">SELISIH</div>
+                                    <div style="font-weight: 800; font-size: 1.2rem; margin-top: 0.3rem;">{}</div>
+                                </div>
+                                """.format(format_currency(difference)), unsafe_allow_html=True)
+                            else:
+                                st.markdown("""
+                                <div class="sesuai-box">
+                                    <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">✅</div>
+                                    <div style="font-weight: 700; font-size: 0.9rem;">SESUAI</div>
+                                </div>
+                                """, unsafe_allow_html=True)
+                        except:
+                            pass
+                    else:
+                        st.markdown("""
+                        <div class="comparison-box" style="text-align: center; padding: 1.5rem;">
+                            <div style="font-size: 1.2rem; color: #9ca3af;">⚠️ Tidak ada data PPN</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                with col3:
+                    if excel_ppn is not None:
+                        try:
+                            excel_val = float(excel_ppn)
+                            st.markdown("""
+                            <div class="ppn-box">
+                                <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">📤 PPN (DI EXCEL)</div>
+                                <div style="font-size: 1.6rem; font-weight: 800;">{}</div>
+                            </div>
+                            """.format(format_currency(excel_val)), unsafe_allow_html=True)
+                        except:
+                            pass
+                
+                # Grand Total
+                col1, col2, col3 = st.columns([2, 1, 2])
+                with col1:
+                    st.markdown("""
+                    <div class="grandtotal-box">
+                        <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">📥 GRAND TOTAL (DIHITUNG)</div>
+                        <div style="font-size: 1.6rem; font-weight: 800;">{}</div>
+                    </div>
+                    """.format(format_currency(calculated_grand_total)), unsafe_allow_html=True)
+                with col2:
+                    if excel_grand_total is not None:
+                        try:
+                            excel_val = float(excel_grand_total)
+                            difference = calculated_grand_total - excel_val
+                            if abs(difference) > 1:
+                                st.markdown("""
+                                <div class="selisih-box">
+                                    <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">❌</div>
+                                    <div style="font-weight: 700; font-size: 0.9rem;">SELISIH</div>
+                                    <div style="font-weight: 800; font-size: 1.2rem; margin-top: 0.3rem;">{}</div>
+                                </div>
+                                """.format(format_currency(difference)), unsafe_allow_html=True)
+                            else:
+                                st.markdown("""
+                                <div class="sesuai-box">
+                                    <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">✅</div>
+                                    <div style="font-weight: 700; font-size: 0.9rem;">SESUAI</div>
+                                </div>
+                                """, unsafe_allow_html=True)
+                        except:
+                            pass
+                    else:
+                        st.markdown("""
+                        <div class="comparison-box" style="text-align: center; padding: 1.5rem;">
+                            <div style="font-size: 1.2rem; color: #9ca3af;">⚠️ Tidak ada data Grand Total</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                with col3:
+                    if excel_grand_total is not None:
+                        try:
+                            excel_val = float(excel_grand_total)
+                            st.markdown("""
+                            <div class="grandtotal-box">
+                                <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">📤 GRAND TOTAL (DI EXCEL)</div>
+                                <div style="font-size: 1.6rem; font-weight: 800;">{}</div>
+                            </div>
+                            """.format(format_currency(excel_val)), unsafe_allow_html=True)
+                        except:
+                            pass
             
             st.markdown("---")
     

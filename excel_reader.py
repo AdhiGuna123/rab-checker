@@ -2,6 +2,7 @@ import pandas as pd
 from openpyxl import load_workbook
 from typing import Dict, List, Any, Optional
 import os
+import re
 
 class ExcelReader:
     """Class untuk membaca file Excel RAB"""
@@ -10,7 +11,7 @@ class ExcelReader:
         self.file_path = file_path
         self.file_name = os.path.basename(file_path)
         self.wb = None
-        self.wb_data = None  # Workbook dengan data_only=True
+        self.wb_data = None
         self.ws = None
         self.ws_data = None
         self.df = None
@@ -18,9 +19,7 @@ class ExcelReader:
     def load_workbook(self) -> bool:
         """Load workbook - 2 versi: formula dan data"""
         try:
-            # Load untuk membaca formula
             self.wb = load_workbook(self.file_path, data_only=False)
-            # Load untuk membaca nilai (cached)
             self.wb_data = load_workbook(self.file_path, data_only=True)
             return True
         except Exception as e:
@@ -59,7 +58,6 @@ class ExcelReader:
                 if cell_value:
                     row_values.append(str(cell_value).upper().strip())
             
-            # Cek apakah ada kolom QTY dan TOTAL
             has_qty = any('QTY' in val or 'QUANTITY' in val or 'JUMLAH' in val for val in row_values)
             has_total = any('TOTAL' in val or 'HARGA TOTAL' in val for val in row_values)
             
@@ -78,15 +76,12 @@ class ExcelReader:
             'total': None
         }
         
-        # Mapping kolom berdasarkan posisi (F=6, G=7, H=8, I=9, J=10)
-        # atau berdasarkan header
         header_values = {}
         for col in range(1, self.ws.max_column + 1):
             cell_value = self.ws.cell(row=header_row, column=col).value
             if cell_value:
                 header_values[str(cell_value).upper().strip()] = col
         
-        # Cari kolom berdasarkan header
         for key, value in header_values.items():
             if 'QTY' in key or 'QUANTITY' in key or 'JUMLAH' in key:
                 columns['qty'] = value
@@ -101,18 +96,15 @@ class ExcelReader:
             elif 'ITEM' in key or 'NAME' in key or 'NAMA' in key or 'DESKRIPSI' in key or 'DESCRIPTION' in key or 'KETERANGAN' in key or 'BARANG' in key:
                 columns['item_name'] = value
         
-        # Default berdasarkan posisi jika tidak ditemukan
         if columns['qty'] is None:
-            columns['qty'] = 6  # Kolom F
+            columns['qty'] = 6
         if columns['unit_price'] is None:
-            columns['unit_price'] = 9  # Kolom I
+            columns['unit_price'] = 9
         if columns['total'] is None:
-            columns['total'] = 10  # Kolom J
+            columns['total'] = 10
         
-        # Jika item_name belum ketemu, cari kolom yang bukan angka
         if columns['item_name'] is None:
             for col in range(1, columns['qty']):
-                # Cek beberapa baris untuk pastikan ini kolom deskripsi
                 has_text = False
                 for row in range(header_row + 1, min(header_row + 5, self.ws.max_row + 1)):
                     cell_value = self.ws.cell(row=row, column=col).value
@@ -122,16 +114,46 @@ class ExcelReader:
                 if has_text:
                     columns['item_name'] = col
                     break
-            
+        
         return columns
     
+    def _get_total_value(self, row: int, total_col: int) -> Any:
+        """Ambil nilai dari kolom total"""
+        total_cell_data = self.ws_data.cell(row=row, column=total_col)
+        total_cell_formula = self.ws.cell(row=row, column=total_col)
+        
+        if total_cell_data.value is not None:
+            return total_cell_data.value
+        elif total_cell_formula.value is not None:
+            if isinstance(total_cell_formula.value, str) and total_cell_formula.value.startswith('='):
+                return None  # Formula without cached value
+            else:
+                return total_cell_formula.value
+        return None
+    
+    def _detect_section_letter(self, text: str) -> Optional[str]:
+        """Deteksi huruf section dari text seperti 'Total A', 'Jumlah B'"""
+        text_upper = text.upper().strip()
+        
+        # Pattern: "Total A", "Jumlah B", "Subtotal C", dll
+        match = re.search(r'(?:TOTAL|JUMLAH|SUBTOTAL)\s*([A-Z])\b', text_upper)
+        if match:
+            return match.group(1)
+        
+        # Pattern: "TOTAL (A+B)" - ini grand total
+        if re.search(r'TOTAL\s*\([A-Z]\+[A-Z]\)', text_upper):
+            return 'GRAND'
+        
+        return None
+    
     def read_data(self, sheet_name: str) -> Dict[str, Any]:
-        """Membaca data dari sheet"""
+        """Membaca data dari sheet dengan support multiple sections"""
         result = {
             'sheet_name': sheet_name,
             'header_row': None,
             'columns': None,
             'items': [],
+            'sections': {},  # {section_letter: {subtotal, ppn, total, items}}
             'subtotal_row': None,
             'subtotal_value': None,
             'ppn_row': None,
@@ -144,122 +166,101 @@ class ExcelReader:
         if not self.select_sheet(sheet_name):
             return result
         
-        # Cari header row
         header_row = self.find_header_row()
         if header_row is None:
             return result
         result['header_row'] = header_row
         
-        # Cari kolom
         columns = self.find_data_columns(header_row)
         result['columns'] = columns
         
-        # Track subtotal yang sudah ditemukan
-        found_subtotal = False
-        found_ppn = False
+        total_col = columns.get('total', 10)
+        current_section = None  # Track section aktif
+        section_items = {}  # {section_letter: [items]}
         
-        # Baca data item
         for row in range(header_row + 1, self.ws.max_row + 1):
-            # Cek semua kolom untuk mencari TOTAL/PPN/GRAND TOTAL
             is_summary_row = False
             
-            for col in range(1, min(self.ws.max_column + 1, 15)):  # Cek 14 kolom pertama
+            # Cek semua kolom untuk mencari label
+            for col in range(1, min(self.ws.max_column + 1, 15)):
                 cell_value = self.ws.cell(row=row, column=col).value
                 if cell_value:
                     cell_str = str(cell_value).upper().strip()
                     
-                    # Cek TOTAL/Subtotal
-                    if ('SUBTOTAL' in cell_str or 'TOTAL' in cell_str) and 'GRAND' not in cell_str:
-                        # Ambil nilai dari kolom total (gunakan data workbook untuk cached value)
-                        total_col = columns.get('total', 10)
-                        total_cell_data = self.ws_data.cell(row=row, column=total_col)
-                        total_cell_formula = self.ws.cell(row=row, column=total_col)
-                        
-                        # Prioritas: cached value > formula
-                        total_value = None
-                        if total_cell_data.value is not None:
-                            total_value = total_cell_data.value
-                        elif total_cell_formula.value is not None:
-                            # Jika formula, coba hitung sendiri
-                            if isinstance(total_cell_formula.value, str) and total_cell_formula.value.startswith('='):
-                                # Hitung subtotal dari semua item
-                                calculated_subtotal = 0
-                                for item_row in range(header_row + 1, row):
-                                    item_total_cell = self.ws_data.cell(row=item_row, column=total_col)
-                                    if item_total_cell.value is not None:
-                                        try:
-                                            calculated_subtotal += float(item_total_cell.value)
-                                        except:
-                                            pass
-                                total_value = calculated_subtotal
-                            else:
-                                total_value = total_cell_formula.value
-                        
-                        # Cek apakah ada nilai di kolom total
-                        if total_value is not None:
-                            if not found_subtotal:
-                                result['subtotal_row'] = row
-                                result['subtotal_value'] = total_value
-                                found_subtotal = True
+                    # Cek GRAND TOTAL dulu (paling prioritas)
+                    if 'GRAND TOTAL' in cell_str or re.search(r'TOTAL\s*\([A-Z]\+[A-Z]\)', cell_str):
+                        grand_total_value = self._get_total_value(row, total_col)
+                        if grand_total_value is not None:
+                            result['grand_total_row'] = row
+                            result['grand_total_value'] = grand_total_value
                             is_summary_row = True
                             break
                     
                     # Cek PPN
                     elif 'PPN' in cell_str or 'TAX' in cell_str:
-                        # Ambil nilai dari kolom total (gunakan data workbook untuk cached value)
-                        total_col = columns.get('total', 10)
-                        total_cell_data = self.ws_data.cell(row=row, column=total_col)
-                        total_cell_formula = self.ws.cell(row=row, column=total_col)
-                        
-                        # Prioritas: cached value > formula
-                        ppn_value = None
-                        if total_cell_data.value is not None:
-                            ppn_value = total_cell_data.value
-                        elif total_cell_formula.value is not None:
-                            # Jika formula, hitung 11% dari subtotal
-                            if isinstance(total_cell_formula.value, str) and total_cell_formula.value.startswith('='):
-                                if result.get('subtotal_value') is not None:
-                                    try:
-                                        ppn_value = float(result['subtotal_value']) * 0.11
-                                    except:
-                                        pass
-                            else:
-                                ppn_value = total_cell_formula.value
-                        
+                        ppn_value = self._get_total_value(row, total_col)
                         if ppn_value is not None:
-                            if not found_ppn:
+                            # Simpan PPN ke section yang sedang aktif
+                            if current_section and current_section in result['sections']:
+                                result['sections'][current_section]['ppn_value'] = ppn_value
+                                result['sections'][current_section]['ppn_row'] = row
+                            # Juga simpan sebagai global PPN (untuk backward compatibility)
+                            if result['ppn_value'] is None:
                                 result['ppn_row'] = row
                                 result['ppn_value'] = ppn_value
-                                found_ppn = True
                             is_summary_row = True
                             break
                     
-                    # Cek GRAND TOTAL
-                    elif 'GRAND TOTAL' in cell_str:
-                        # Ambil nilai dari kolom total (gunakan data workbook untuk cached value)
-                        total_col = columns.get('total', 10)
-                        total_cell_data = self.ws_data.cell(row=row, column=total_col)
-                        total_cell_formula = self.ws.cell(row=row, column=total_col)
-                        
-                        # Prioritas: cached value > formula
-                        grand_total_value = None
-                        if total_cell_data.value is not None:
-                            grand_total_value = total_cell_data.value
-                        elif total_cell_formula.value is not None:
-                            # Jika formula, hitung subtotal + ppn
-                            if isinstance(total_cell_formula.value, str) and total_cell_formula.value.startswith('='):
-                                subtotal_val = result.get('subtotal_value', 0) or 0
-                                ppn_val = result.get('ppn_value', 0) or 0
-                                try:
-                                    grand_total_value = float(subtotal_val) + float(ppn_val)
-                                except:
-                                    pass
+                    # Cek TOTAL/Subtotal - bisa multiple sections
+                    elif 'TOTAL' in cell_str or 'SUBTOTAL' in cell_str or 'JUMLAH' in cell_str:
+                        total_value = self._get_total_value(row, total_col)
+                        if total_value is not None:
+                            # Deteksi section letter
+                            section_letter = self._detect_section_letter(cell_str)
+                            
+                            if section_letter == 'GRAND':
+                                # Ini grand total
+                                result['grand_total_row'] = row
+                                result['grand_total_value'] = total_value
+                            elif section_letter:
+                                # Ini subtotal section tertentu (A, B, C, dst)
+                                if section_letter not in result['sections']:
+                                    result['sections'][section_letter] = {
+                                        'subtotal_row': row,
+                                        'subtotal_value': total_value,
+                                        'ppn_row': None,
+                                        'ppn_value': None,
+                                        'total_row': None,
+                                        'total_value': None,
+                                        'items': []
+                                    }
+                                else:
+                                    result['sections'][section_letter]['subtotal_row'] = row
+                                    result['sections'][section_letter]['subtotal_value'] = total_value
+                                
+                                # Update current section
+                                current_section = section_letter
+                                
+                                # Simpan sebagai global pertama (backward compatibility)
+                                if result['subtotal_value'] is None:
+                                    result['subtotal_row'] = row
+                                    result['subtotal_value'] = total_value
                             else:
-                                grand_total_value = total_cell_formula.value
-                        
-                        if grand_total_value is not None:
-                            result['grand_total_row'] = row
-                            result['grand_total_value'] = grand_total_value
+                                # Tanpa label section - mungkin "Jumlah B" yang tidak ada huruf
+                                # Atau generic subtotal
+                                # Coba deteksi dari context
+                                
+                                # Cek apakah baris ini punya label Total + angka
+                                # Misalnya "Jumlah B" atau "Total B"
+                                # Kita perlu cek lebih detail
+                                
+                                # Simpan sebagai global jika belum ada
+                                if result['subtotal_value'] is None:
+                                    result['subtotal_row'] = row
+                                    result['subtotal_value'] = total_value
+                                    is_summary_row = True
+                                    break
+                            
                             is_summary_row = True
                             break
             
@@ -267,19 +268,14 @@ class ExcelReader:
             if not is_summary_row:
                 item = self.read_item(row, columns)
                 
-                # Filter: skip baris header (yang punya "Rp." atau text lain di kolom numerik)
                 unit_price = item.get('unit_price')
                 total = item.get('total')
                 
-                # Cek apakah unit_price adalah text seperti "Rp."
                 if isinstance(unit_price, str) and ('Rp' in unit_price or 'Rp.' in unit_price):
-                    continue  # Skip baris ini
-                
-                # Cek apakah total adalah text seperti "Rp."
+                    continue
                 if isinstance(total, str) and ('Rp' in total or 'Rp.' in total):
-                    continue  # Skip baris ini
+                    continue
                 
-                # Tambahkan item jika ada total atau qty (harus numerik)
                 has_valid_data = False
                 if item.get('total') is not None:
                     try:
@@ -296,7 +292,53 @@ class ExcelReader:
                         pass
                 
                 if has_valid_data:
+                    # Tambahkan ke items global
                     result['items'].append(item)
+                    
+                    # Tambahkan ke section yang sedang aktif
+                    if current_section:
+                        if current_section not in section_items:
+                            section_items[current_section] = []
+                        section_items[current_section].append(item)
+                    else:
+                        # Belum ada section, simpan ke default
+                        if 'DEFAULT' not in section_items:
+                            section_items['DEFAULT'] = []
+                        section_items['DEFAULT'].append(item)
+        
+        # Update section items
+        for section_letter, items in section_items.items():
+            if section_letter in result['sections']:
+                result['sections'][section_letter]['items'] = items
+            elif section_letter == 'DEFAULT':
+                # Items sebelum section pertama, masukkan ke section pertama atau buat baru
+                if result['sections']:
+                    first_section = min(result['sections'].keys())
+                    result['sections'][first_section]['items'] = items + result['sections'][first_section].get('items', [])
+                else:
+                    result['sections']['A'] = {
+                        'subtotal_row': None,
+                        'subtotal_value': None,
+                        'ppn_row': None,
+                        'ppn_value': None,
+                        'total_row': None,
+                        'total_value': None,
+                        'items': items
+                    }
+        
+        # Hitung total items sebagai fallback
+        if result['subtotal_value'] is None:
+            total_items = sum(float(i.get('total', 0) or 0) for i in result['items'])
+            result['subtotal_value'] = total_items
+        
+        # Jika ada multiple sections tapi belum ada grand total, hitung dari total sections
+        if result['grand_total_value'] is None and len(result['sections']) > 1:
+            total_all_sections = 0
+            for section_letter, section_data in result['sections'].items():
+                section_total = section_data.get('total_value') or section_data.get('subtotal_value') or 0
+                total_all_sections += float(section_total or 0)
+            if total_all_sections > 0:
+                result['grand_total_value'] = total_all_sections
         
         return result
     
@@ -315,63 +357,50 @@ class ExcelReader:
             'has_formula': False
         }
         
-        # Baca nama item dari kolom item_name
         if columns.get('item_name'):
             cell = self.ws.cell(row=row, column=columns['item_name'])
             item['item_name'] = cell.value
-            item['description'] = cell.value  # Simpan juga sebagai description
+            item['description'] = cell.value
         
-        # Jika item_name kosong atau adalah nama sheet, coba cari kolom deskripsi
         if not item['item_name'] or (isinstance(item['item_name'], str) and len(item['item_name']) > 30):
-            # Cari kolom yang berisi text deskripsi (bukan angka, bukan formula)
             for col in range(1, columns.get('qty', 6)):
                 cell = self.ws.cell(row=row, column=col)
                 cell_value = cell.value
                 if cell_value and isinstance(cell_value, str):
-                    # Skip jika ini angka, formula, atau text pendek
                     if cell_value.isdigit() or cell_value.startswith('=') or len(cell_value) < 2:
                         continue
-                    # Skip jika ini header seperti "Rp.", "NO.", "UNIT", dll
                     if cell_value.upper() in ['RP.', 'RP', 'NO.', 'NO', 'UNIT', 'QTY', 'DESCRIPTION', 'ITEM', 'NAME']:
                         continue
-                    # Ini mungkin deskripsi item
                     item['item_name'] = cell_value
                     item['description'] = cell_value
                     break
         
-        # Baca qty - ambil nilai dari data workbook
         if columns.get('qty'):
             cell_data = self.ws_data.cell(row=row, column=columns['qty'])
             cell_formula = self.ws.cell(row=row, column=columns['qty'])
             item['qty'] = cell_data.value if cell_data.value is not None else cell_formula.value
         
-        # Baca harga awal
         if columns.get('harga_awal'):
             cell_data = self.ws_data.cell(row=row, column=columns['harga_awal'])
             cell_formula = self.ws.cell(row=row, column=columns['harga_awal'])
             item['harga_awal'] = cell_data.value if cell_data.value is not None else cell_formula.value
         
-        # Baca mark up
         if columns.get('mark_up'):
             cell_data = self.ws_data.cell(row=row, column=columns['mark_up'])
             cell_formula = self.ws.cell(row=row, column=columns['mark_up'])
             item['mark_up'] = cell_data.value if cell_data.value is not None else cell_formula.value
         
-        # Baca unit price - ambil nilai dari data workbook
         if columns.get('unit_price'):
             cell_data = self.ws_data.cell(row=row, column=columns['unit_price'])
             cell_formula = self.ws.cell(row=row, column=columns['unit_price'])
-            # Jika ada formula tapi tidak ada cached value, coba hitung dari harga awal + markup
             if cell_data.value is not None:
                 item['unit_price'] = cell_data.value
             elif cell_formula.data_type == 'f':
-                # Ada formula tapi tidak ada cached value
                 item['has_formula'] = True
-                item['unit_price'] = None  # Tidak bisa dihitung tanpa nilai
+                item['unit_price'] = None
             else:
                 item['unit_price'] = cell_formula.value
         
-        # Baca total - ambil nilai dari data workbook
         if columns.get('total'):
             cell_data = self.ws_data.cell(row=row, column=columns['total'])
             cell_formula = self.ws.cell(row=row, column=columns['total'])
@@ -379,10 +408,8 @@ class ExcelReader:
             if cell_data.value is not None:
                 item['total'] = cell_data.value
             elif cell_formula.data_type == 'f':
-                # Ada formula tapi tidak ada cached value
                 item['has_formula'] = True
                 item['total_formula'] = cell_formula.value
-                # Coba hitung dari qty × unit_price
                 if item.get('qty') is not None and item.get('unit_price') is not None:
                     try:
                         item['total'] = float(item['qty']) * float(item['unit_price'])
