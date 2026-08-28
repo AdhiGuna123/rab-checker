@@ -385,19 +385,33 @@ class ExcelReader:
                     continue
                 
                 has_valid_data = False
-                if item.get('total') is not None:
-                    try:
-                        float(item.get('total'))
-                        has_valid_data = True
-                    except (ValueError, TypeError):
-                        pass
                 
-                if item.get('qty') is not None:
-                    try:
-                        float(item.get('qty'))
+                # Hitung total dari qty × unit_price jika total None atau bukan angka
+                if item.get('total') is not None:
+                    converted = safe_float(item.get('total'))
+                    if converted is not None:
+                        item['total'] = converted
                         has_valid_data = True
-                    except (ValueError, TypeError):
-                        pass
+                    else:
+                        # Total ada tapi bukan angka, coba hitung dari qty × unit_price
+                        qty = safe_float(item.get('qty'))
+                        up = safe_float(item.get('unit_price'))
+                        if qty is not None and up is not None:
+                            item['total'] = qty * up
+                            has_valid_data = True
+                else:
+                    # Total None, coba hitung dari qty × unit_price
+                    qty = safe_float(item.get('qty'))
+                    up = safe_float(item.get('unit_price'))
+                    if qty is not None and up is not None:
+                        item['total'] = qty * up
+                        has_valid_data = True
+                
+                if not has_valid_data:
+                    if item.get('qty') is not None:
+                        converted_qty = safe_float(item.get('qty'))
+                        if converted_qty is not None:
+                            has_valid_data = True
                 
                 if has_valid_data:
                     result['items'].append(item)
@@ -431,19 +445,27 @@ class ExcelReader:
         # Hitung subtotal per section jika belum ada
         for section_letter, section_data in result['sections'].items():
             if section_data['subtotal_value'] is None:
-                calc_subtotal = sum(float(i.get('total', 0) or 0) for i in section_data['items'])
+                calc_subtotal = 0
+                for i in section_data['items']:
+                    val = safe_float(i.get('total'))
+                    if val is not None:
+                        calc_subtotal += val
                 section_data['subtotal_value'] = calc_subtotal
         
         # Hitung total items global
         if result['subtotal_value'] is None:
-            result['subtotal_value'] = sum(float(i.get('total', 0) or 0) for i in result['items'])
+            result['subtotal_value'] = 0
+            for i in result['items']:
+                val = safe_float(i.get('total'))
+                if val is not None:
+                    result['subtotal_value'] += val
         
         # Hitung grand total dari sections jika belum ada
         if result['grand_total_value'] is None and len(result['sections']) > 1:
             total_all = 0
             for sl, sd in result['sections'].items():
-                section_total = sd.get('total_value') or sd.get('subtotal_value') or 0
-                total_all += float(section_total or 0)
+                section_total = safe_float(sd.get('total_value')) or safe_float(sd.get('subtotal_value')) or 0
+                total_all += section_total or 0
             if total_all > 0:
                 result['grand_total_value'] = total_all
         
