@@ -253,8 +253,7 @@ class RABChecker:
             
             # Hitung total dari semua section
             total_from_sections = 0
-            for section_letter, section_data in sections.items()
-:
+            for section_letter, section_data in sections.items():
                 # Prioritas: total_value > subtotal_value
                 section_total = section_data.get('total_value')
                 if section_total is None:
