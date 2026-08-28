@@ -4,6 +4,23 @@ from typing import Dict, List, Any, Optional
 import os
 import re
 
+def safe_float(value):
+    """Convert value to float safely, handling commas and formatting"""
+    if value is None:
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, str):
+        # Remove currency symbols and whitespace
+        cleaned = value.replace('Rp', '').replace('.', '').replace(',', '').strip()
+        if cleaned == '' or cleaned == '-':
+            return None
+        try:
+            return float(cleaned)
+        except:
+            return None
+    return None
+
 class ExcelReader:
     """Class untuk membaca file Excel RAB"""
     
@@ -122,13 +139,18 @@ class ExcelReader:
         total_cell_data = self.ws_data.cell(row=row, column=total_col)
         total_cell_formula = self.ws.cell(row=row, column=total_col)
         
+        raw_val = None
         if total_cell_data.value is not None:
-            return total_cell_data.value
+            raw_val = total_cell_data.value
         elif total_cell_formula.value is not None:
             if isinstance(total_cell_formula.value, str) and total_cell_formula.value.startswith('='):
                 return None
             else:
-                return total_cell_formula.value
+                raw_val = total_cell_formula.value
+        
+        if raw_val is not None:
+            converted = safe_float(raw_val)
+            return converted if converted is not None else raw_val
         return None
     
     def _detect_section_letter(self, text: str) -> Optional[str]:
@@ -380,17 +402,16 @@ class ExcelReader:
                 if has_valid_data:
                     result['items'].append(item)
                     
-                    if current_section:
-                        if current_section in result['sections']:
-                            result['sections'][current_section]['items'].append(item)
-                        else:
-                            pending_items.append(item)
+                    # Selalu tambahkan ke section aktif atau pending
+                    if current_section and current_section in result['sections']:
+                        result['sections'][current_section]['items'].append(item)
                     else:
                         pending_items.append(item)
         
-        # Handle pending items
+        # Handle pending items - PENTING: pastikan semua item masuk ke section
         if pending_items:
             if not result['sections']:
+                # Belum ada section, buat section A
                 result['sections']['A'] = {
                     'items': pending_items,
                     'subtotal_row': None,
@@ -403,6 +424,7 @@ class ExcelReader:
                     'total_value': None
                 }
             else:
+                # Sudah ada section, masukkan ke section pertama
                 first_section = min(result['sections'].keys())
                 result['sections'][first_section]['items'].extend(pending_items)
         
@@ -463,7 +485,8 @@ class ExcelReader:
         if columns.get('qty'):
             cell_data = self.ws_data.cell(row=row, column=columns['qty'])
             cell_formula = self.ws.cell(row=row, column=columns['qty'])
-            item['qty'] = cell_data.value if cell_data.value is not None else cell_formula.value
+            raw_val = cell_data.value if cell_data.value is not None else cell_formula.value
+            item['qty'] = safe_float(raw_val)
         
         if columns.get('harga_awal'):
             cell_data = self.ws_data.cell(row=row, column=columns['harga_awal'])
@@ -478,30 +501,33 @@ class ExcelReader:
         if columns.get('unit_price'):
             cell_data = self.ws_data.cell(row=row, column=columns['unit_price'])
             cell_formula = self.ws.cell(row=row, column=columns['unit_price'])
-            if cell_data.value is not None:
-                item['unit_price'] = cell_data.value
-            elif cell_formula.data_type == 'f':
-                item['has_formula'] = True
-                item['unit_price'] = None
-            else:
-                item['unit_price'] = cell_formula.value
+            raw_val = cell_data.value if cell_data.value is not None else cell_formula.value
+            if raw_val is not None:
+                converted = safe_float(raw_val)
+                if converted is not None:
+                    item['unit_price'] = converted
+                elif cell_formula.data_type == 'f':
+                    item['has_formula'] = True
+                    item['unit_price'] = None
+                else:
+                    item['unit_price'] = raw_val
         
         if columns.get('total'):
             cell_data = self.ws_data.cell(row=row, column=columns['total'])
             cell_formula = self.ws.cell(row=row, column=columns['total'])
             
-            if cell_data.value is not None:
-                item['total'] = cell_data.value
-            elif cell_formula.data_type == 'f':
-                item['has_formula'] = True
-                item['total_formula'] = cell_formula.value
-                if item.get('qty') is not None and item.get('unit_price') is not None:
-                    try:
-                        item['total'] = float(item['qty']) * float(item['unit_price'])
-                    except:
-                        item['total'] = None
-            else:
-                item['total'] = cell_formula.value
+            raw_val = cell_data.value if cell_data.value is not None else cell_formula.value
+            if raw_val is not None:
+                converted = safe_float(raw_val)
+                if converted is not None:
+                    item['total'] = converted
+                elif cell_formula.data_type == 'f':
+                    item['has_formula'] = True
+                    item['total_formula'] = cell_formula.value
+                    if item.get('qty') is not None and item.get('unit_price') is not None:
+                        item['total'] = item['qty'] * item['unit_price']
+                else:
+                    item['total'] = raw_val
         
         return item
     

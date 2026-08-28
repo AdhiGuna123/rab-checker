@@ -557,12 +557,32 @@ p {
 </style>
 """, unsafe_allow_html=True)
 
+def safe_float(value):
+    """Convert value to float safely, handling commas and formatting"""
+    if value is None:
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, str):
+        # Remove currency symbols and whitespace
+        cleaned = value.replace('Rp', '').replace('.', '').replace(',', '').strip()
+        if cleaned == '' or cleaned == '-':
+            return None
+        try:
+            return float(cleaned)
+        except:
+            return None
+    return None
+
 def format_currency(value):
     """Format angka sebagai mata uang Rupiah"""
     if value is None:
         return "Rp 0"
     try:
-        return f"Rp {float(value):,.0f}".replace(',', '.')
+        num = safe_float(value)
+        if num is None:
+            return str(value)
+        return f"Rp {num:,.0f}".replace(',', '.')
     except:
         return str(value)
 
@@ -802,12 +822,9 @@ def display_results():
             sheet_total_calculated = 0
             
             for item in items:
-                total_val = item.get('total')
+                total_val = safe_float(item.get('total'))
                 if total_val is not None:
-                    try:
-                        sheet_total_calculated += float(total_val)
-                    except:
-                        pass
+                    sheet_total_calculated += total_val
                 
                 # Ambil nama item dari kolom yang benar
                 item_name = item.get('item_name', '-')
@@ -867,12 +884,9 @@ def display_results():
                     # Hitung subtotal dari items section ini
                     section_calculated = 0
                     for item in section_items:
-                        total_val = item.get('total')
+                        total_val = safe_float(item.get('total'))
                         if total_val is not None:
-                            try:
-                                section_calculated += float(total_val)
-                            except:
-                                pass
+                            section_calculated += total_val
                     
                     # Header Section
                     st.markdown(f"""
