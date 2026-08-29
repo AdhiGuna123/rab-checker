@@ -559,50 +559,49 @@ class ExcelReader:
             if len(result['sections']) > 1 and result['grand_total_value'] is None and section_order:
                 # Hitung berapa section yang punya nilai dari Excel (sebelum auto-calc subtotal)
                 excel_counts = sum(1 for v in result['sections'].values() if v.get('total_value') is not None or v.get('subtotal_value') is not None)
-            last = section_order[-1]
-            last_data = result['sections'][last]
-            cand = last_data.get('total_value')
-            cand_row = last_data.get('total_row')
-            cand_kind = 'total'
-            if cand is None:
-                cand = last_data.get('subtotal_value')
-                cand_row = last_data.get('subtotal_row')
-                cand_kind = 'subtotal'
-            # Rule 1: jika HANYA 1 section yang punya Total/Jumlah dari Excel dan itu di section terakhir -> pasti Grand Total
-            if excel_counts == 1 and cand is not None:
-                result['grand_total_value'] = cand
-                result['grand_total_row'] = cand_row
-                if cand_kind == 'total':
-                    last_data['total_value'] = None
-                    last_data['total_row'] = None
-                else:
-                    last_data['subtotal_value'] = None
-                    last_data['subtotal_row'] = None
-            # Rule 2: nilai mendekati sum semua item tapi jauh dari sum section terakhir -> juga Grand Total
-            elif cand is not None:
-                cand_f = safe_float(cand)
-                sum_all_items = sum(safe_float(i.get('total')) or 0 for i in result['items'])
-                sum_last_items = sum(safe_float(i.get('total')) or 0 for i in last_data.get('items', []))
-                sum_all_sub = sum(safe_float(v.get('subtotal_value')) or 0 for v in result['sections'].values() if safe_float(v.get('subtotal_value')) is not None)
-                if cand_f is not None:
-                    is_global = False
-                    for base in [sum_all_items, sum_all_sub, sum_all_items * 1.11, sum_all_sub * 1.11]:
-                        if base > 0 and abs(cand_f - base) <= max(2, base * 0.008) and abs(cand_f - sum_last_items) > max(2, cand_f * 0.008):
-                            is_global = True
-                            break
-                    if is_global:
-                        result['grand_total_value'] = cand
-                        result['grand_total_row'] = cand_row
-                        if cand_kind == 'total':
-                            last_data['total_value'] = None
-                            last_data['total_row'] = None
-                        else:
-                            last_data['subtotal_value'] = None
-                            last_data['subtotal_row'] = None
-
-            elif total_mode == 'per_section':
-                # User memaksa: jangan promosikan, biarkan per-section apa adanya
-                pass
+                last = section_order[-1]
+                last_data = result['sections'][last]
+                cand = last_data.get('total_value')
+                cand_row = last_data.get('total_row')
+                cand_kind = 'total'
+                if cand is None:
+                    cand = last_data.get('subtotal_value')
+                    cand_row = last_data.get('subtotal_row')
+                    cand_kind = 'subtotal'
+                # Rule 1: jika HANYA 1 section yang punya Total/Jumlah dari Excel dan itu di section terakhir -> pasti Grand Total
+                if excel_counts == 1 and cand is not None:
+                    result['grand_total_value'] = cand
+                    result['grand_total_row'] = cand_row
+                    if cand_kind == 'total':
+                        last_data['total_value'] = None
+                        last_data['total_row'] = None
+                    else:
+                        last_data['subtotal_value'] = None
+                        last_data['subtotal_row'] = None
+                # Rule 2: nilai mendekati sum semua item tapi jauh dari sum section terakhir -> juga Grand Total
+                elif cand is not None:
+                    cand_f = safe_float(cand)
+                    sum_all_items = sum(safe_float(i.get('total')) or 0 for i in result['items'])
+                    sum_last_items = sum(safe_float(i.get('total')) or 0 for i in last_data.get('items', []))
+                    sum_all_sub = sum(safe_float(v.get('subtotal_value')) or 0 for v in result['sections'].values() if safe_float(v.get('subtotal_value')) is not None)
+                    if cand_f is not None:
+                        is_global = False
+                        for base in [sum_all_items, sum_all_sub, sum_all_items * 1.11, sum_all_sub * 1.11]:
+                            if base > 0 and abs(cand_f - base) <= max(2, base * 0.008) and abs(cand_f - sum_last_items) > max(2, cand_f * 0.008):
+                                is_global = True
+                                break
+                        if is_global:
+                            result['grand_total_value'] = cand
+                            result['grand_total_row'] = cand_row
+                            if cand_kind == 'total':
+                                last_data['total_value'] = None
+                                last_data['total_row'] = None
+                            else:
+                                last_data['subtotal_value'] = None
+                                last_data['subtotal_row'] = None
+        elif total_mode == 'per_section':
+            # User memaksa: jangan promosikan, biarkan per-section apa adanya
+            pass
 
         # Hitung subtotal per section jika belum ada
         for section_letter, section_data in result['sections'].items():
