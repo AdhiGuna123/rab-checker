@@ -167,7 +167,7 @@ class RABChecker:
                         'section': section_letter
                     })
             
-            # 2. Cek PPN per section
+            # 2. Cek PPN per section (fleksibel: jika ada PPN global gabungan, jangan validasi PPN section kosong sebagai error)
             if ppn_excel is not None and subtotal_excel is not None:
                 expected_ppn = subtotal_excel * 0.11
                 tolerance = 1
@@ -185,6 +185,7 @@ class RABChecker:
                         'status': 'PERLU CEK',
                         'section': section_letter
                     })
+            # Jika PPN tidak ada di section tapi ada global, jangan anggap salah — kasus PPN gabungan A+B
             
             # 3. Cek Total Section (Subtotal + PPN - Diskon)
             if total_excel is not None:
@@ -216,33 +217,68 @@ class RABChecker:
                     })
     
     def check_grand_total_global(self, data: Dict[str, Any]) -> None:
-        """Cek Grand Total global"""
+        """Cek Grand Total global — fleksibel: dukung PPN per-section atau PPN gabungan"""
         sections = data.get('sections', {})
         grand_total_excel = safe_float(data.get('grand_total_value'))
         
         if grand_total_excel is None or len(sections) == 0:
             return
         
-        # Hitung total dari semua section
+        # Hitung total fleksibel dari sections
         total_from_sections = 0
+        sum_subtotals = 0
         for section_letter, section_data in sections.items():
             section_total = safe_float(section_data.get('total_value'))
             if section_total is None:
-                section_total = safe_float(section_data.get('subtotal_value'))
+                sub = safe_float(section_data.get('subtotal_value'))
+                if sub is None:
+                    # fallback hitung dari items
+                    calc = 0
+                    for it in section_data.get('items', []):
+                        v = safe_float(it.get('total'))
+                        if v is not None: calc += v
+                    sub = calc if calc else None
+                ppn = safe_float(section_data.get('ppn_value')) or 0
+                disc = safe_float(section_data.get('discount_value')) or 0
+                if sub is not None:
+                    section_total = sub + ppn - disc
+                    sum_subtotals += sub
+                else:
+                    section_total = None
+            else:
+                # total sudah termasuk PPN, tetap hitung sum_sub untuk opsi gabungan
+                sub = safe_float(section_data.get('subtotal_value'))
+                if sub is not None: sum_subtotals += sub
             if section_total is not None:
                 total_from_sections += section_total
         
+        global_ppn = safe_float(data.get('ppn_value'))
+        has_any_section_ppn = any(safe_float(v.get('ppn_value')) is not None for v in sections.values())
+        
+        # Kandidat expected: 1) sum section totals (per-section PPN) 2) sum subtotals + global PPN (gabungan)
+        candidates = [total_from_sections]
+        if global_ppn is not None and not has_any_section_ppn:
+            candidates.append(sum_subtotals + global_ppn)
+        # Juga pertimbangkan kasus: sections punya total tanpa PPN tapi ada global PPN
+        if global_ppn is not None:
+            candidates.append(total_from_sections + global_ppn if not has_any_section_ppn else total_from_sections)
+        
         tolerance = 1
-        if abs(total_from_sections - grand_total_excel) > tolerance:
-            self.errors.append({
-                'type': 'GRAND_TOTAL_ERROR',
-                'sheet': data.get('sheet_name'),
-                'row': data.get('grand_total_row'),
-                'item_name': 'Grand Total',
-                'detail': 'Grand Total tidak sesuai dengan jumlah semua section',
-                'calculation': f'Jumlah {len(sections)} section',
-                'expected': total_from_sections,
-                'actual': grand_total_excel,
-                'difference': total_from_sections - grand_total_excel,
-                'status': 'PERLU CEK'
-            })
+        # Jika salah satu kandidat cocok, anggap benar (fleksibel)
+        if any(abs(c - grand_total_excel) <= tolerance for c in candidates):
+            return
+        
+        # Tidak ada yang cocok -> laporkan dengan kandidat utama
+        expected = total_from_sections
+        self.errors.append({
+            'type': 'GRAND_TOTAL_ERROR',
+            'sheet': data.get('sheet_name'),
+            'row': data.get('grand_total_row'),
+            'item_name': 'Grand Total',
+            'detail': 'Grand Total tidak sesuai dengan jumlah semua section',
+            'calculation': f'Jumlah {len(sections)} section' + (f' + PPN global' if global_ppn and not has_any_section_ppn else ''),
+            'expected': expected,
+            'actual': grand_total_excel,
+            'difference': expected - grand_total_excel,
+            'status': 'PERLU CEK'
+        })

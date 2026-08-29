@@ -1024,8 +1024,10 @@ def display_results():
                             </div>
                             """.format(format_currency(section_subtotal_excel)), unsafe_allow_html=True)
                     
-                    # PPN Section (jika ada)
-                    if section_ppn_excel is not None:
+                    # PPN Section (fleksibel: tampilkan hanya jika section ini punya PPN)
+                    # Jika tidak ada ppn section, skip (PPN mungkin global gabungan)
+                    has_section_ppn = section_ppn_excel is not None
+                    if has_section_ppn:
                         section_calculated_ppn = section_calculated * 0.11
                         col1, col2, col3 = st.columns([2, 1, 2])
                         with col1:
@@ -1152,16 +1154,28 @@ def display_results():
                     </div>
                     """, unsafe_allow_html=True)
                     
-                    # Hitung grand total dari semua section totals
+                    # Hitung grand total fleksibel: kalau ada total_value (sudah termasuk PPN), pakai itu; kalau tidak, hitung subtotal+ppn-discount
                     calculated_grand_total = 0
                     for sl in sorted(sections.keys()):
                         sd = sections[sl]
-                        # Prioritas: total_value > subtotal_value
                         sec_total = sd.get('total_value')
                         if sec_total is None:
-                            sec_total = sd.get('subtotal_value')
+                            sub = safe_float(sd.get('subtotal_value')) or 0
+                            # per-section PPN fleksibel: pakai ppn section jika ada, kalau tidak pakai sub*11%
+                            sec_ppn = safe_float(sd.get('ppn_value'))
+                            if sec_ppn is None and sub:
+                                sec_ppn = sub * 0.11
+                            else:
+                                sec_ppn = sec_ppn or 0
+                            disc = safe_float(sd.get('discount_value')) or 0
+                            sec_total = sub + sec_ppn - disc if (sub or sec_ppn) else None
+                            if sec_total is None:
+                                sec_total = sd.get('subtotal_value')
                         if sec_total is not None:
                             calculated_grand_total += float(sec_total)
+                    # Fallback global PPN gabungan jika tidak ada total section: subtotal global + ppn global
+                    if calculated_grand_total == 0 and excel_ppn is None and excel_grand_total is None:
+                        pass
                     
                     col1, col2, col3 = st.columns([2, 1, 2])
                     with col1:
@@ -1199,6 +1213,53 @@ def display_results():
                             <div style="font-size: 1.6rem; font-weight: 800;">{}</div>
                         </div>
                         """.format(format_currency(excel_grand_total)), unsafe_allow_html=True)
+                    
+                    # PPN Global gabungan (fleksibel): jika ada PPN global terpisah dari per-section
+                    excel_ppn_global = excel_sheets_data.get(sheet_name, {}).get('ppn_value') or sheet_data.get('ppn_value')
+                    # Tampilkan hanya kalau ada global dan tidak sama dengan sum section (untuk kasus 1 PPN A+B)
+                    if excel_ppn_global is not None:
+                        # Hitung PPN yang seharusnya: 11% dari sum subtotal semua section
+                        sum_sub = sum(safe_float(sd.get('subtotal_value')) or 0 for sd in sections.values())
+                        calc_ppn_global = sum_sub * 0.11
+                        has_any_section_ppn = any(sd.get('ppn_value') is not None for sd in sections.values())
+                        # Tampilkan PPN global hanya jika tidak ada PPN per-section (kasus gabungan) atau sebagai ringkasan
+                        if not has_any_section_ppn:
+                            col1, col2, col3 = st.columns([2, 1, 2])
+                            with col1:
+                                st.markdown("""
+                                <div class="ppn-box">
+                                    <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">📥 PPN 11% GLOBAL (DIHITUNG)</div>
+                                    <div style="font-size: 1.6rem; font-weight: 800;">{}</div>
+                                </div>
+                                """.format(format_currency(calc_ppn_global)), unsafe_allow_html=True)
+                            with col2:
+                                try:
+                                    excel_val2 = float(excel_ppn_global)
+                                    diff2 = calc_ppn_global - excel_val2
+                                    if abs(diff2) > 1:
+                                        st.markdown("""
+                                        <div class="selisih-box">
+                                            <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">❌</div>
+                                            <div style="font-weight: 700; font-size: 0.9rem;">SELISIH</div>
+                                            <div style="font-weight: 800; font-size: 1.2rem; margin-top: 0.3rem;">{}</div>
+                                        </div>
+                                        """.format(format_currency(diff2)), unsafe_allow_html=True)
+                                    else:
+                                        st.markdown("""
+                                        <div class="sesuai-box">
+                                            <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">✅</div>
+                                            <div style="font-weight: 700; font-size: 0.9rem;">SESUAI</div>
+                                        </div>
+                                        """, unsafe_allow_html=True)
+                                except:
+                                    pass
+                            with col3:
+                                st.markdown("""
+                                <div class="ppn-box">
+                                    <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">📤 PPN GLOBAL (DI EXCEL)</div>
+                                    <div style="font-size: 1.6rem; font-weight: 800;">{}</div>
+                                </div>
+                                """.format(format_currency(excel_ppn_global)), unsafe_allow_html=True)
             
             else:
                 # SINGLE SECTION - Tampilan seperti sebelumnya

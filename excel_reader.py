@@ -347,16 +347,45 @@ class ExcelReader:
                         break
                     
                     elif row_type == 'ppn':
-                        # PPN - simpan ke section yang aktif
+                        # === PPN FLEKSIBEL ===
+                        # - Jika baris PPN menyebut section (PPN 11% A) -> masuk section tersebut
+                        # - Jika baris PPN generik: simpan ke section aktif JIKA ada; kalau tidak/belum ada -> global
+                        # - Jika sudah ada PPN per section, global tetap menyimpan PPN gabungan terakhir
                         ppn_value = self._get_total_value(row, total_col)
                         if ppn_value is not None:
-                            if current_section and current_section in result['sections']:
-                                result['sections'][current_section]['ppn_value'] = ppn_value
-                                result['sections'][current_section]['ppn_row'] = row
-                            # Global PPN fallback
-                            if result['ppn_value'] is None:
-                                result['ppn_row'] = row
-                                result['ppn_value'] = ppn_value
+                            section_for_ppn = self._detect_section_letter(cell_str)
+                            if section_for_ppn and section_for_ppn != 'GRAND' and section_for_ppn in result['sections']:
+                                result['sections'][section_for_ppn]['ppn_value'] = ppn_value
+                                result['sections'][section_for_ppn]['ppn_row'] = row
+                            elif current_section and current_section in result['sections']:
+                                # PPN section-aktif (untuk kasus A punya PPN, B punya PPN masing-masing)
+                                # Hanya timpa jika section itu belum punya PPN, supaya tidak saling timpa
+                                if result['sections'][current_section]['ppn_value'] is None:
+                                    result['sections'][current_section]['ppn_value'] = ppn_value
+                                    result['sections'][current_section]['ppn_row'] = row
+                                    # Global tetap diisi untuk kasus 1-section; untuk multi-section isi terpisah
+                                # Jika semua section sudah punya PPN, PPN ini dianggap PPN global gabungan
+                                all_have_ppn = all(v.get('ppn_value') is not None for v in result['sections'].values())
+                                if all_have_ppn or len(result['sections']) == 1:
+                                    # Simpandi global juga untuk kasus single-section / gabungan
+                                    if result['ppn_value'] is None:
+                                        result['ppn_row'] = row
+                                        result['ppn_value'] = ppn_value
+                                    # Jika sudah ada global, update hanya bila ini baris setelah section terakhir
+                                    else:
+                                        # keep last global PPN as potential combined PPN
+                                        result['ppn_row'] = row
+                                        result['ppn_value'] = ppn_value
+                                else:
+                                    # Belum semua isi -> tetap update global sebagai fallback
+                                    if result['ppn_value'] is None:
+                                        result['ppn_row'] = row
+                                        result['ppn_value'] = ppn_value
+                            else:
+                                # Tidak ada section aktif -> global
+                                if result['ppn_value'] is None:
+                                    result['ppn_row'] = row
+                                    result['ppn_value'] = ppn_value
                             is_summary_row = True
                             break
                     
@@ -535,14 +564,27 @@ class ExcelReader:
                 if val is not None:
                     result['subtotal_value'] += val
         
-        # Hitung grand total dari sections jika belum ada
+        # Hitung grand total dari sections jika belum ada (fleksibel)
         if result['grand_total_value'] is None and len(result['sections']) > 1:
             total_all = 0
             for sl, sd in result['sections'].items():
-                section_total = safe_float(sd.get('total_value')) or safe_float(sd.get('subtotal_value')) or 0
-                total_all += section_total or 0
+                # Prioritas total_value (sudah termasuk PPN/diskon) -> subtotal+ppn jika total kosong
+                sec_total = safe_float(sd.get('total_value'))
+                if sec_total is None:
+                    sub = safe_float(sd.get('subtotal_value')) or 0
+                    ppn = safe_float(sd.get('ppn_value')) or 0
+                    disc = safe_float(sd.get('discount_value')) or 0
+                    sec_total = sub + ppn - disc if (sub or ppn) else None
+                if sec_total is not None:
+                    total_all += sec_total
             if total_all > 0:
                 result['grand_total_value'] = total_all
+        
+        # PPN global fallback: jika sections sudah punya PPN masing-masing, global = sum PPN sections
+        if result['ppn_value'] is None and len(result['sections']) > 1:
+            ppn_sum = sum(safe_float(v.get('ppn_value')) or 0 for v in result['sections'].values())
+            if ppn_sum > 0:
+                result['ppn_value'] = ppn_sum
         
         result['skipped_rows'] = skipped_rows
         result['columns'] = columns
