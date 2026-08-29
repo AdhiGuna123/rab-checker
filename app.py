@@ -688,7 +688,7 @@ def display_results():
                                 difference = section_calculated - excel_val
                                 if abs(difference) > 1:
                                     st.markdown("""
-                                    <div class="selisih-box">
+                                    <div class="selisih-box" style="display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:88px;">
                                         <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">❌</div>
                                         <div style="font-weight: 700; font-size: 0.9rem;">SELISIH</div>
                                         <div style="font-weight: 800; font-size: 1.2rem; margin-top: 0.3rem;">{}</div>
@@ -696,7 +696,7 @@ def display_results():
                                     """.format(format_currency(difference)), unsafe_allow_html=True)
                                 else:
                                     st.markdown("""
-                                    <div class="sesuai-box">
+                                    <div class="sesuai-box" style="display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:88px;">
                                         <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">✅</div>
                                         <div style="font-weight: 700; font-size: 0.9rem;">SESUAI</div>
                                     </div>
@@ -705,14 +705,14 @@ def display_results():
                                 pass
                         elif is_calc:
                             st.markdown("""
-                            <div class="comparison-box" style="text-align: center; padding: 1rem; border: 1px dashed rgba(59,130,246,0.5);">
+                            <div class="comparison-box" style="text-align: center; padding: 1rem; border: 1px dashed rgba(59,130,246,0.5); display:flex; flex-direction:column; align-items:center; justify-content:center;">
                                 <div style="color: #93c5fd; font-size: 0.85rem;">Tidak ada Jumlah di Excel — pakai hitungan</div>
                                 <div style="color: #60a5fa; font-weight: 700; margin-top: 0.3rem;">{}</div>
                             </div>
                             """.format(format_currency(section_calculated)), unsafe_allow_html=True)
                         else:
                             st.markdown("""
-                            <div style="background: rgba(107, 114, 128, 0.3); border-radius: 12px; padding: 1rem; text-align: center;">
+                            <div style="background: rgba(107, 114, 128, 0.3); border-radius: 12px; padding: 1rem; text-align: center; display:flex; flex-direction:column; align-items:center; justify-content:center;">
                                 <div style="color: #9ca3af;">Tidak ada subtotal</div>
                             </div>
                             """, unsafe_allow_html=True)
