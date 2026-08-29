@@ -1154,28 +1154,23 @@ def display_results():
                     </div>
                     """, unsafe_allow_html=True)
                     
-                    # Hitung grand total fleksibel: kalau ada total_value (sudah termasuk PPN), pakai itu; kalau tidak, hitung subtotal+ppn-discount
+                    # Hitung grand total fleksibel - HONOR apa adanya di Excel:
+                    # - Jika section punya total_value (sudah termasuk PPN/diskon) -> pakai itu
+                    # - Jika tidak, hitung sub + ppn_section(jika ada) - discount (TIDAK auto 11% kalau ppn tidak ada)
                     calculated_grand_total = 0
                     for sl in sorted(sections.keys()):
                         sd = sections[sl]
                         sec_total = sd.get('total_value')
                         if sec_total is None:
                             sub = safe_float(sd.get('subtotal_value')) or 0
-                            # per-section PPN fleksibel: pakai ppn section jika ada, kalau tidak pakai sub*11%
-                            sec_ppn = safe_float(sd.get('ppn_value'))
-                            if sec_ppn is None and sub:
-                                sec_ppn = sub * 0.11
-                            else:
-                                sec_ppn = sec_ppn or 0
+                            sec_ppn = safe_float(sd.get('ppn_value')) or 0
                             disc = safe_float(sd.get('discount_value')) or 0
-                            sec_total = sub + sec_ppn - disc if (sub or sec_ppn) else None
+                            # Hanya tambah PPN jika section itu memang punya PPN di Excel
+                            sec_total = sub + sec_ppn - disc if (sub or sec_ppn or disc) else None
                             if sec_total is None:
                                 sec_total = sd.get('subtotal_value')
                         if sec_total is not None:
                             calculated_grand_total += float(sec_total)
-                    # Fallback global PPN gabungan jika tidak ada total section: subtotal global + ppn global
-                    if calculated_grand_total == 0 and excel_ppn is None and excel_grand_total is None:
-                        pass
                     
                     col1, col2, col3 = st.columns([2, 1, 2])
                     with col1:
