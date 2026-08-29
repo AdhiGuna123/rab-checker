@@ -272,32 +272,49 @@ def main():
                 sheets_to_check = sheet_names
                 st.markdown(f"<div class='badge neutral'>Semua sheet: {', '.join(sheets_to_check)}</div>", unsafe_allow_html=True)
             
-            st.markdown('<div class="card"><h3>📋 Langkah 2 — Pilih Sheet & Mulai Cek</h3><p class="hint">Pilih 1 sheet atau semua sheet. Jika hasil tidak sesuai, buka <b>Pengaturan Lanjutan</b> di bawah — tetap gratis tanpa AI.</p></div>', unsafe_allow_html=True)
-            # === PENGATURAN LANJUTAN (Hybrid, tanpa AI, 100% lokal) ===
-            with st.expander("⚙️ Pengaturan Lanjutan (jika perlu) — tetap gratis tanpa AI", expanded=False):
+            st.markdown('<div class="card"><h3>📋 Langkah 2 — Pilih Sheet & Mulai Cek</h3><p class="hint">Default paling cepat: <b>Auto</b>. Upload → Pilih Sheet → <b>START CHECK</b> langsung jadi tanpa pilih. Jika 1 sheet membingungkan, baru pilih <b>Model Case</b> di bawah — sheet lain tetap Auto, tidak ikut kena.</p></div>', unsafe_allow_html=True)
+            with st.expander("⚙️ Pengaturan Lanjutan — Model Case per-sheet (opsional, tetap cepat)", expanded=False):
                 st.caption("Kosongkan = auto-detect. Isi hanya jika hasil auto salah (mis. PPN gabungan vs per-section). Tetap berjalan lokal tanpa langganan.")
                 c1, c2, c3, c4 = st.columns(4)
                 with c1:
                     adv_header = st.text_input("Baris Header (angka, kosong=auto)", key="adv_header", placeholder="auto")
                 with c2:
+                    st.markdown("**Model Case (pilih agar tidak bingung PPN/TOTAL satu vs beda)**")
+                    model_case = st.selectbox("Model Case", ["Auto — deteksi otomatis", "1 — Tanpa PPN", "2 — PPN hanya di 1 bagian", "3 — Normal (PPN di akhir)", "4 — PPN 1 di akhir (2 bagian: Total A+Total B)", "5 — PPN 1 di akhir (3+ bagian: dinamis)"], key="adv_model_case")
+                    # Mapping Model Case -> ppn_mode + total_mode (agar case lain tidak ikut kena)
+                    model_map = {
+                        "Auto — deteksi otomatis": ("auto", "auto"),
+                        "1 — Tanpa PPN": ("none", "auto"),
+                        "2 — PPN hanya di 1 bagian": ("single", "auto"),
+                        "3 — Normal (PPN di akhir)": ("auto", "auto"),
+                        "4 — PPN 1 di akhir (2 bagian: Total A+Total B)": ("combined", "auto"),
+                        "5 — PPN 1 di akhir (3+ bagian: dinamis)": ("combined", "auto"),
+                    }
+                    adv_ppn_mapped, adv_total_mapped = model_map[model_case]
+                    st.markdown("**Pengaturan Akurasi (kolom, opsional)**")
                     adv_qty = st.text_input("Kolom Qty (huruf A=1, B=2...)", key="adv_qty", placeholder="auto")
                 with c3:
                     adv_price = st.text_input("Kolom Harga Satuan (huruf)", key="adv_price", placeholder="auto")
                 with c4:
                     adv_total = st.text_input("Kolom Jumlah/Total (huruf)", key="adv_total", placeholder="auto")
-                c5, c6, c7 = st.columns(3)
+                # Mode detail tetap tapi tidak mengganggu cepat — sudah mapping dari Model Case di atas
+                adv_ppn = f"Auto ({adv_ppn_mapped})"
+                adv_total_mode = "Gabungan (1 Grand Total)" if model_case.startswith("4") or model_case.startswith("5") else "Auto (deteksi)"
+                # Detail dihapus — cukup Model Case (st.caption detail dihapus agar tidak rame)
+                adv_ppn = f"Auto ({adv_ppn_mapped})"  # placeholder agar mapping tidak error
+                adv_total_mode = "Auto (deteksi)"
+                c5, c6 = st.columns([1, 2])
                 with c5:
-                    adv_ppn = st.selectbox("Mode PPN", ["Auto (deteksi)", "Per-section (masing-masing)", "Gabungan (1 PPN A+B)", "Hanya 1 section (A atau B)", "Tanpa PPN"], key="adv_ppn")
+                    st.caption(f"Mode PPN/Total otomatis dari Model Case")
                 with c6:
-                    adv_total_mode = st.selectbox("Mode Total", ["Auto (deteksi)", "Per-section (Total A & Total B)", "Gabungan (1 Grand Total)"], key="adv_total_mode")
-                with c7:
-                    adv_ai = st.selectbox("AI untuk semua case", ["AI Aktif (Gemini Free)", "Tanpa AI"], key="adv_ai")
+                    adv_ai = st.selectbox("AI untuk semua case", ["Tanpa AI (default cepat)", "AI Aktif (Gemini Free)"], key="adv_ai")
                 adv_gemini_key = st.session_state.get('adv_gemini_key','')
                 if adv_ai == "AI Aktif (Gemini Free)":
                     adv_gemini_key = st.text_input("Gemini API Key (gratis selamanya: aistudio.google.com/app/apikey)", key="adv_gemini_key", type="password", placeholder="AIza...")
                     st.caption("AI hanya klasifikasi label (TOTAL/PPN/GRAND), hitungan tetap lokal. Kosong = fallback Value Intelligence gratis 100%.")
                 else:
                     st.session_state['adv_gemini_key'] = ""
+                st.caption("Tips: pilih Model Case jika Auto membingungkan PPN/TOTAL satu vs beda. Case lain tidak ikut kena karena mapping langsung ke Mode PPN/Total.")
                 # Store for START CHECK
                 def _col_letter_to_num(s: str):
                     s = s.strip().upper()
@@ -308,13 +325,21 @@ def main():
                         if 'A' <= ch <= 'Z': n = n*26 + (ord(ch)-64)
                         else: return None
                     return n if n else None
+                # Mapping Model Case -> override (agar tidak bingung kapan total satu vs beda)
+                if 'model_case' in locals() and model_case != "Auto — deteksi otomatis":
+                    ppn_mode_final = adv_ppn_mapped
+                    total_mode_final = adv_total_mapped
+                else:
+                    ppn_mode_final = {'Auto (deteksi)':'auto','Auto (combined)':'auto','Per-section (masing-masing)':'per_section','Gabungan (1 PPN A+B)':'combined','Hanya 1 section (A atau B)':'single','Tanpa PPN':'none'}.get(adv_ppn, 'auto')
+                    total_mode_final = {'Auto (deteksi)':'auto','Per-section (Total A & Total B)':'per_section','Gabungan (1 Grand Total)':'combined'}.get(adv_total_mode, 'auto')
                 st.session_state['adv_overrides_preview'] = {
                     'header_row': int(adv_header) if adv_header.strip().isdigit() else None,
                     'qty_col': _col_letter_to_num(adv_qty),
                     'unit_price_col': _col_letter_to_num(adv_price),
                     'total_col': _col_letter_to_num(adv_total),
-                    'ppn_mode': {'Auto (deteksi)':'auto','Per-section (masing-masing)':'per_section','Gabungan (1 PPN A+B)':'combined','Hanya 1 section (A atau B)':'single','Tanpa PPN':'none'}[adv_ppn],
-                    'total_mode': {'Auto (deteksi)':'auto','Per-section (Total A & Total B)':'per_section','Gabungan (1 Grand Total)':'combined'}[adv_total_mode],
+                    'ppn_mode': ppn_mode_final,
+                    'total_mode': total_mode_final,
+                    'model_case': model_case
                 }
                 st.session_state['adv_ai_preview'] = {'provider': 'gemini' if adv_ai.startswith('AI Aktif') else 'none', 'gemini_key': adv_gemini_key.strip() if adv_gemini_key else ""}
                 st.caption(f"Preview override: header={st.session_state['adv_overrides_preview']['header_row'] or 'auto'} qty={adv_qty or 'auto'} price={adv_price or 'auto'} total={adv_total or 'auto'} | PPN={st.session_state['adv_overrides_preview']['ppn_mode']} TOTAL={st.session_state['adv_overrides_preview']['total_mode']}")
