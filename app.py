@@ -102,6 +102,11 @@ st.markdown("""
 .stFileUploader [data-testid="stFileUploaderDropzone"]:hover{ border-color: #6366f1; background: #eef2ff; }
 .stFileUploader small{ color:#64748b !important; }
 .stExpander{ border:1px solid #e2e8f0; border-radius:16px; background:white;}
+/* Sheet picker — besar, jelas, awam */
+.stRadio > div{ background:white; border:2px solid #c7d2fe; border-radius:14px; padding:.7rem; }
+.stRadio [role="radiogroup"] label{ background:#f8fafc; border:2px solid #e2e8f0; border-radius:12px; padding:.55rem .8rem; font-weight:700;}
+.stRadio [role="radiogroup"] label:has(input:checked){ background:#4338ca; color:white; border-color:#4338ca;}
+[data-testid="stMultiSelect"]{ background:white; border-radius:12px;}
 [data-testid="stDataFrame"]{ border-radius:16px; overflow:hidden; border:1px solid #e2e8f0; background:white;}
 /* Tabel terang — teks gelap (bukan hitam pekat), header biru, stripe lembut, garis grid halus */
 [data-testid="stDataFrame"] div[data-testid="stDataFrameResizable"] { background:white;}
@@ -224,24 +229,18 @@ def main():
         </div>
         """, unsafe_allow_html=True)
         
-        # Pilih sheet
         reader = ExcelReader(tmp_file_path)
         if reader.load_workbook():
             sheet_names = reader.get_sheet_names()
-            
-            # Opsi pilihan sheet
-            sheet_option = st.radio(
-                "📋 Pilih Sheet:",
-                ["Sheet Tertentu", "Semua Sheet"],
-                horizontal=True
-            )
-            
-            if sheet_option == "Sheet Tertentu":
-                selected_sheet = st.selectbox("📋 Pilih Sheet:", sheet_names)
-                sheets_to_check = [selected_sheet]
+            st.markdown('<div class="card" style="border:2px solid #c7d2fe;"><h3>📑 Pilih Sheet yang dicek</h3><p class="hint">Pilih <b>Semua</b> untuk cek sekaligus, atau <b>Pilih sheet</b> untuk cek 1 / beberapa sheet.</p></div>', unsafe_allow_html=True)
+            sheet_mode = st.radio("Mode sheet", ["✅ Semua sheet", "📄 Pilih sheet"], horizontal=True, label_visibility="collapsed")
+            if sheet_mode == "📄 Pilih sheet":
+                picks = st.multiselect("Pilih sheet (bisa lebih dari satu)", sheet_names, default=[sheet_names[0]] if sheet_names else [])
+                sheets_to_check = picks if picks else sheet_names
+                st.markdown(f"<div class='badge ok'>Dicek: {', '.join(sheets_to_check) if sheets_to_check else '-'}</div>", unsafe_allow_html=True)
             else:
                 sheets_to_check = sheet_names
-                st.info(f"📋 Akan mengecek {len(sheets_to_check)} sheet: {', '.join(sheets_to_check)}")
+                st.markdown(f"<div class='badge neutral'>Semua sheet: {', '.join(sheets_to_check)}</div>", unsafe_allow_html=True)
             
             st.markdown('<div class="card"><h3>📋 Langkah 2 — Pilih Sheet & Mulai Cek</h3><p class="hint">Pilih 1 sheet atau semua sheet. Jika hasil tidak sesuai, buka <b>Pengaturan Lanjutan</b> di bawah — tetap gratis tanpa AI.</p></div>', unsafe_allow_html=True)
             # === PENGATURAN LANJUTAN (Hybrid, tanpa AI, 100% lokal) ===
