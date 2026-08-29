@@ -860,30 +860,40 @@ def display_results():
                             </div>
                             """.format(format_currency(section_total_excel)), unsafe_allow_html=True)
                 
-                # === TOTAL KATEGORI — jangan pakai label misleading jika 3+ section ===
+                # === TOTAL KATEGORI — Case 5 3+ section: TOTAL = sum sections = grand-PPN ===
                 sheet_dbg_global = excel_sheets_data.get(sheet_name, {}) or sheet_data
                 excel_ppn_global = sheet_dbg_global.get('ppn_value')
                 is_combined_global = sheet_dbg_global.get('ppn_is_combined', False)
                 has_any_section_ppn = any(sd.get('ppn_value') is not None for sd in sections.values())
                 _is_single_ppn = sum(1 for sd in sections.values() if sd.get('ppn_value') is not None) == 1 and len(sections) > 1
-                # Case 5: 3+ section dinamis — label harus A+B+C, bukan A+B
                 letters = "+".join(sorted(sections.keys()))
-                total_label = f"Jumlah {' + '.join(sorted(sections.keys()))}" if len(sections) <= 4 else f"Jumlah {len(sections)} bagian"
-                has_total_kategori = not _is_single_ppn and (sheet_dbg_global.get('jumlah_global_excel') is not None or sheet_dbg_global.get('subtotal_value') is not None or sum(safe_float(sd.get('subtotal_value')) or 0 for sd in sections.values()) > 0)
-                # Case 5: TOTAL (A+B+C) = GRAND - PPN (nilai Excel langsung)
-                if sheet_dbg_global.get('jumlah_global_excel') is not None:
-                    total_kategori_excel = safe_float(sheet_dbg_global.get('jumlah_global_excel'))
-                elif is_combined_global and len(sections) >= 2:
+                # 3+ section selalu TOTAL = grand-PPN (jika ada), fallback sum
+                if len(sections) >= 3 and is_combined_global:
                     g = safe_float(sheet_dbg_global.get('grand_total_value'))
                     pg = safe_float(sheet_dbg_global.get('ppn_value'))
                     if g is not None and pg is not None and g > pg:
                         total_kategori_excel = g - pg
+                        has_total_kategori = True
                     else:
+                        has_total_kategori = True
                         total_kategori_excel = sum(safe_float(sd.get('subtotal_value')) or 0 for sd in sections.values())
-                elif sheet_dbg_global.get('is_without_ppn') and sum(safe_float(sd.get('subtotal_value')) or 0 for sd in sections.values()) > 0:
-                    total_kategori_excel = sum(safe_float(sd.get('subtotal_value')) or 0 for sd in sections.values())
+                    total_label = f"Jumlah {' + '.join(sorted(sections.keys()))}"
                 else:
-                    total_kategori_excel = safe_float(sheet_dbg_global.get('subtotal_value'))
+                    total_label = f"Jumlah {' + '.join(sorted(sections.keys()))}" if len(sections) <= 4 else f"Jumlah {len(sections)} bagian"
+                    has_total_kategori = not _is_single_ppn and (sheet_dbg_global.get('jumlah_global_excel') is not None or sheet_dbg_global.get('subtotal_value') is not None or sum(safe_float(sd.get('subtotal_value')) or 0 for sd in sections.values()) > 0)
+                    if sheet_dbg_global.get('jumlah_global_excel') is not None:
+                        total_kategori_excel = safe_float(sheet_dbg_global.get('jumlah_global_excel'))
+                    elif is_combined_global and len(sections) >= 2:
+                        g = safe_float(sheet_dbg_global.get('grand_total_value'))
+                        pg = safe_float(sheet_dbg_global.get('ppn_value'))
+                        if g is not None and pg is not None and g > pg:
+                            total_kategori_excel = g - pg
+                        else:
+                            total_kategori_excel = sum(safe_float(sd.get('subtotal_value')) or 0 for sd in sections.values())
+                    elif sheet_dbg_global.get('is_without_ppn') and sum(safe_float(sd.get('subtotal_value')) or 0 for sd in sections.values()) > 0:
+                        total_kategori_excel = sum(safe_float(sd.get('subtotal_value')) or 0 for sd in sections.values())
+                    else:
+                        total_kategori_excel = safe_float(sheet_dbg_global.get('subtotal_value'))
                 if has_total_kategori and len(sections) > 1:
                     sum_sub_for_total = sum(safe_float(sd.get('subtotal_value')) or 0 for sd in sections.values())
                     col1, col2, col3 = st.columns([2, 1, 2])
