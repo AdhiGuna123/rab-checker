@@ -230,35 +230,18 @@ class RABChecker:
                             'section': section_letter
                         })
             
-            # 3. Cek Total Section — fleksibel: skip jika ini kasus 1 Total global yang sudah dipromosikan jadi Grand Total
-            # Jangan cek total section jika nilainya memang adalah grand_total (sudah dipindahkan)
             if total_excel is not None:
+                # Untuk Case PPN 1 di akhir, Total A seharusnya Jumlah A (subtotal), bukan TOTAL global
                 base = subtotal_excel if subtotal_excel is not None else calculated_subtotal
                 ppn = ppn_excel if ppn_excel else 0
                 discount = discount_excel if discount_excel else 0
-                
                 expected_total = base + ppn - discount
                 tolerance = 1
                 if abs(expected_total - total_excel) > tolerance:
                     detail_parts = [f'Subtotal ({base:,.0f})']
-                    if ppn > 0:
-                        detail_parts.append(f'+ PPN ({ppn:,.0f})')
-                    if discount > 0:
-                        detail_parts.append(f'- Diskon ({discount:,.0f})')
-                    
-                    self.errors.append({
-                        'type': 'SECTION_TOTAL_ERROR',
-                        'sheet': data.get('sheet_name'),
-                        'row': section_data.get('total_row'),
-                        'item_name': f'Total Section {section_letter}',
-                        'detail': f'Total Section {section_letter} tidak sesuai',
-                        'calculation': ' + '.join(detail_parts),
-                        'expected': expected_total,
-                        'actual': total_excel,
-                        'difference': expected_total - total_excel,
-                        'status': 'PERLU CEK',
-                        'section': section_letter
-                    })
+                    if ppn > 0: detail_parts.append(f'+ PPN ({ppn:,.0f})')
+                    if discount > 0: detail_parts.append(f'- Diskon ({discount:,.0f})')
+                    self.errors.append({'type': 'SECTION_TOTAL_ERROR','sheet': data.get('sheet_name'),'row': section_data.get('total_row'),'item_name': f'Total Section {section_letter}','detail': f'Total Section {section_letter} tidak sesuai','calculation': ' + '.join(detail_parts),'expected': expected_total,'actual': total_excel,'difference': expected_total - total_excel,'status': 'PERLU CEK','section': section_letter})
 
     def check_global_subtotal(self, data: Dict[str, Any]) -> None:
         """TOTAL gabungan: hanya cek jika ada baris TOTAL (A+B[+C]) eksplisit dari Excel."""

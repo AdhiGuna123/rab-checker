@@ -224,14 +224,14 @@ class ExcelReader:
         m3 = re.search(r'(?:TOTAL|JUMLAH|SUBTOTAL)([A-Z])\b', norm_jml.replace(' ', ''))
         if m3:
             return m3.group(1)
-        # Pattern: "TOTAL (A+B)" atau "TOTAL (A+B+C)" - ini grand total (dinamis, beyond 5 case)
-        if re.search(r'TOTAL\s*[\(]?\s*[A-Z]\s*[\+]\s*[A-Z](?:\s*[\+]\s*[A-Z])*\s*[\)]?', norm):
+        # Jangan deteksi TOTAL (A+B) sebagai GRAND — itu Jumlah Global sebelum PPN; hanya TOTAL (A+B+C) atau GRAND TOTAL yang GRAND
+        if 'GRAND TOTAL' in norm or 'GRANDTOTAL' in norm.replace(' ', ''):
             return 'GRAND'
-        # Fuzzy fallback via rapidfuzz untuk label panjang
+        if 'TOTAL' in norm and re.search(r'\([A-Z]\s*[\+]\s*[A-Z]\s*[\+]\s*[A-Z]', norm):
+            return 'GRAND'
         try:
             from rapidfuzz import fuzz
             for target in ['TOTAL', 'JUMLAH', 'SUBTOTAL']:
-                # Ambil token pertama sebagai kandidat
                 token = norm_jml.split()[0] if norm_jml.split() else ''
                 if token and fuzz.ratio(token, target) >= 85 and re.search(r'[A-Z]\b', norm_jml):
                     ml = re.search(r'([A-Z])\b', norm_jml)
@@ -246,8 +246,8 @@ class ExcelReader:
         norm = self._normalize_label(cell_str)
         norm_jml = re.sub(r'\bJML\b', 'JUMLAH', norm)
         
-        # Grand Total — toleran: GRAND TOTAL / TOTAL A+B / TOTAL A+B+C / GRANDTOTAL
-        if 'GRAND TOTAL' in norm or 'GRANDTOTAL' in norm.replace(' ', '') or re.search(r'TOTAL\s*[\(]?\s*[A-Z]\s*[\+]\s*[A-Z](?:\s*[\+]\s*[A-Z])*\s*[\)]?', norm):
+        # GRAND TOTAL — jangan makan TOTAL (A+B) yang sebelum PPN; hanya GRAND TOTAL asli
+        if 'GRAND TOTAL' in norm or 'GRANDTOTAL' in norm.replace(' ', ''):
             return 'grand_total'
         # Fuzzy GRAND TOTAL
         try:
@@ -313,13 +313,13 @@ class ExcelReader:
         except ImportError:
             pass
         
-        # Jumlah Global — JUMLAH/TOTAL sebelum PPN (multi-section).
+        # Jumlah Global — TOTAL (A+B) di atas PPN -> jumlah_global, GRAND TOTAL setelah PPN -> grand_total di atas
+        if re.search(r'TOTAL\s*\(.*\+.*\)', norm) and 'PPN' not in norm:
+            return 'jumlah_global'
+        if re.search(r'TOTAL\s*\(.*\+.*\)', norm_jml) and 'PPN' not in norm:
+            return 'jumlah_global'
         norm_for_global = norm_jml.strip()
-        # GRAND TOTAL selalu grand_total, bukan jumlah_global — cek dulu
         if 'GRAND TOTAL' in norm or 'GRANDTOTAL' in norm.replace(' ', ''):
-            return 'grand_total'
-        # TOTAL (A+B+C) atau TOTAL (A+B) -> grand_total sudah ditangani di atas, jangan jumlah_global
-        if re.search(r'TOTAL\s*[\(]?\s*[A-Z]\s*[\+]\s*[A-Z]', norm):
             return 'grand_total'
         if norm_for_global in ('JUMLAH', 'TOTAL', 'SUBTOTAL', 'SUB TOTAL', 'JUMLAH SEBELUM PPN', 'TOTAL SEBELUM PPN', 'JUMLAH TOTAL', 'SUBTOTAL GLOBAL', 'TOTAL JUMLAH', 'JUMLAH GLOBAL'):
             return 'jumlah_global'
@@ -454,16 +454,19 @@ class ExcelReader:
                             break
                     
                     elif row_type == 'jumlah_global':
-                        # Jumlah Global sebelum PPN — terima meski _get_total_value None
-                        # (fallback: coba baca angka dari semua kolom baris ini jika total_col salah)
+                        # TOTAL (A+B) sebelum PPN = jumlah_global — jangan timpa jika sudah ada PPN global
+                        # Jika sudah ada grand_total (mis. PPN hanya di 1 bagian, grand sudah TOTAL A+B+PPN), jumlah_global adalah gabungan
                         val = self._get_total_value(row, total_col)
                         if val is None:
-                            # Fallback global: scan semua kolom cari angka terakhir
                             for c2 in range(self.ws.max_column, 0, -1):
                                 try:
                                     v2 = self.ws_data.cell(row=row, column=c2).value
                                     if v2 is None:
                                         v2 = self.ws.cell(row=row, column=c2).value
+                                    if v2 is None and c2 != 8:
+                                        v2 = self.ws_data.cell(row=row, column=8).value
+                                        if v2 is None:
+                                            v2 = self.ws.cell(row=row, column=8).value
                                     sf = safe_float(v2)
                                     if sf is not None and sf > 0:
                                         val = sf
@@ -471,12 +474,11 @@ class ExcelReader:
                                 except:
                                     pass
                         if val is not None:
-                            if result['subtotal_value'] is None:
-                                result['subtotal_value'] = val
-                                result['subtotal_row'] = row
                             result['jumlah_global_row'] = row
                             result['jumlah_global_excel'] = val
-                        # Selalu anggap baris JUMLAH/TOTAL global sebagai summary agar tidak jadi item/notes
+                            result['total_kategori_value'] = val
+                            result['total_kategori_row'] = row
+                            # Jangan timpa grand_total yang sudah benar
                         is_summary_row = True
                         break
 
@@ -548,7 +550,14 @@ class ExcelReader:
                             break
                     
                     elif row_type == 'subtotal':
-                        # Subtotal/Total section
+                        # TOTAL (A+B) sudah handled sebagai jumlah_global — jangan duplikat ke subtotal
+                        if re.search(r'TOTAL\s*\(.*\+.*\)', self._normalize_label(cell_str)):
+                            val2 = self._get_total_value(row, total_col)
+                            if val2 is not None:
+                                # Sudah disimpan sebagai jumlah_global_excel di atas jika row_type jumlah_global
+                                pass
+                            is_summary_row = True
+                            break
                         total_value = self._get_total_value(row, total_col)
                         if total_value is not None:
                             section_letter = self._detect_section_letter(cell_str)
@@ -694,77 +703,9 @@ class ExcelReader:
                 first_section = min(result['sections'].keys())
                 result['sections'][first_section]['items'].extend(pending_items)
         
-        # === OVERRIDE TOTAL MODE (manual) ===
-        total_mode = overrides.get('total_mode', 'auto')
-        if total_mode == 'combined' and len(result['sections']) > 1 and result['grand_total_value'] is None and section_order:
-            # User memaksa: satu Total di bawah = Grand Total A+B, hapus Total per-section
-            last = section_order[-1]
-            last_data = result['sections'][last]
-            cand = last_data.get('total_value')
-            cand_row = last_data.get('total_row')
-            cand_kind = 'total'
-            if cand is None:
-                cand = last_data.get('subtotal_value')
-                cand_row = last_data.get('subtotal_row')
-                cand_kind = 'subtotal'
-            if cand is not None:
-                result['grand_total_value'] = cand
-                result['grand_total_row'] = cand_row
-                if cand_kind == 'total':
-                    last_data['total_value'] = None
-                    last_data['total_row'] = None
-                else:
-                    last_data['subtotal_value'] = None
-                    last_data['subtotal_row'] = None
-        elif total_mode == 'auto':
-            # === TOTAL FLEKSIBEL OTOMATIS ===
-            # Kasus user: Section A tidak isi Total, hanya 1 Total di bawah (seharusnya Grand Total A+B) tapi terbaca sebagai Total B -> salah.
-            if len(result['sections']) > 1 and result['grand_total_value'] is None and section_order:
-                # Hitung berapa section yang punya nilai dari Excel (sebelum auto-calc subtotal)
-                excel_counts = sum(1 for v in result['sections'].values() if v.get('total_value') is not None or v.get('subtotal_value') is not None)
-                last = section_order[-1]
-                last_data = result['sections'][last]
-                cand = last_data.get('total_value')
-                cand_row = last_data.get('total_row')
-                cand_kind = 'total'
-                if cand is None:
-                    cand = last_data.get('subtotal_value')
-                    cand_row = last_data.get('subtotal_row')
-                    cand_kind = 'subtotal'
-                # Rule 1: jika HANYA 1 section yang punya Total/Jumlah dari Excel dan itu di section terakhir -> pasti Grand Total
-                if excel_counts == 1 and cand is not None:
-                    result['grand_total_value'] = cand
-                    result['grand_total_row'] = cand_row
-                    if cand_kind == 'total':
-                        last_data['total_value'] = None
-                        last_data['total_row'] = None
-                    else:
-                        last_data['subtotal_value'] = None
-                        last_data['subtotal_row'] = None
-                # Rule 2: nilai mendekati sum semua item tapi jauh dari sum section terakhir -> juga Grand Total
-                elif cand is not None:
-                    cand_f = safe_float(cand)
-                    sum_all_items = sum(safe_float(i.get('total')) or 0 for i in result['items'])
-                    sum_last_items = sum(safe_float(i.get('total')) or 0 for i in last_data.get('items', []))
-                    sum_all_sub = sum(safe_float(v.get('subtotal_value')) or 0 for v in result['sections'].values() if safe_float(v.get('subtotal_value')) is not None)
-                    if cand_f is not None:
-                        is_global = False
-                        for base in [sum_all_items, sum_all_sub, sum_all_items * 1.11, sum_all_sub * 1.11]:
-                            if base > 0 and abs(cand_f - base) <= max(2, base * 0.008) and abs(cand_f - sum_last_items) > max(2, cand_f * 0.008):
-                                is_global = True
-                                break
-                        if is_global:
-                            result['grand_total_value'] = cand
-                            result['grand_total_row'] = cand_row
-                            if cand_kind == 'total':
-                                last_data['total_value'] = None
-                                last_data['total_row'] = None
-                            else:
-                                last_data['subtotal_value'] = None
-                                last_data['subtotal_row'] = None
-        elif total_mode == 'per_section':
-            # User memaksa: jangan promosikan, biarkan per-section apa adanya
-            pass
+        # TOTAL (A+B) di atas PPN vs GRAND TOTAL setelah PPN — jangan promosikan TOTAL (A+B) yang sebelum PPN jadi grand
+        # Hanya grand yang setelah PPN yang grand. TOTAL (A+B) sebelum PPN adalah jumlah_global_excel/total_kategori_value
+        pass
 
         # Hitung subtotal per section jika belum ada — TETAP tampil Jumlah A/B sebelum PPN
         # Case Sparepart/Instalasi: A/B hanya pemisah kategori, bukan section dijumlah terpisah.
@@ -1041,19 +982,16 @@ class ExcelReader:
                 result['summary_rows_debug'].append(k2)
             except Exception:
                 pass
-        # CASE 5: 3+ sub bagian -> WAJIB pakai AI (jika AI aktif), fallback tetap Value jika tanpa key
-        is_case5 = len(result['sections']) >= 3
-        if ai_overrides and isinstance(ai_overrides, dict) and ai_overrides.get('provider') != 'none' or is_case5:
+        # AI opsional — tanpa AI fallback lokal gratis (Value Intelligence)
+        if ai_overrides and isinstance(ai_overrides, dict) and ai_overrides.get('provider') != 'none':
             try:
-                # Jika CASE 5 tapi tanpa key, tetap pakai AI jika ada key global, else fallback
-                g_key_case5 = (ai_overrides or {}).get('gemini_key') if isinstance(ai_overrides, dict) else None
-                should_ai = (isinstance(ai_overrides, dict) and ai_overrides.get('provider') != 'none') or (is_case5 and g_key_case5)
-                # Untuk CASE 5, paksa AI meski UI Tanpa AI jika ada key env
-                if is_case5 and not should_ai:
+                should_ai = isinstance(ai_overrides, dict) and ai_overrides.get('provider') != 'none'
+                if should_ai and not (ai_overrides.get('gemini_key') or ai_overrides.get('groq_key')):
                     import os as _os
                     if _os.environ.get("GOOGLE_API_KEY") or _os.environ.get("GEMINI_API_KEY"):
-                        should_ai = True
                         ai_overrides = {'provider': 'gemini', 'gemini_key': _os.environ.get("GOOGLE_API_KEY") or _os.environ.get("GEMINI_API_KEY")}
+                    else:
+                        should_ai = False
                 if should_ai:
                     ai_map = None
                     tmp_summary = []
@@ -1072,7 +1010,7 @@ class ExcelReader:
                         tmp_summary.append({'row': k['row'], 'value': v_dbg2})
                     klass_map_tmp = {x['row']: x for x in tmp_summary}
                     g_key2 = (ai_overrides or {}).get('gemini_key') or (ai_overrides or {}).get('groq_key')
-                    if (ai_overrides or {}).get('provider') == 'gemini' or (g_key2 and 'gemini' in str((ai_overrides or {}).get('provider','')).lower()) or is_case5:
+                    if (ai_overrides or {}).get('provider') == 'gemini' or (g_key2 and 'gemini' in str((ai_overrides or {}).get('provider','')).lower()):
                         from ai_helper import classify_with_gemini_free
                         rows_for_ai = [{'row': k['row'], 'raw': k['raw'], 'normalized': k.get('normalized',''), 'value': klass_map_tmp.get(k['row'],{}).get('value')} for k in classifications]
                         ai_map = classify_with_gemini_free(rows_for_ai, api_key=(ai_overrides or {}).get('gemini_key'))
@@ -1086,8 +1024,6 @@ class ExcelReader:
                                 k['type'] = ai_map[k['row']]
                                 k['fuzzy'] = True
                                 k['ai_patched'] = True
-                                if is_case5:
-                                    k['ai_case5'] = True
             except Exception:
                 pass
         return result
