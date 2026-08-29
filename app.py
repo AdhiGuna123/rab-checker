@@ -96,11 +96,17 @@ st.markdown("""
 
 .stButton > button{ background: linear-gradient(135deg, #4f46e5, #7c3aed); color:white; border:none; border-radius:14px; padding:.9rem 1.4rem; font-weight:800; letter-spacing:.02em; box-shadow: 0 10px 24px rgba(79,70,229,.30); }
 .stButton > button:hover{ transform: translateY(-1px); box-shadow: 0 14px 28px rgba(79,70,229,.35); }
-/* Uploader — simpel awam, tidak rame */
-.stFileUploader{ border: 2px dashed #c7d2fe; background: #ffffff; border-radius:16px; padding:.2rem; }
-.stFileUploader [data-testid="stFileUploaderDropzone"]{ background: #f8faff; border-radius:12px; border: 2px dashed #a5b4fc; }
-.stFileUploader [data-testid="stFileUploaderDropzone"]:hover{ border-color: #6366f1; background: #eef2ff; }
+/* Uploader — latar PUTIH terang (bukan hitam) sebelum klik, teks abu gelap */
+.stFileUploader{ border: 2px dashed #c7d2fe; background: #ffffff !important; border-radius:16px; padding:.2rem; }
+.stFileUploader [data-testid="stFileUploaderDropzone"]{ background: #ffffff !important; border: 2px dashed #a5b4fc !important; border-radius:12px; }
+.stFileUploader [data-testid="stFileUploaderDropzone"]:hover{ border-color: #6366f1 !important; background: #eef2ff !important; }
+.stFileUploader [data-testid="stFileUploaderDropzone"] span,
+.stFileUploader [data-testid="stFileUploaderDropzone"] p,
+.stFileUploader [data-testid="stFileUploaderDropzone"] div{ color:#334155 !important; }
+.stFileUploader [data-testid="stFileUploaderDropzone"] button{ background:#4f46e5 !important; color:white !important; border:none !important; border-radius:10px !important; }
 .stFileUploader small{ color:#64748b !important; }
+[data-testid="stFileUploaderDropzoneInstructions"]{ color:#475569 !important; }
+[data-testid="stFileDropzoneInstructions"]{ color:#475569 !important; }
 .stExpander{ border:1px solid #e2e8f0; border-radius:16px; background:white;}
 /* Sheet picker — huruf gelap terlihat, terpilih ungu kontras */
 .stRadio > div{ background:white; border:2px solid #c7d2fe; border-radius:14px; padding:.7rem; }
