@@ -102,11 +102,16 @@ st.markdown("""
 .stFileUploader [data-testid="stFileUploaderDropzone"]:hover{ border-color: #6366f1 !important; background: #eef2ff !important; }
 .stFileUploader [data-testid="stFileUploaderDropzone"] span,
 .stFileUploader [data-testid="stFileUploaderDropzone"] p,
-.stFileUploader [data-testid="stFileUploaderDropzone"] div{ color:#334155 !important; }
-.stFileUploader [data-testid="stFileUploaderDropzone"] button{ background:#4f46e5 !important; color:white !important; border:none !important; border-radius:10px !important; }
-.stFileUploader small{ color:#64748b !important; }
-[data-testid="stFileUploaderDropzoneInstructions"]{ color:#475569 !important; }
-[data-testid="stFileDropzoneInstructions"]{ color:#475569 !important; }
+.stFileUploader [data-testid="stFileUploaderDropzone"] div,
+.stFileUploader [data-testid="stFileUploaderDropzone"] label{ color:#ffffff !important; }
+.stFileUploader [data-testid="stFileUploaderDropzone"] *{ color:#ffffff !important; }
+.stFileUploader [data-testid="stFileUploaderDropzone"] button{ background:white !important; color:#4338ca !important; border:none !important; border-radius:10px !important; font-weight:800 !important; }
+.stFileUploader [data-testid="stFileUploaderDropzone"] button p,
+.stFileUploader [data-testid="stFileUploaderDropzone"] button span{ color:#4338ca !important; }
+.stFileUploader small{ color:#e0e7ff !important; }
+[data-testid="stFileUploaderDropzoneInstructions"]{ color:#ffffff !important; }
+[data-testid="stFileDropzoneInstructions"]{ color:#ffffff !important; }
+[data-testid="stFileDropzoneInstructions"] div{ color:#ffffff !important; }
 .stExpander{ border:1px solid #e2e8f0; border-radius:16px; background:white;}
 /* Sheet picker — huruf gelap terlihat, terpilih ungu kontras */
 .stRadio > div{ background:white; border:2px solid #c7d2fe; border-radius:14px; padding:.7rem; }
