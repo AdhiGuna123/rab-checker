@@ -1021,8 +1021,7 @@ def display_results():
                             <div style="font-size: 1.7rem; font-weight: 800;">{}</div>
                         </div>
                         """.format(format_currency(excel_grand_total)), unsafe_allow_html=True)
-                    st.markdown("<div style='height:1rem;'></div>", unsafe_allow_html=True)
-                st.markdown("<div style='text-align:center; color:#64748b; font-size:.82rem; margin:.4rem 0;'>⬆️ Semua hasil di atas sudah rata tengah</div>", unsafe_allow_html=True)
+                    st.markdown("<div style='height:.6rem;'></div>", unsafe_allow_html=True)
             
             else:
                 has_ppn_single = excel_ppn is not None
