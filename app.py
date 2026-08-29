@@ -994,10 +994,15 @@ def display_results():
                         </div>
                         """.format(format_currency(excel_ppn_global)), unsafe_allow_html=True)
 
-                # Case Normal: PPN di section A → tampilkan juga sebagai Langkah 2 jika global gap
-                if not show_global_ppn and len(sections) == 1:
+                # Fallback Normal: PPN Section A → isi global agar Langkah 2 tampil (check sudah pakai ini)
+                if not show_global_ppn and len(sections) == 1 and not sheet_dbg_global.get('is_without_ppn', False):
                     sd0 = list(sections.values())[0]
-                    if sd0.get('ppn_value') is not None and sd0.get('subtotal_value') is not None:
+                    if sd0.get('ppn_value') is not None and sd0.get('subtotal_value') is not None and excel_ppn_global is None:
+                        excel_ppn_global = safe_float(sd0.get('ppn_value'))
+                        show_global_ppn = True
+                        # Override sum untuk NORMAL single
+                        sum_sub_for_ppn = safe_float(sd0.get('subtotal_value')) or 0
+                        calc_ppn_global = sum_sub_for_ppn * 0.11
                         st.markdown("""
                         <div class="card" style="border:2px solid #fed7aa; background: linear-gradient(180deg, #fffbeb, #ffffff);">
                           <div style="display:flex; align-items:center; gap:.6rem; margin-bottom:.6rem;">
@@ -1007,20 +1012,19 @@ def display_results():
                           </div>
                         </div>
                         """, unsafe_allow_html=True)
-                        calc_ppn_single = safe_float(sd0.get('subtotal_value')) * 0.11
                         col1, col2, col3 = st.columns([2, 1, 2])
                         with col1:
                             st.markdown(f"""
                             <div class="ppn-box">
                                 <div style="font-size: 0.95rem; font-weight:700; opacity: 0.95; margin-bottom: 0.4rem;">PPN (DIHITUNG)</div>
                                 <div style="font-size: 0.8rem; opacity:.85; margin-bottom:.3rem;">Jumlah × 11%</div>
-                                <div style="font-size: 1.7rem; font-weight: 800;">{format_currency(calc_ppn_single)}</div>
+                                <div style="font-size: 1.7rem; font-weight: 800;">{format_currency(calc_ppn_global)}</div>
                             </div>
                             """, unsafe_allow_html=True)
                         with col2:
                             try:
-                                ev = float(sd0.get('ppn_value'))
-                                d = calc_ppn_single - ev
+                                ev = float(excel_ppn_global)
+                                d = calc_ppn_global - ev
                                 if abs(d) > 1:
                                     st.markdown(f"""
                                     <div class="selisih-box">
@@ -1040,7 +1044,7 @@ def display_results():
                             st.markdown(f"""
                             <div class="ppn-box">
                                 <div style="font-size: 0.95rem; font-weight:700; opacity: 0.95; margin-bottom: 0.4rem;">PPN (DI EXCEL)</div>
-                                <div style="font-size: 1.7rem; font-weight: 800;">{format_currency(sd0.get('ppn_value'))}</div>
+                                <div style="font-size: 1.7rem; font-weight: 800;">{format_currency(excel_ppn_global)}</div>
                             </div>
                             """, unsafe_allow_html=True)
 
