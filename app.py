@@ -111,14 +111,14 @@ st.markdown("""
 [data-testid="stMultiSelect"]{ background:white; border-radius:12px;}
 [data-testid="stMultiSelect"] span{ color:#1e293b !important;}
 [data-testid="stDataFrame"]{ border-radius:16px; overflow:hidden; border:1px solid #e2e8f0; background:white;}
-/* Tabel terang — background putih, header biru soft, teks abu gelap (bukan hitam pekat) */
-[data-testid="stDataFrame"]{ background:white !important; }
-[data-testid="stDataFrame"] div[data-testid="stDataFrameResizable"] { background:white !important;}
-[data-testid="stDataFrame"] [role="grid"]{ background:white !important;}
-[data-testid="stDataFrame"] [role="columnheader"]{ background:#dbeafe !important; color:#1e3a8a !important; font-weight:800 !important; font-size:.82rem !important; border-bottom: 2px solid #93c5fd !important; border-right:1px solid #bfdbfe !important;}
-[data-testid="stDataFrame"] [role="gridcell"]{ color:#475569 !important; font-weight:500 !important; border-bottom:1px solid #f1f5f9 !important; border-right:1px solid #f1f5f9 !important; background:white !important;}
-[data-testid="stDataFrame"] [role="row"]:nth-child(even) [role="gridcell"]{ background:#f8fafc !important; color:#334155 !important;}
-[data-testid="stDataFrame"] [role="row"]:hover [role="gridcell"]{ background:#eff6ff !important; }
+/* Tabel — latar PUTIH (bukan hitam), teks abu gelap, header biru soft */
+[data-testid="stDataFrame"]{ background:#ffffff !important; border:1px solid #e2e8f0 !important;}
+[data-testid="stDataFrame"] div[data-testid="stDataFrameResizable"]{ background:#ffffff !important;}
+[data-testid="stDataFrame"] [role="grid"]{ background:#ffffff !important;}
+[data-testid="stDataFrame"] [role="columnheader"]{ background:#e0e7ff !important; color:#4338ca !important; font-weight:800 !important; font-size:.82rem !important; border-bottom: 2px solid #a5b4fc !important; border-right:1px solid #e0e7ff !important;}
+[data-testid="stDataFrame"] [role="gridcell"]{ color:#334155 !important; font-weight:500 !important; border-bottom:1px solid #eef2ff !important; border-right:1px solid #f1f5f9 !important; background:#ffffff !important;}
+[data-testid="stDataFrame"] [role="row"]:nth-child(even) [role="gridcell"]{ background:#f8fafc !important;}
+[data-testid="stDataFrame"] [role="row"]:hover [role="gridcell"]{ background:#eef2ff !important; }
 hr{ border:none; height:1px; background: linear-gradient(90deg, transparent, #c7d2fe, transparent); margin:1.2rem 0;}
 @media (max-width: 768px){ .how{ grid-template-columns: 1fr; } .hero h1{ font-size:1.6rem;} }
 </style>
@@ -478,17 +478,24 @@ def display_results():
                     'Total': item.get('total', '-')
                 })
             
-            # Tabel terang, rupiah rapi, header besar awam
+            # Tabel: Rupiah hanya Unit Price & Total, Qty = angka biasa; latar PUTIH bukan hitam
             if item_data:
                 for r in item_data:
-                    # Rupiah format
-                    for k in ('Qty','Unit Price','Total'):
+                    for k in ('Unit Price','Total'):
                         v = r.get(k)
                         try:
                             if v not in ('-','', None) and safe_float(v) is not None:
                                 r[k] = format_currency(v)
                         except:
                             pass
+                    # Qty: angka biasa, bukan Rp
+                    vq = r.get('Qty')
+                    try:
+                        fv = safe_float(vq) if vq not in ('-','', None) else None
+                        if fv is not None:
+                            r['Qty'] = f"{fv:,.0f}".replace(',', '.') if fv == int(fv) else f"{fv:,.2f}".replace(',', '.')
+                    except:
+                        pass
             df_items = pd.DataFrame(item_data)
             st.dataframe(df_items, use_container_width=True, hide_index=True, height=min(420, 44+len(df_items)*34))
 
