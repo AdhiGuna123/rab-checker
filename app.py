@@ -939,10 +939,15 @@ def display_results():
                     </div>
                     """, unsafe_allow_html=True)
 
-                # PPN GLOBAL — kartu besar; sesuai tulisan: PPN = TOTAL (Jumlah A+B) × 11%
-                show_global_ppn = not _is_without and excel_ppn_global is not None and (is_combined_global or not has_any_section_ppn)
+                # NORMAL single-section: PPN global adalah untuk single, tampilkan Langkah 2
+                is_single = len(sections) == 1
+                # PPN GLOBAL — multi Langkah 2 sesuai kondisi, single juga jika 1 section punya PPN
+                show_global_ppn = not _is_without and excel_ppn_global is not None and (is_combined_global or not has_any_section_ppn or (is_single and excel_ppn_global is not None))
                 if show_global_ppn:
-                    sum_sub_for_ppn = safe_float(sheet_dbg_global.get('jumlah_global_excel')) or sum(safe_float(sd.get('subtotal_value')) or 0 for sd in sections.values())
+                    if is_single:
+                        sum_sub_for_ppn = safe_float(sheet_dbg_global.get('jumlah_global_excel')) or safe_float(sections[list(sections.keys())[0]].get('subtotal_value')) or 0
+                    else:
+                        sum_sub_for_ppn = safe_float(sheet_dbg_global.get('jumlah_global_excel')) or sum(safe_float(sd.get('subtotal_value')) or 0 for sd in sections.values())
                     calc_ppn_global = sum_sub_for_ppn * 0.11
                     st.markdown("""
                     <div class="card" style="border:2px solid #fed7aa; background: linear-gradient(180deg, #fffbeb, #ffffff);">
