@@ -253,23 +253,25 @@ class RABChecker:
                 total_from_sections += section_total
         
         global_ppn = safe_float(data.get('ppn_value'))
+        is_combined = data.get('ppn_is_combined', False)
         has_any_section_ppn = any(safe_float(v.get('ppn_value')) is not None for v in sections.values())
         
-        # Kandidat expected: 1) sum section totals (per-section PPN) 2) sum subtotals + global PPN (gabungan)
+        # Kandidat fleksibel:
+        # A) sum section_total (PPN sudah di section) — kasus PPN per-section
+        # B) sum subtotal + PPN gabungan — kasus PPN tunggal gabungan
         candidates = [total_from_sections]
-        if global_ppn is not None and not has_any_section_ppn:
-            candidates.append(sum_subtotals + global_ppn)
-        # Juga pertimbangkan kasus: sections punya total tanpa PPN tapi ada global PPN
         if global_ppn is not None:
-            candidates.append(total_from_sections + global_ppn if not has_any_section_ppn else total_from_sections)
+            if is_combined or not has_any_section_ppn:
+                # PPN gabungan -> kandidat utama adalah sum_sub + global
+                candidates.append(sum_subtotals + global_ppn)
+            # Tetap pertimbangkan total_from + global untuk kasus hybrid
+            if not has_any_section_ppn:
+                candidates.append(total_from_sections + global_ppn)
         
         tolerance = 1
-        # Jika salah satu kandidat cocok, anggap benar (fleksibel)
         if any(abs(c - grand_total_excel) <= tolerance for c in candidates):
             return
-        
-        # Tidak ada yang cocok -> laporkan dengan kandidat utama
-        expected = total_from_sections
+        expected = (sum_subtotals + global_ppn) if (is_combined and global_ppn is not None) else total_from_sections
         self.errors.append({
             'type': 'GRAND_TOTAL_ERROR',
             'sheet': data.get('sheet_name'),

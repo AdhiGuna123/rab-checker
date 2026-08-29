@@ -1209,16 +1209,16 @@ def display_results():
                         </div>
                         """.format(format_currency(excel_grand_total)), unsafe_allow_html=True)
                     
-                    # PPN Global gabungan (fleksibel): jika ada PPN global terpisah dari per-section
-                    excel_ppn_global = excel_sheets_data.get(sheet_name, {}).get('ppn_value') or sheet_data.get('ppn_value')
-                    # Tampilkan hanya kalau ada global dan tidak sama dengan sum section (untuk kasus 1 PPN A+B)
+                    # PPN Global gabungan: tampilkan hanya jika ini kasus gabungan (ppn_is_combined) atau satu PPN untuk semua section
+                    sheet_dbg_global = excel_sheets_data.get(sheet_name, {}) or sheet_data
+                    excel_ppn_global = sheet_dbg_global.get('ppn_value')
+                    is_combined_global = sheet_dbg_global.get('ppn_is_combined', False)
                     if excel_ppn_global is not None:
-                        # Hitung PPN yang seharusnya: 11% dari sum subtotal semua section
                         sum_sub = sum(safe_float(sd.get('subtotal_value')) or 0 for sd in sections.values())
                         calc_ppn_global = sum_sub * 0.11
                         has_any_section_ppn = any(sd.get('ppn_value') is not None for sd in sections.values())
-                        # Tampilkan PPN global hanya jika tidak ada PPN per-section (kasus gabungan) atau sebagai ringkasan
-                        if not has_any_section_ppn:
+                        # Kasus gabungan: PPN tunggal untuk semua section. Kasus ringkasan sum PPN -> jangan tampil ganda
+                        if is_combined_global or not has_any_section_ppn:
                             col1, col2, col3 = st.columns([2, 1, 2])
                             with col1:
                                 st.markdown("""

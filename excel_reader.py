@@ -347,43 +347,63 @@ class ExcelReader:
                         break
                     
                     elif row_type == 'ppn':
-                        # === PPN FLEKSIBEL ===
-                        # - Jika baris PPN menyebut section (PPN 11% A) -> masuk section tersebut
-                        # - Jika baris PPN generik: simpan ke section aktif JIKA ada; kalau tidak/belum ada -> global
-                        # - Jika sudah ada PPN per section, global tetap menyimpan PPN gabungan terakhir
+                        # === PPN FLEKSIBEL dengan deteksi gabungan vs tunggal ===
+                        # Rule:
+                        # 1) Jika label menyebut section (PPN 11% A) -> section tersebut
+                        # 2) Deteksi gabungan: baris setelah Jumlah B/Total B/Grand Total ATAU nilai ~= 11% * sum(subtotals)
+                        # 3) Jika tidak gabungan dan ada current_section kosong PPN -> isi section itu
+                        # 4) Jika semua section sudah ada PPN, tambahan PPN = global gabungan
                         ppn_value = self._get_total_value(row, total_col)
                         if ppn_value is not None:
                             section_for_ppn = self._detect_section_letter(cell_str)
                             if section_for_ppn and section_for_ppn != 'GRAND' and section_for_ppn in result['sections']:
                                 result['sections'][section_for_ppn]['ppn_value'] = ppn_value
                                 result['sections'][section_for_ppn]['ppn_row'] = row
-                            elif current_section and current_section in result['sections']:
-                                # PPN section-aktif (untuk kasus A punya PPN, B punya PPN masing-masing)
-                                # Hanya timpa jika section itu belum punya PPN, supaya tidak saling timpa
-                                if result['sections'][current_section]['ppn_value'] is None:
-                                    result['sections'][current_section]['ppn_value'] = ppn_value
-                                    result['sections'][current_section]['ppn_row'] = row
-                                    # Global tetap diisi untuk kasus 1-section; untuk multi-section isi terpisah
-                                # Jika semua section sudah punya PPN, PPN ini dianggap PPN global gabungan
-                                all_have_ppn = all(v.get('ppn_value') is not None for v in result['sections'].values())
-                                if all_have_ppn or len(result['sections']) == 1:
-                                    # Simpandi global juga untuk kasus single-section / gabungan
-                                    if result['ppn_value'] is None:
-                                        result['ppn_row'] = row
-                                        result['ppn_value'] = ppn_value
-                                    # Jika sudah ada global, update hanya bila ini baris setelah section terakhir
-                                    else:
-                                        # keep last global PPN as potential combined PPN
-                                        result['ppn_row'] = row
-                                        result['ppn_value'] = ppn_value
-                                else:
-                                    # Belum semua isi -> tetap update global sebagai fallback
-                                    if result['ppn_value'] is None:
-                                        result['ppn_row'] = row
-                                        result['ppn_value'] = ppn_value
+                                # Jangan isi global bila ini explicit per-section
                             else:
-                                # Tidak ada section aktif -> global
-                                if result['ppn_value'] is None:
+                                # Test apakah ini PPN gabungan (setelah semua Jumlah, baris TOTAL(A+B)/PPN gabungan)
+                                is_combined = False
+                                # Heuristic A: nilai ~= 11% * sum semua subtotals yang sudah ada
+                                sum_sub = sum(
+                                    safe_float(v.get('subtotal_value')) or 0
+                                    for v in result['sections'].values()
+                                    if safe_float(v.get('subtotal_value')) is not None
+                                )
+                                if sum_sub > 0:
+                                    expected_combined = sum_sub * 0.11
+                                    if ppn_value is not None and abs(ppn_value - expected_combined) <= max(2, expected_combined * 0.005):
+                                        is_combined = True
+                                # Heuristic B: ada GRAND TOTAL atau sudah ada TOTAL per section sebelumnya -> kemungkinan gabungan
+                                last_section_total_exists = any(
+                                    safe_float(v.get('total_value')) is not None for v in result['sections'].values()
+                                )
+                                has_grand = result['grand_total_value'] is not None
+                                # Jika gabungan terdeteksi, simpan ke global (jangan ke section)
+                                if is_combined and len(result['sections']) > 1:
+                                    result['ppn_row'] = row
+                                    result['ppn_value'] = ppn_value
+                                    result['ppn_is_combined'] = True
+                                elif current_section and current_section in result['sections']:
+                                    all_have_ppn = all(v.get('ppn_value') is not None for v in result['sections'].values())
+                                    if all_have_ppn:
+                                        # Semua sudah ada PPN, baris tambahan = global gabungan
+                                        result['ppn_row'] = row
+                                        result['ppn_value'] = ppn_value
+                                        result['ppn_is_combined'] = True
+                                    elif result['sections'][current_section]['ppn_value'] is None:
+                                        result['sections'][current_section]['ppn_value'] = ppn_value
+                                        result['sections'][current_section]['ppn_row'] = row
+                                        # Single-section juga isi global agar tampilan single-section tetap muncul
+                                        if len(result['sections']) == 1 and result['ppn_value'] is None:
+                                            result['ppn_row'] = row
+                                            result['ppn_value'] = ppn_value
+                                    else:
+                                        # Section sudah ada PPN tapi belum semua -> anggap global gabungan
+                                        result['ppn_row'] = row
+                                        result['ppn_value'] = ppn_value
+                                        result['ppn_is_combined'] = True
+                                else:
+                                    # Tidak ada section aktif -> global
                                     result['ppn_row'] = row
                                     result['ppn_value'] = ppn_value
                             is_summary_row = True
@@ -568,23 +588,26 @@ class ExcelReader:
         if result['grand_total_value'] is None and len(result['sections']) > 1:
             total_all = 0
             for sl, sd in result['sections'].items():
-                # Prioritas total_value (sudah termasuk PPN/diskon) -> subtotal+ppn jika total kosong
                 sec_total = safe_float(sd.get('total_value'))
                 if sec_total is None:
                     sub = safe_float(sd.get('subtotal_value')) or 0
                     ppn = safe_float(sd.get('ppn_value')) or 0
                     disc = safe_float(sd.get('discount_value')) or 0
-                    sec_total = sub + ppn - disc if (sub or ppn) else None
+                    sec_total = sub + ppn - disc if (sub or ppn or disc) else None
                 if sec_total is not None:
                     total_all += sec_total
             if total_all > 0:
                 result['grand_total_value'] = total_all
+        # Grand total sudah ada tapi PPN gabungan belum terdeteksi: jangan timpa
         
-        # PPN global fallback: jika sections sudah punya PPN masing-masing, global = sum PPN sections
+        # PPN global fallback: jika tidak ada global tapi sections ada PPN, global = sum PPN sections
+        # Tandai bukan gabungan (bukan combined) — ini hanya ringkasan
         if result['ppn_value'] is None and len(result['sections']) > 1:
             ppn_sum = sum(safe_float(v.get('ppn_value')) or 0 for v in result['sections'].values())
             if ppn_sum > 0:
                 result['ppn_value'] = ppn_sum
+                result['ppn_is_combined'] = False  # ringkasan, bukan baris gabungan di Excel
+        result.setdefault('ppn_is_combined', False)
         
         result['skipped_rows'] = skipped_rows
         result['columns'] = columns
