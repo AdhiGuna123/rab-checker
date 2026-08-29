@@ -994,6 +994,56 @@ def display_results():
                         </div>
                         """.format(format_currency(excel_ppn_global)), unsafe_allow_html=True)
 
+                # Case Normal: PPN di section A → tampilkan juga sebagai Langkah 2 jika global gap
+                if not show_global_ppn and len(sections) == 1:
+                    sd0 = list(sections.values())[0]
+                    if sd0.get('ppn_value') is not None and sd0.get('subtotal_value') is not None:
+                        st.markdown("""
+                        <div class="card" style="border:2px solid #fed7aa; background: linear-gradient(180deg, #fffbeb, #ffffff);">
+                          <div style="display:flex; align-items:center; gap:.6rem; margin-bottom:.6rem;">
+                            <span style="background:#f97316; color:white; border-radius:8px; padding:.3rem .6rem; font-weight:800;">Langkah 2</span>
+                            <b style="font-size:1.05rem;">PPN 11% — dari Jumlah</b>
+                            <span style="margin-left:auto; color:#9ca3af; font-size:.8rem;">Rumus: Jumlah × 11%</span>
+                          </div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                        calc_ppn_single = safe_float(sd0.get('subtotal_value')) * 0.11
+                        col1, col2, col3 = st.columns([2, 1, 2])
+                        with col1:
+                            st.markdown(f"""
+                            <div class="ppn-box">
+                                <div style="font-size: 0.95rem; font-weight:700; opacity: 0.95; margin-bottom: 0.4rem;">PPN (DIHITUNG)</div>
+                                <div style="font-size: 0.8rem; opacity:.85; margin-bottom:.3rem;">Jumlah × 11%</div>
+                                <div style="font-size: 1.7rem; font-weight: 800;">{format_currency(calc_ppn_single)}</div>
+                            </div>
+                            """, unsafe_allow_html=True)
+                        with col2:
+                            try:
+                                ev = float(sd0.get('ppn_value'))
+                                d = calc_ppn_single - ev
+                                if abs(d) > 1:
+                                    st.markdown(f"""
+                                    <div class="selisih-box">
+                                        <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">❌ SELISIH</div>
+                                        <div style="font-weight: 800; font-size: 1.1rem; margin-top: 0.3rem;">{format_currency(d)}</div>
+                                    </div>
+                                    """, unsafe_allow_html=True)
+                                else:
+                                    st.markdown("""
+                                    <div class="sesuai-box">
+                                        <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">✅ COCOK</div>
+                                        <div style="font-weight: 700; font-size: .85rem; opacity:.9;">PPN benar</div>
+                                    </div>
+                                    """, unsafe_allow_html=True)
+                            except: pass
+                        with col3:
+                            st.markdown(f"""
+                            <div class="ppn-box">
+                                <div style="font-size: 0.95rem; font-weight:700; opacity: 0.95; margin-bottom: 0.4rem;">PPN (DI EXCEL)</div>
+                                <div style="font-size: 1.7rem; font-weight: 800;">{format_currency(sd0.get('ppn_value'))}</div>
+                            </div>
+                            """, unsafe_allow_html=True)
+
                 # Judul Langkah 3
                 if excel_grand_total is not None:
                     st.markdown("""
