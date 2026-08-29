@@ -902,10 +902,10 @@ class ExcelReader:
         # Expose jumlah section dinamis (A/B/C atau lebih) untuk laporan
         result['detected_sections'] = sorted(result['sections'].keys())
 
-        # CASE 1: RAB TANPA PPN — jika tidak ada PPN di mana pun, GRAND TOTAL = TOTAL (atau Jumlah Global)
+        # CASE 1: RAB TANPA PPN — jika tidak ada PPN di mana pun, GRAND TOTAL = TOTAL = SUM item
         if result.get('ppn_value') is None and all(safe_float(v.get('ppn_value')) is None for v in result['sections'].values()):
             result['is_without_ppn'] = True
-            # Grand = TOTAL gabungan jika ada, else Jumlah Global / subtotal
+            # Grand = TOTAL gabungan jika ada, else Jumlah Global / subtotal / SUM item langsung
             if result['grand_total_value'] is None:
                 cand = result.get('jumlah_global_excel') or result.get('subtotal_value')
                 if cand is not None:
@@ -913,12 +913,39 @@ class ExcelReader:
                     result['grand_total_row'] = result.get('jumlah_global_row') or result.get('subtotal_row')
                 elif len(result['sections']) > 1:
                     s = sum(safe_float(v.get('subtotal_value')) or 0 for v in result['sections'].values())
+                    if not s:
+                        s = sum(safe_float(it.get('total')) or 0 for it in result['items'])
                     if s:
                         result['grand_total_value'] = s
+                        result['grand_total_row'] = result.get('subtotal_row') or result.get('jumlah_global_row')
                 elif result['sections']:
                     only = list(result['sections'].values())[0]
                     if safe_float(only.get('subtotal_value')) is not None:
                         result['grand_total_value'] = safe_float(only.get('subtotal_value'))
+                        result['grand_total_row'] = only.get('subtotal_row')
+                    else:
+                        # Fallback paling simpel: SUM semua item (CASE 1 tanpa PPN paling dasar)
+                        s = sum(safe_float(it.get('total')) or 0 for it in result['items'])
+                        if s:
+                            result['grand_total_value'] = s
+                            result['subtotal_value'] = s
+                            result['jumlah_global_excel'] = s
+                            only['subtotal_value'] = s
+                else:
+                    # Tanpa section sama sekali (file simpel Item->TOTAL)
+                    s = sum(safe_float(it.get('total')) or 0 for it in result['items'])
+                    if s:
+                        result['grand_total_value'] = s
+                        result['subtotal_value'] = s
+                        result['jumlah_global_excel'] = s
+            # Pastikan subtotal/grand tidak tetap None untuk case tanpa ppn paling mudah
+            if result.get('subtotal_value') is None:
+                s = sum(safe_float(it.get('total')) or 0 for it in result['items'])
+                if s:
+                    result['subtotal_value'] = s
+                    result['jumlah_global_excel'] = s
+            if not result['sections'] and result['grand_total_value'] is None and result.get('subtotal_value') is not None:
+                result['grand_total_value'] = safe_float(result.get('subtotal_value'))
         else:
             result['is_without_ppn'] = False
 
