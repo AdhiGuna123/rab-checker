@@ -665,6 +665,43 @@ def main():
                 sheets_to_check = sheet_names
                 st.info(f"📋 Akan mengecek {len(sheets_to_check)} sheet: {', '.join(sheets_to_check)}")
             
+            # === PENGATURAN LANJUTAN (Hybrid, tanpa AI, 100% lokal) ===
+            with st.expander("⚙️ Pengaturan Lanjutan (override auto-detect, tanpa AI)", expanded=False):
+                st.caption("Kosongkan = auto-detect. Isi hanya jika hasil auto salah (mis. PPN gabungan vs per-section). Tetap berjalan lokal tanpa langganan.")
+                c1, c2, c3, c4 = st.columns(4)
+                with c1:
+                    adv_header = st.text_input("Baris Header (angka, kosong=auto)", key="adv_header", placeholder="auto")
+                with c2:
+                    adv_qty = st.text_input("Kolom Qty (huruf A=1, B=2...)", key="adv_qty", placeholder="auto")
+                with c3:
+                    adv_price = st.text_input("Kolom Harga Satuan (huruf)", key="adv_price", placeholder="auto")
+                with c4:
+                    adv_total = st.text_input("Kolom Jumlah/Total (huruf)", key="adv_total", placeholder="auto")
+                c5, c6 = st.columns(2)
+                with c5:
+                    adv_ppn = st.selectbox("Mode PPN", ["Auto (deteksi)", "Per-section (masing-masing)", "Gabungan (1 PPN A+B)", "Hanya 1 section (A atau B)", "Tanpa PPN"], key="adv_ppn")
+                with c6:
+                    adv_total_mode = st.selectbox("Mode Total", ["Auto (deteksi)", "Per-section (Total A & Total B)", "Gabungan (1 Grand Total)"], key="adv_total_mode")
+                # Store for START CHECK
+                def _col_letter_to_num(s: str):
+                    s = s.strip().upper()
+                    if not s: return None
+                    if s.isdigit(): return int(s)
+                    n = 0
+                    for ch in s:
+                        if 'A' <= ch <= 'Z': n = n*26 + (ord(ch)-64)
+                        else: return None
+                    return n if n else None
+                st.session_state['adv_overrides_preview'] = {
+                    'header_row': int(adv_header) if adv_header.strip().isdigit() else None,
+                    'qty_col': _col_letter_to_num(adv_qty),
+                    'unit_price_col': _col_letter_to_num(adv_price),
+                    'total_col': _col_letter_to_num(adv_total),
+                    'ppn_mode': {'Auto (deteksi)':'auto','Per-section (masing-masing)':'per_section','Gabungan (1 PPN A+B)':'combined','Hanya 1 section (A atau B)':'single','Tanpa PPN':'none'}[adv_ppn],
+                    'total_mode': {'Auto (deteksi)':'auto','Per-section (Total A & Total B)':'per_section','Gabungan (1 Grand Total)':'combined'}[adv_total_mode],
+                }
+                st.caption(f"Preview override: header={st.session_state['adv_overrides_preview']['header_row'] or 'auto'} qty={adv_qty or 'auto'} price={adv_price or 'auto'} total={adv_total or 'auto'} | PPN={st.session_state['adv_overrides_preview']['ppn_mode']} TOTAL={st.session_state['adv_overrides_preview']['total_mode']}")
+
             st.markdown("<br>", unsafe_allow_html=True)
             
             # Tombol mulai check
@@ -686,8 +723,11 @@ def main():
                             progress.progress((idx + 1) / len(sheets_to_check))
                             status_text.text(f"Memeriksa sheet: {sheet_name}...")
                             
-                            # Baca data
-                            data = reader.read_data(sheet_name)
+                            # Baca data (dengan override jika ada)
+                            overrides = st.session_state.get('adv_overrides_preview', {})
+                            # bersihkan None agar tidak override auto dengan kosong
+                            overrides = {k: v for k, v in overrides.items() if v is not None}
+                            data = reader.read_data(sheet_name, overrides=overrides if overrides else None)
                             
                             # Simpan data Excel untuk perbandingan (termasuk sections)
                             if 'excel_sheets_data' not in st.session_state:

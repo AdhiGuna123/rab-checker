@@ -247,8 +247,16 @@ class ExcelReader:
         
         return 'unknown'
     
-    def read_data(self, sheet_name: str) -> Dict[str, Any]:
-        """Membaca data dari sheet dengan support multiple sections dan flexible fields"""
+    def read_data(self, sheet_name: str, overrides: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """Membaca data dari sheet dengan support multiple sections dan flexible fields.
+        
+        overrides (opsional, tanpa AI, 100% lokal):
+            header_row: int | None — override baris header (1-indexed)
+            qty_col, unit_price_col, total_col: int | None — huruf kolom A=1, B=2, ...
+            ppn_mode: 'auto' | 'per_section' | 'combined' | 'single' | 'none'
+            total_mode: 'auto' | 'per_section' | 'combined'  — combined = 1 Total global
+        """
+        overrides = overrides or {}
         result = {
             'sheet_name': sheet_name,
             'header_row': None,
@@ -261,18 +269,26 @@ class ExcelReader:
             'ppn_value': None,
             'grand_total_row': None,
             'grand_total_value': None,
-            'formulas': {}
+            'formulas': {},
+            'overrides_applied': overrides
         }
         
         if not self.select_sheet(sheet_name):
             return result
         
-        header_row = self.find_header_row()
+        header_row = overrides.get('header_row') or self.find_header_row()
         if header_row is None:
             return result
         result['header_row'] = header_row
         
         columns = self.find_data_columns(header_row)
+        # Apply column overrides
+        if overrides.get('qty_col'):
+            columns['qty'] = int(overrides['qty_col'])
+        if overrides.get('unit_price_col'):
+            columns['unit_price'] = int(overrides['unit_price_col'])
+        if overrides.get('total_col'):
+            columns['total'] = int(overrides['total_col'])
         result['columns'] = columns
         
         total_col = columns.get('total', 10)
@@ -515,11 +531,34 @@ class ExcelReader:
                 first_section = min(result['sections'].keys())
                 result['sections'][first_section]['items'].extend(pending_items)
         
-        # === TOTAL FLEKSIBEL: 1 baris Total/Jumlah di paling bawah untuk semua section -> anggap GRAND TOTAL ===
-        # Kasus user: Section A tidak isi Total, hanya 1 Total di bawah (seharusnya Grand Total A+B) tapi terbaca sebagai Total B -> salah.
-        if len(result['sections']) > 1 and result['grand_total_value'] is None and section_order:
-            # Hitung berapa section yang punya nilai dari Excel (sebelum auto-calc subtotal)
-            excel_counts = sum(1 for v in result['sections'].values() if v.get('total_value') is not None or v.get('subtotal_value') is not None)
+        # === OVERRIDE TOTAL MODE (manual) ===
+        total_mode = overrides.get('total_mode', 'auto')
+        if total_mode == 'combined' and len(result['sections']) > 1 and result['grand_total_value'] is None and section_order:
+            # User memaksa: satu Total di bawah = Grand Total A+B, hapus Total per-section
+            last = section_order[-1]
+            last_data = result['sections'][last]
+            cand = last_data.get('total_value')
+            cand_row = last_data.get('total_row')
+            cand_kind = 'total'
+            if cand is None:
+                cand = last_data.get('subtotal_value')
+                cand_row = last_data.get('subtotal_row')
+                cand_kind = 'subtotal'
+            if cand is not None:
+                result['grand_total_value'] = cand
+                result['grand_total_row'] = cand_row
+                if cand_kind == 'total':
+                    last_data['total_value'] = None
+                    last_data['total_row'] = None
+                else:
+                    last_data['subtotal_value'] = None
+                    last_data['subtotal_row'] = None
+        elif total_mode == 'auto':
+            # === TOTAL FLEKSIBEL OTOMATIS ===
+            # Kasus user: Section A tidak isi Total, hanya 1 Total di bawah (seharusnya Grand Total A+B) tapi terbaca sebagai Total B -> salah.
+            if len(result['sections']) > 1 and result['grand_total_value'] is None and section_order:
+                # Hitung berapa section yang punya nilai dari Excel (sebelum auto-calc subtotal)
+                excel_counts = sum(1 for v in result['sections'].values() if v.get('total_value') is not None or v.get('subtotal_value') is not None)
             last = section_order[-1]
             last_data = result['sections'][last]
             cand = last_data.get('total_value')
@@ -561,6 +600,10 @@ class ExcelReader:
                             last_data['subtotal_value'] = None
                             last_data['subtotal_row'] = None
 
+            elif total_mode == 'per_section':
+                # User memaksa: jangan promosikan, biarkan per-section apa adanya
+                pass
+
         # Hitung subtotal per section jika belum ada
         for section_letter, section_data in result['sections'].items():
             if section_data['subtotal_value'] is None:
@@ -579,68 +622,95 @@ class ExcelReader:
                 if val is not None:
                     result['subtotal_value'] += val
         
-        # === KLASIFIKASI PPN setelah semua subtotal/total terbaca (lebih akurat) ===
+        # === KLASIFIKASI PPN setelah semua subtotal/total terbaca ===
+        ppn_mode = overrides.get('ppn_mode', 'auto')
         if ppn_candidates:
-            # Jika ada label explicit "PPN ... A/B" -> langsung ke section
-            remaining = []
-            for cand in ppn_candidates:
-                sec_letter = self._detect_section_letter(cand['label'])
-                if sec_letter and sec_letter != 'GRAND' and sec_letter in result['sections']:
-                    result['sections'][sec_letter]['ppn_value'] = cand['value']
-                    result['sections'][sec_letter]['ppn_row'] = cand['row']
-                else:
-                    remaining.append(cand)
-            # remaining = PPN generik tanpa huruf
-            if remaining:
+            if ppn_mode == 'combined':
+                # User memaksa: satu PPN gabungan untuk semua section
                 sum_sub_all = sum(safe_float(v.get('subtotal_value')) or 0 for v in result['sections'].values())
-                # Cek apakah remaining terakhir adalah PPN GABUNGAN (nilai ~= 11% * sum_sub_all)
-                # Atau ada multiple remaining -> yang nilai gabungannya yang global
-                is_combined_global = False
-                combined_candidate = None
-                if len(remaining) >= 1 and sum_sub_all > 0:
-                    for cand in remaining:
-                        expected_combined = sum_sub_all * 0.11
-                        if abs(cand['value'] - expected_combined) <= max(2, expected_combined * 0.008):
-                            combined_candidate = cand
-                            # Jika jumlah PPN generik == 1 dan section >1, anggap itu gabungan
-                            # Jika >1, yang nilainya match combined diambil sebagai global
-                            break
-                if combined_candidate is not None:
-                    # Global gabungan
-                    result['ppn_value'] = combined_candidate['value']
-                    result['ppn_row'] = combined_candidate['row']
-                    result['ppn_is_combined'] = True
-                    remaining = [c for c in remaining if c is not combined_candidate]
-                # Sisa remaining distribusikan ke section secara urutan (A dulu, lalu B, dst)
-                # Hanya section yang belum punya PPN
+                best = max(ppn_candidates, key=lambda c: c['row'])  # ambil yang paling bawah (biasanya gabungan)
+                result['ppn_value'] = best['value']
+                result['ppn_row'] = best['row']
+                result['ppn_is_combined'] = True
+            elif ppn_mode == 'per_section':
+                # User memaksa: semua generik adalah per-section
                 section_order_sorted = sorted(result['sections'].keys())
-                for cand in remaining:
-                    placed = False
-                    # Prefer current_section saat itu
-                    pref = cand['current_section']
-                    if pref and pref in result['sections'] and result['sections'][pref]['ppn_value'] is None:
-                        result['sections'][pref]['ppn_value'] = cand['value']
-                        result['sections'][pref]['ppn_row'] = cand['row']
-                        placed = True
+                for cand in ppn_candidates:
+                    sec_letter = self._detect_section_letter(cand['label'])
+                    if sec_letter and sec_letter != 'GRAND' and sec_letter in result['sections']:
+                        result['sections'][sec_letter]['ppn_value'] = cand['value']
+                        result['sections'][sec_letter]['ppn_row'] = cand['row']
                     else:
                         for sl in section_order_sorted:
                             if result['sections'][sl]['ppn_value'] is None:
                                 result['sections'][sl]['ppn_value'] = cand['value']
                                 result['sections'][sl]['ppn_row'] = cand['row']
-                                placed = True
                                 break
-                    if not placed:
-                        # Semua sudah ada -> overflow jadi global gabungan (sudah handle) atau update global
-                        if result.get('ppn_value') is None:
-                            result['ppn_value'] = cand['value']
-                            result['ppn_row'] = cand['row']
-                            result['ppn_is_combined'] = True
-                # Single-section fallback: isi global juga agar UI single-section tetap tampil
-                if len(result['sections']) == 1 and result.get('ppn_value') is None:
-                    only = list(result['sections'].values())[0]
-                    if only.get('ppn_value') is not None:
-                        result['ppn_value'] = only['ppn_value']
-                        result['ppn_row'] = only['ppn_row']
+                # also set global as sum for display
+                s = sum(safe_float(v.get('ppn_value')) or 0 for v in result['sections'].values())
+                if s > 0:
+                    result['ppn_value'] = s
+                    result['ppn_is_combined'] = False
+            elif ppn_mode == 'single':
+                # Hanya section tertentu (paling bawah / yang punya PPN saja)
+                best = max(ppn_candidates, key=lambda c: c['row'])
+                pref = best['current_section']
+                target = pref if pref and pref in result['sections'] else sorted(result['sections'].keys())[-1]
+                result['sections'][target]['ppn_value'] = best['value']
+                result['sections'][target]['ppn_row'] = best['row']
+                result['ppn_value'] = best['value']
+                result['ppn_row'] = best['row']
+                result['ppn_is_combined'] = False
+            elif ppn_mode == 'none':
+                pass  # jangan isi PPN sama sekali
+            else:  # auto — heuristik lama yang flexible
+                remaining = []
+                for cand in ppn_candidates:
+                    sec_letter = self._detect_section_letter(cand['label'])
+                    if sec_letter and sec_letter != 'GRAND' and sec_letter in result['sections']:
+                        result['sections'][sec_letter]['ppn_value'] = cand['value']
+                        result['sections'][sec_letter]['ppn_row'] = cand['row']
+                    else:
+                        remaining.append(cand)
+                if remaining:
+                    sum_sub_all = sum(safe_float(v.get('subtotal_value')) or 0 for v in result['sections'].values())
+                    combined_candidate = None
+                    if len(remaining) >= 1 and sum_sub_all > 0:
+                        for cand in remaining:
+                            expected_combined = sum_sub_all * 0.11
+                            if abs(cand['value'] - expected_combined) <= max(2, expected_combined * 0.008):
+                                combined_candidate = cand
+                                break
+                    if combined_candidate is not None:
+                        result['ppn_value'] = combined_candidate['value']
+                        result['ppn_row'] = combined_candidate['row']
+                        result['ppn_is_combined'] = True
+                        remaining = [c for c in remaining if c is not combined_candidate]
+                    section_order_sorted = sorted(result['sections'].keys())
+                    for cand in remaining:
+                        placed = False
+                        pref = cand['current_section']
+                        if pref and pref in result['sections'] and result['sections'][pref]['ppn_value'] is None:
+                            result['sections'][pref]['ppn_value'] = cand['value']
+                            result['sections'][pref]['ppn_row'] = cand['row']
+                            placed = True
+                        else:
+                            for sl in section_order_sorted:
+                                if result['sections'][sl]['ppn_value'] is None:
+                                    result['sections'][sl]['ppn_value'] = cand['value']
+                                    result['sections'][sl]['ppn_row'] = cand['row']
+                                    placed = True
+                                    break
+                        if not placed:
+                            if result.get('ppn_value') is None:
+                                result['ppn_value'] = cand['value']
+                                result['ppn_row'] = cand['row']
+                                result['ppn_is_combined'] = True
+                    if len(result['sections']) == 1 and result.get('ppn_value') is None:
+                        only = list(result['sections'].values())[0]
+                        if only.get('ppn_value') is not None:
+                            result['ppn_value'] = only['ppn_value']
+                            result['ppn_row'] = only['ppn_row']
         
         # Hitung grand total dari sections jika belum ada (fleksibel)
         if result['grand_total_value'] is None and len(result['sections']) > 1:
