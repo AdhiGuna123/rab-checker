@@ -155,23 +155,28 @@ class RABChecker:
                     calculated_subtotal += total
                     item_count += 1
             
-            # 1. Cek Subtotal (Jumlah X)
+            # 1. Cek Subtotal (Jumlah X) — jangan salahkan jika nilai Excel adalah auto-calc (subtotal_is_calculated)
             if subtotal_excel is not None:
-                tolerance = 1
-                if abs(calculated_subtotal - subtotal_excel) > tolerance:
-                    self.errors.append({
-                        'type': 'SECTION_SUBTOTAL_ERROR',
-                        'sheet': data.get('sheet_name'),
-                        'row': section_data.get('subtotal_row'),
-                        'item_name': f'Subtotal Section {section_letter}',
-                        'detail': f'Subtotal Section {section_letter} tidak sesuai! {item_count} item',
-                        'calculation': f'Jumlah {item_count} item',
-                        'expected': calculated_subtotal,
-                        'actual': subtotal_excel,
-                        'difference': calculated_subtotal - subtotal_excel,
-                        'status': 'PERLU CEK',
-                        'section': section_letter
-                    })
+                is_calc = section_data.get('subtotal_is_calculated', False)
+                if is_calc:
+                    # Nilai Jumlah adalah hitungan kita sendiri, bukan dari Excel -> jangan error palsu
+                    pass
+                else:
+                    tolerance = 1
+                    if abs(calculated_subtotal - subtotal_excel) > tolerance:
+                        self.errors.append({
+                            'type': 'SECTION_SUBTOTAL_ERROR',
+                            'sheet': data.get('sheet_name'),
+                            'row': section_data.get('subtotal_row'),
+                            'item_name': f'Subtotal Section {section_letter}',
+                            'detail': f'Subtotal Section {section_letter} tidak sesuai! {item_count} item',
+                            'calculation': f'Jumlah {item_count} item',
+                            'expected': calculated_subtotal,
+                            'actual': subtotal_excel,
+                            'difference': calculated_subtotal - subtotal_excel,
+                            'status': 'PERLU CEK',
+                            'section': section_letter
+                        })
             
             # 2. Cek PPN per section (fleksibel: jika ada PPN global gabungan, jangan validasi PPN section kosong sebagai error)
             if ppn_excel is not None and subtotal_excel is not None:
@@ -228,12 +233,11 @@ class RABChecker:
         sections = data.get('sections', {})
         if len(sections) <= 1:
             return
-        # Prefer Jumlah Global yang eksplisit dari baris JUMLAH tanpa huruf section
+        # Hanya cek jika ada baris JUMLAH global eksplisit dari Excel; jangan pakai subtotal_value auto/global ringkasan
         subtotal_global_excel = safe_float(data.get('jumlah_global_excel'))
-        subtotal_row = data.get('jumlah_global_row') or data.get('subtotal_row')
+        subtotal_row = data.get('jumlah_global_row')
         if subtotal_global_excel is None:
-            subtotal_global_excel = safe_float(data.get('subtotal_value'))
-            subtotal_row = data.get('subtotal_row')
+            return
         sum_sub = 0
         for sd in sections.values():
             v = safe_float(sd.get('subtotal_value'))
@@ -241,7 +245,7 @@ class RABChecker:
                 calc = sum(safe_float(it.get('total')) or 0 for it in sd.get('items', []))
                 v = calc if calc else 0
             sum_sub += v or 0
-        if subtotal_global_excel is None or sum_sub == 0:
+        if sum_sub == 0:
             return
         if abs(sum_sub - subtotal_global_excel) > 1:
             self.errors.append({
