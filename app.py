@@ -102,18 +102,23 @@ st.markdown("""
 .stFileUploader [data-testid="stFileUploaderDropzone"]:hover{ border-color: #6366f1; background: #eef2ff; }
 .stFileUploader small{ color:#64748b !important; }
 .stExpander{ border:1px solid #e2e8f0; border-radius:16px; background:white;}
-/* Sheet picker — besar, jelas, awam */
+/* Sheet picker — huruf gelap terlihat, terpilih ungu kontras */
 .stRadio > div{ background:white; border:2px solid #c7d2fe; border-radius:14px; padding:.7rem; }
-.stRadio [role="radiogroup"] label{ background:#f8fafc; border:2px solid #e2e8f0; border-radius:12px; padding:.55rem .8rem; font-weight:700;}
-.stRadio [role="radiogroup"] label:has(input:checked){ background:#4338ca; color:white; border-color:#4338ca;}
+.stRadio [role="radiogroup"] label{ background:#ffffff; border:2px solid #cbd5e1; border-radius:12px; padding:.55rem .8rem; font-weight:700; color:#1e293b !important;}
+.stRadio [role="radiogroup"] label p{ color:#1e293b !important; font-weight:700 !important;}
+.stRadio [role="radiogroup"] label:has(input:checked){ background:#4338ca !important; color:white !important; border-color:#4338ca !important;}
+.stRadio [role="radiogroup"] label:has(input:checked) p{ color:white !important;}
 [data-testid="stMultiSelect"]{ background:white; border-radius:12px;}
+[data-testid="stMultiSelect"] span{ color:#1e293b !important;}
 [data-testid="stDataFrame"]{ border-radius:16px; overflow:hidden; border:1px solid #e2e8f0; background:white;}
-/* Tabel terang — teks gelap (bukan hitam pekat), header biru, stripe lembut, garis grid halus */
-[data-testid="stDataFrame"] div[data-testid="stDataFrameResizable"] { background:white;}
-[data-testid="stDataFrame"] [role="grid"]{ background:white;}
-[data-testid="stDataFrame"] [role="columnheader"]{ background:#eff6ff !important; color:#1e40af !important; font-weight:700 !important; border-bottom: 2px solid #bfdbfe !important;}
-[data-testid="stDataFrame"] [role="gridcell"]{ color:#334155 !important; border-bottom:1px solid #f1f5f9 !important; border-right:1px solid #f8fafc !important;}
-[data-testid="stDataFrame"] [role="row"]:nth-child(even) [role="gridcell"]{ background:#f8fafc !important;}
+/* Tabel terang — background putih, header biru soft, teks abu gelap (bukan hitam pekat) */
+[data-testid="stDataFrame"]{ background:white !important; }
+[data-testid="stDataFrame"] div[data-testid="stDataFrameResizable"] { background:white !important;}
+[data-testid="stDataFrame"] [role="grid"]{ background:white !important;}
+[data-testid="stDataFrame"] [role="columnheader"]{ background:#dbeafe !important; color:#1e3a8a !important; font-weight:800 !important; font-size:.82rem !important; border-bottom: 2px solid #93c5fd !important; border-right:1px solid #bfdbfe !important;}
+[data-testid="stDataFrame"] [role="gridcell"]{ color:#475569 !important; font-weight:500 !important; border-bottom:1px solid #f1f5f9 !important; border-right:1px solid #f1f5f9 !important; background:white !important;}
+[data-testid="stDataFrame"] [role="row"]:nth-child(even) [role="gridcell"]{ background:#f8fafc !important; color:#334155 !important;}
+[data-testid="stDataFrame"] [role="row"]:hover [role="gridcell"]{ background:#eff6ff !important; }
 hr{ border:none; height:1px; background: linear-gradient(90deg, transparent, #c7d2fe, transparent); margin:1.2rem 0;}
 @media (max-width: 768px){ .how{ grid-template-columns: 1fr; } .hero h1{ font-size:1.6rem;} }
 </style>
