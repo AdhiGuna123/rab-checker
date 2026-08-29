@@ -867,8 +867,8 @@ def display_results():
                 has_any_section_ppn = any(sd.get('ppn_value') is not None for sd in sections.values())
                 _is_single_ppn = sum(1 for sd in sections.values() if sd.get('ppn_value') is not None) == 1 and len(sections) > 1
                 letters = "+".join(sorted(sections.keys()))
-                if len(sections) >= 3:
-                    # Case 5: TOTAL DI EXCEL harus sum A+B+C / grand-PPN
+                if is_combined_global and len(sections) >= 2:
+                    # PPN 1 di akhir (2 atau 3+): TOTAL (A+B[+C]) = sum A+B[+C], bukan Total A 25jt (selisih 76jt)
                     g = safe_float(sheet_dbg_global.get('grand_total_value'))
                     pg = safe_float(sheet_dbg_global.get('ppn_value'))
                     if g is not None and pg is not None and g > pg:
@@ -882,13 +882,6 @@ def display_results():
                     has_total_kategori = not _is_single_ppn and (sheet_dbg_global.get('jumlah_global_excel') is not None or sheet_dbg_global.get('subtotal_value') is not None or sum(safe_float(sd.get('subtotal_value')) or 0 for sd in sections.values()) > 0)
                     if sheet_dbg_global.get('jumlah_global_excel') is not None:
                         total_kategori_excel = safe_float(sheet_dbg_global.get('jumlah_global_excel'))
-                    elif is_combined_global and len(sections) >= 2:
-                        g = safe_float(sheet_dbg_global.get('grand_total_value'))
-                        pg = safe_float(sheet_dbg_global.get('ppn_value'))
-                        if g is not None and pg is not None and g > pg:
-                            total_kategori_excel = g - pg
-                        else:
-                            total_kategori_excel = sum(safe_float(sd.get('subtotal_value')) or 0 for sd in sections.values())
                     elif sheet_dbg_global.get('is_without_ppn') and sum(safe_float(sd.get('subtotal_value')) or 0 for sd in sections.values()) > 0:
                         total_kategori_excel = sum(safe_float(sd.get('subtotal_value')) or 0 for sd in sections.values())
                     else:
