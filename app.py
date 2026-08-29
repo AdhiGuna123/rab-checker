@@ -108,12 +108,12 @@ st.markdown("""
 .stFileUploader [data-testid="stFileUploaderDropzone"] button{ background:white !important; color:#4338ca !important; border:none !important; border-radius:10px !important; font-weight:800 !important; }
 .stFileUploader [data-testid="stFileUploaderDropzone"] button p,
 .stFileUploader [data-testid="stFileUploaderDropzone"] button span{ color:#4338ca !important; }
-.stFileUploader small{ color:#64748b !important; }
+.stFileUploader small{ color:#111827 !important; }
 [data-testid="stFileUploaderDropzoneInstructions"]{ color:#ffffff !important; }
-[data-testid="stFileUploaderDropzoneInstructions"] small{ color:#64748b !important; }
+[data-testid="stFileUploaderDropzoneInstructions"] small{ color:#111827 !important; }
 [data-testid="stFileDropzoneInstructions"]{ color:#ffffff !important; }
-[data-testid="stFileDropzoneInstructions"] small{ color:#64748b !important; }
-[data-testid="stFileDropzoneInstructions"] div small{ color:#64748b !important; }
+[data-testid="stFileDropzoneInstructions"] small{ color:#111827 !important; }
+[data-testid="stFileDropzoneInstructions"] div small{ color:#111827 !important; }
 .stExpander{ border:1px solid #e2e8f0; border-radius:16px; background:white;}
 /* Sheet picker — huruf gelap terlihat, terpilih ungu kontras */
 .stRadio > div{ background:white; border:2px solid #c7d2fe; border-radius:14px; padding:.7rem; }
