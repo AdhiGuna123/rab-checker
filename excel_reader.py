@@ -845,14 +845,15 @@ class ExcelReader:
                     else:
                         remaining.append(cand)
                 if remaining:
-                    # Langkah 2: deteksi gabungan dulu SEBELUM distribusikan ke section
-                    # PPN gabungan = nilai ~= 11% * sum semua subtotal section
-                    # Jika cocok, JANGAN masuk ke A/B — langsung global
-                    sum_sub_all = sum(safe_float(v.get('subtotal_value')) or 0 for v in result['sections'].values())
+                    # Langkah 2: deteksi PPN GABUNGAN dulu (setelah Jumlah A+B) — JANGAN masuk ke A
+                    # PPN gabungan = 11% * (Jumlah A + Jumlah B) = 11% * jumlah_global_excel atau sum_sub_all
+                    jumlah_global_for_ppn = safe_float(result.get('jumlah_global_excel'))
+                    if jumlah_global_for_ppn is None:
+                        jumlah_global_for_ppn = sum(safe_float(v.get('subtotal_value')) or 0 for v in result['sections'].values())
                     combined_candidate = None
-                    if len(remaining) >= 1 and sum_sub_all > 0:
+                    if len(remaining) >= 1 and jumlah_global_for_ppn and jumlah_global_for_ppn > 0:
+                        expected_combined = jumlah_global_for_ppn * 0.11
                         for cand in remaining:
-                            expected_combined = sum_sub_all * 0.11
                             if abs(cand['value'] - expected_combined) <= max(2, expected_combined * 0.008):
                                 combined_candidate = cand
                                 break

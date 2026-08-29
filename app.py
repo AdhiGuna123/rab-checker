@@ -861,8 +861,9 @@ def display_results():
                     with col1:
                         st.markdown("""
                         <div class="subtotal-box">
-                            <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">📥 TOTAL KATEGORI (DIHITUNG = Jumlah A+B)</div>
-                            <div style="font-size: 1.6rem; font-weight: 800;">{}</div>
+                            <div style="font-size: 0.95rem; font-weight:700; opacity: 0.95; margin-bottom: 0.4rem;">TOTAL — DIHITUNG</div>
+                            <div style="font-size: 0.8rem; opacity:.85; margin-bottom:.3rem;">Jumlah A + Jumlah B</div>
+                            <div style="font-size: 1.7rem; font-weight: 800;">{}</div>
                         </div>
                         """.format(format_currency(sum_sub_for_total)), unsafe_allow_html=True)
                     with col2:
@@ -872,16 +873,15 @@ def display_results():
                             if abs(diff_t) > 1:
                                 st.markdown("""
                                 <div class="selisih-box">
-                                    <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">❌</div>
-                                    <div style="font-weight: 700; font-size: 0.9rem;">SELISIH</div>
-                                    <div style="font-weight: 800; font-size: 1.2rem; margin-top: 0.3rem;">{}</div>
+                                    <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">❌ SELISIH</div>
+                                    <div style="font-weight: 800; font-size: 1.1rem; margin-top: 0.3rem;">{}</div>
                                 </div>
                                 """.format(format_currency(diff_t)), unsafe_allow_html=True)
                             else:
                                 st.markdown("""
                                 <div class="sesuai-box">
-                                    <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">✅</div>
-                                    <div style="font-weight: 700; font-size: 0.9rem;">SESUAI</div>
+                                    <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">✅ COCOK</div>
+                                    <div style="font-weight: 700; font-size: .85rem; opacity:.9;">TOTAL benar</div>
                                 </div>
                                 """, unsafe_allow_html=True)
                         except:
@@ -889,8 +889,8 @@ def display_results():
                     with col3:
                         st.markdown("""
                         <div class="subtotal-box">
-                            <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">📤 TOTAL (DI EXCEL, sebelum PPN)</div>
-                            <div style="font-size: 1.6rem; font-weight: 800;">{}</div>
+                            <div style="font-size: 0.95rem; font-weight:700; opacity: 0.95; margin-bottom: 0.4rem;">TOTAL — DI EXCEL (sebelum PPN)</div>
+                            <div style="font-size: 1.7rem; font-weight: 800;">{}</div>
                         </div>
                         """.format(format_currency(total_kategori_excel)), unsafe_allow_html=True)
 
