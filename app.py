@@ -696,7 +696,9 @@ def main():
                                 'subtotal_value': data.get('subtotal_value'),
                                 'ppn_value': data.get('ppn_value'),
                                 'grand_total_value': data.get('grand_total_value'),
-                                'sections': data.get('sections', {})
+                                'sections': data.get('sections', {}),
+                                'skipped_rows': data.get('skipped_rows', []),
+                                'columns': data.get('columns', {})
                             }
                             
                             # Lakukan pemeriksaan
