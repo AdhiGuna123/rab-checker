@@ -293,21 +293,21 @@ class ExcelReader:
         except ImportError:
             pass
         
-        # Jumlah Global — multi-section tanpa huruf: "JUMLAH" / "JUMLAH SEBELUM PPN" / "TOTAL SEBELUM PPN" / "SUBTOTAL"
-        # Harus sebelum subtotal biasa, dan hanya jika tidak ada huruf section
-        has_section_letter = self._detect_section_letter(cell_str) is not None
-        if not has_section_letter and len(norm.strip()) > 2:
-            # Kandidat Jumlah Global: JUMLAH / TOTAL / SUBTOTAL tanpa huruf section
-            if norm_jml in ('JUMLAH', 'TOTAL', 'SUBTOTAL', 'SUB TOTAL', 'JUMLAH SEBELUM PPN', 'TOTAL SEBELUM PPN', 'JUMLAH TOTAL', 'SUBTOTAL GLOBAL'):
+        # Jumlah Global — JUMLAH/TOTAL sebelum PPN (multi-section).
+        # Harus sebelum subtotal biasa. Support: JUMLAH / TOTAL / Jumlah A+B global / JUMLAH SEBELUM PPN
+        # Baris "TOTAL" tanpa huruf section atau dengan label gabungan tetap dianggap global jika konteks multi-section.
+        norm_for_global = norm_jml.strip()
+        # Daftar exact dan prefix untuk global
+        if norm_for_global in ('JUMLAH', 'TOTAL', 'SUBTOTAL', 'SUB TOTAL', 'JUMLAH SEBELUM PPN', 'TOTAL SEBELUM PPN', 'JUMLAH TOTAL', 'SUBTOTAL GLOBAL', 'TOTAL JUMLAH', 'JUMLAH GLOBAL'):
+            return 'jumlah_global'
+        if norm_for_global.startswith(('JUMLAH SEBELUM', 'TOTAL SEBELUM', 'SUBTOTAL SEBELUM')):
+            return 'jumlah_global'
+        # Single word TOTAL/JUMLAH tanpa huruf section -> global
+        if len(norm_for_global) <= 20 and not self._detect_section_letter(cell_str):
+            if norm_for_global == 'JUMLAH' or norm_for_global == 'TOTAL' or 'SUBTOTAL' in norm_for_global:
                 return 'jumlah_global'
-            # Toleran: baris hanya "JUMLAH" meskipun diikuti angka sudah di-handle sebagai subtotal per detection
-            # Jika panjang <= 10 dan mengandung JUMLAH/TOTAL tanpa huruf, anggap global
-            if len(norm) <= 20 and ('JUMLAH' in norm_jml or norm_jml == 'TOTAL' or 'SUBTOTAL' in norm_jml):
-                if not re.search(r'[A-Z]\b', norm_jml) or norm_jml.strip() in ('JUMLAH', 'TOTAL'):
-                    # Heuristic: kalau sudah ada huruf section di huruf terakhir, biarkan subtotal
-                    # Kalau tidak ada huruf section sama sekali -> jumlah_global
-                    if not re.search(r'(?:JUMLAH|TOTAL|SUBTOTAL)[\s\.]*[A-Z]\b', norm_jml):
-                        return 'jumlah_global'
+            if 'JUMLAH' in norm_for_global and not re.search(r'[A-Z]\b', norm_for_global.replace('JUMLAH','').strip()):
+                return 'jumlah_global'
 
         # Subtotal/Total section — toleran: TOTAL / JUMLAH / JML / SUBTOTAL / SUB TOTAL
         # Rapidfuzz + JML sudah di-normalisasi
