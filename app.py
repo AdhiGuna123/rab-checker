@@ -1223,12 +1223,54 @@ def display_results():
                             </div>
                             """.format(format_currency(section_total_excel)), unsafe_allow_html=True)
                 
-                # === PPN GLOBAL (tampilkan SEBELUM grand total agar urutan benar: Jumlah -> PPN -> Grand Total) ===
+                # === TOTAL KATEGORI (Jumlah A + Jumlah B sebelum PPN) + PPN GLOBAL (urutan: Jumlah -> TOTAL -> PPN -> Grand Total) ===
                 sheet_dbg_global = excel_sheets_data.get(sheet_name, {}) or sheet_data
                 excel_ppn_global = sheet_dbg_global.get('ppn_value')
                 is_combined_global = sheet_dbg_global.get('ppn_is_combined', False)
                 has_any_section_ppn = any(sd.get('ppn_value') is not None for sd in sections.values())
-                # Tampilkan PPN global hanya untuk kasus gabungan (1 PPN A+B)
+                # Total kategori: Jumlah Global sebelum PPN (TOTAL 92.585.120 di PDF, belum tambah PPN)
+                has_total_kategori = sheet_dbg_global.get('subtotal_value') is not None or sheet_dbg_global.get('jumlah_global_excel') is not None
+                total_kategori_excel = sheet_dbg_global.get('jumlah_global_excel') if sheet_dbg_global.get('jumlah_global_excel') is not None else sheet_dbg_global.get('subtotal_value')
+                if has_total_kategori and len(sections) > 1:
+                    sum_sub_for_total = sum(safe_float(sd.get('subtotal_value')) or 0 for sd in sections.values())
+                    # Selalu tampilkan TOTAL KATEGORI (belum PPN) — di atas PPN
+                    col1, col2, col3 = st.columns([2, 1, 2])
+                    with col1:
+                        st.markdown("""
+                        <div class="subtotal-box">
+                            <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">📥 TOTAL KATEGORI (DIHITUNG = Jumlah A+B)</div>
+                            <div style="font-size: 1.6rem; font-weight: 800;">{}</div>
+                        </div>
+                        """.format(format_currency(sum_sub_for_total)), unsafe_allow_html=True)
+                    with col2:
+                        try:
+                            excel_val_t = float(total_kategori_excel)
+                            diff_t = sum_sub_for_total - excel_val_t
+                            if abs(diff_t) > 1:
+                                st.markdown("""
+                                <div class="selisih-box">
+                                    <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">❌</div>
+                                    <div style="font-weight: 700; font-size: 0.9rem;">SELISIH</div>
+                                    <div style="font-weight: 800; font-size: 1.2rem; margin-top: 0.3rem;">{}</div>
+                                </div>
+                                """.format(format_currency(diff_t)), unsafe_allow_html=True)
+                            else:
+                                st.markdown("""
+                                <div class="sesuai-box">
+                                    <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">✅</div>
+                                    <div style="font-weight: 700; font-size: 0.9rem;">SESUAI</div>
+                                </div>
+                                """, unsafe_allow_html=True)
+                        except:
+                            pass
+                    with col3:
+                        st.markdown("""
+                        <div class="subtotal-box">
+                            <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">📤 TOTAL (DI EXCEL, sebelum PPN)</div>
+                            <div style="font-size: 1.6rem; font-weight: 800;">{}</div>
+                        </div>
+                        """.format(format_currency(total_kategori_excel)), unsafe_allow_html=True)
+                # PPN GLOBAL (tampilkan setelah TOTAL kategori)
                 show_global_ppn = excel_ppn_global is not None and (is_combined_global or not has_any_section_ppn)
                 if show_global_ppn:
                     sum_sub_for_ppn = sum(safe_float(sd.get('subtotal_value')) or 0 for sd in sections.values())
