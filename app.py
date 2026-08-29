@@ -862,17 +862,37 @@ def display_results():
                             <div style="font-size: 1.6rem; font-weight: 800;">{}</div>
                         </div>
                         """.format(format_currency(total_kategori_excel)), unsafe_allow_html=True)
-                # PPN GLOBAL (tampilkan setelah TOTAL kategori)
+
+                # === Alur awam: tampilkan urutan -->
+                st.markdown("""
+                <div style="display:flex; align-items:center; justify-content:center; gap:.5rem; margin:1rem 0; flex-wrap:wrap;">
+                  <span class="badge ok">1. Jumlah A+B = TOTAL</span><span style="color:#94a3b8;">→</span>
+                  <span class="badge neutral">2. TOTAL × 11% = PPN</span><span style="color:#94a3b8;">→</span>
+                  <span class="badge ok" style="background:#dcfce7; border-color:#86efac;">3. TOTAL + PPN = GRAND</span>
+                </div>
+                """, unsafe_allow_html=True)
+
+                # PPN GLOBAL — kartu besar, judul jelas, rumus
                 show_global_ppn = excel_ppn_global is not None and (is_combined_global or not has_any_section_ppn)
                 if show_global_ppn:
                     sum_sub_for_ppn = sum(safe_float(sd.get('subtotal_value')) or 0 for sd in sections.values())
                     calc_ppn_global = sum_sub_for_ppn * 0.11
+                    st.markdown("""
+                    <div class="card" style="border:2px solid #fed7aa; background: linear-gradient(180deg, #fffbeb, #ffffff);">
+                      <div style="display:flex; align-items:center; gap:.6rem; margin-bottom:.6rem;">
+                        <span style="background:#f97316; color:white; border-radius:8px; padding:.3rem .6rem; font-weight:800;">Langkah 2</span>
+                        <b style="font-size:1.05rem;">PPN 11% — dari TOTAL kategori</b>
+                        <span style="margin-left:auto; color:#9ca3af; font-size:.8rem;">Rumus: TOTAL × 11%</span>
+                      </div>
+                    </div>
+                    """, unsafe_allow_html=True)
                     col1, col2, col3 = st.columns([2, 1, 2])
                     with col1:
                         st.markdown("""
                         <div class="ppn-box">
-                            <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">📥 PPN 11% GLOBAL (DIHITUNG)</div>
-                            <div style="font-size: 1.6rem; font-weight: 800;">{}</div>
+                            <div style="font-size: 0.95rem; font-weight:700; opacity: 0.95; margin-bottom: 0.4rem;">PPN (DIHITUNG)</div>
+                            <div style="font-size: 0.8rem; opacity:.85; margin-bottom:.3rem;">TOTAL × 11%</div>
+                            <div style="font-size: 1.7rem; font-weight: 800;">{}</div>
                         </div>
                         """.format(format_currency(calc_ppn_global)), unsafe_allow_html=True)
                     with col2:
@@ -882,16 +902,15 @@ def display_results():
                             if abs(diff2) > 1:
                                 st.markdown("""
                                 <div class="selisih-box">
-                                    <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">❌</div>
-                                    <div style="font-weight: 700; font-size: 0.9rem;">SELISIH</div>
-                                    <div style="font-weight: 800; font-size: 1.2rem; margin-top: 0.3rem;">{}</div>
+                                    <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">❌ SELISIH</div>
+                                    <div style="font-weight: 800; font-size: 1.1rem; margin-top: 0.3rem;">{}</div>
                                 </div>
                                 """.format(format_currency(diff2)), unsafe_allow_html=True)
                             else:
                                 st.markdown("""
                                 <div class="sesuai-box">
-                                    <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">✅</div>
-                                    <div style="font-weight: 700; font-size: 0.9rem;">SESUAI</div>
+                                    <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">✅ COCOK</div>
+                                    <div style="font-weight: 700; font-size: .85rem; opacity:.9;">PPN benar</div>
                                 </div>
                                 """, unsafe_allow_html=True)
                         except:
@@ -899,21 +918,16 @@ def display_results():
                     with col3:
                         st.markdown("""
                         <div class="ppn-box">
-                            <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">📤 PPN GLOBAL (DI EXCEL)</div>
-                            <div style="font-size: 1.6rem; font-weight: 800;">{}</div>
+                            <div style="font-size: 0.95rem; font-weight:700; opacity: 0.95; margin-bottom: 0.4rem;">PPN (DI EXCEL)</div>
+                            <div style="font-size: 1.7rem; font-weight: 800;">{}</div>
                         </div>
                         """.format(format_currency(excel_ppn_global)), unsafe_allow_html=True)
 
-                # GRAND TOTAL (Gabungan semua section) — SUDAH termasuk PPN jika ada
+                # Judul Langkah 3
                 if excel_grand_total is not None:
                     st.markdown("""
-                    <div style="background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%); 
-                                color: white; 
-                                padding: 0.8rem; 
-                                border-radius: 12px; 
-                                text-align: center;
-                                margin: 1rem 0;">
-                        <h4 style="margin: 0; color: white;">📊 GRAND TOTAL (SEMUA SECTION)</h4>
+                    <div class="card" style="border:2px solid #86efac; background: linear-gradient(180deg, #ecfdf5, #ffffff);">
+                      <div style="display:flex; gap:.6rem; align-items:center;"><span style="background:#059669; color:white; border-radius:8px; padding:.35rem .7rem; font-weight:800;">Langkah 3</span><b>Grand Total — sudah termasuk PPN</b><span style="margin-left:auto; color:#9ca3af; font-size:.8rem;">Rumus: TOTAL + PPN</span></div>
                     </div>
                     """, unsafe_allow_html=True)
                     
@@ -947,8 +961,9 @@ def display_results():
                     with col1:
                         st.markdown("""
                         <div class="grandtotal-box">
-                            <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">📥 GRAND TOTAL (DIHITUNG)</div>
-                            <div style="font-size: 1.6rem; font-weight: 800;">{}</div>
+                            <div style="font-size: 0.95rem; font-weight:700; opacity: 0.95; margin-bottom: 0.4rem;">Grand Total — DIHITUNG</div>
+                            <div style="font-size: 1.7rem; font-weight: 800;">{}</div>
+                            <div style="font-size:.75rem; opacity:.85; margin-top:.2rem;">TOTAL + PPN</div>
                         </div>
                         """.format(format_currency(calculated_grand_total)), unsafe_allow_html=True)
                     with col2:
@@ -958,16 +973,15 @@ def display_results():
                             if abs(difference) > 1:
                                 st.markdown("""
                                 <div class="selisih-box">
-                                    <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">❌</div>
-                                    <div style="font-weight: 700; font-size: 0.9rem;">SELISIH</div>
-                                    <div style="font-weight: 800; font-size: 1.2rem; margin-top: 0.3rem;">{}</div>
+                                    <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">❌ SELISIH</div>
+                                    <div style="font-weight: 800; font-size: 1.1rem; margin-top: 0.3rem;">{}</div>
                                 </div>
                                 """.format(format_currency(difference)), unsafe_allow_html=True)
                             else:
                                 st.markdown("""
                                 <div class="sesuai-box">
-                                    <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">✅</div>
-                                    <div style="font-weight: 700; font-size: 0.9rem;">SESUAI</div>
+                                    <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">✅ COCOK</div>
+                                    <div style="font-weight: 700; font-size: .85rem; opacity:.9;">Grand benar</div>
                                 </div>
                                 """, unsafe_allow_html=True)
                         except:
@@ -975,25 +989,34 @@ def display_results():
                     with col3:
                         st.markdown("""
                         <div class="grandtotal-box">
-                            <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">📤 GRAND TOTAL (DI EXCEL)</div>
-                            <div style="font-size: 1.6rem; font-weight: 800;">{}</div>
+                            <div style="font-size: 0.95rem; font-weight:700; opacity: 0.95; margin-bottom: 0.4rem;">Grand Total — DI EXCEL</div>
+                            <div style="font-size: 1.7rem; font-weight: 800;">{}</div>
                         </div>
                         """.format(format_currency(excel_grand_total)), unsafe_allow_html=True)
+                    st.markdown("<div style='height:1rem;'></div>", unsafe_allow_html=True)
             
             else:
-                # SINGLE SECTION - fleksibel: GRAND TOTAL sudah termasuk PPN jika ada PPN di Excel
-                # Jangan auto-11% jika tidak ada baris PPN (PPN opsional)
                 has_ppn_single = excel_ppn is not None
                 calculated_ppn = calculated_total_items * 0.11 if has_ppn_single else 0
                 calculated_grand_total = calculated_total_items + calculated_ppn
-                
-                # Subtotal
+
+                # Judul langkah single
+                st.markdown("""
+                <div class="card" style="border:2px solid #bfdbfe;">
+                  <div style="display:flex; gap:.6rem; align-items:center; flex-wrap:wrap;">
+                    <span style="background:#2563eb; color:white; border-radius:8px; padding:.35rem .7rem; font-weight:800;">Langkah 1</span>
+                    <b>Jumlah (sebelum PPN)</b> <span style="color:#64748b; font-size:.85rem;">— penjumlahan semua item</span>
+                    <span style="margin-left:auto; background:#f1f5f9; border-radius:999px; padding:.25rem .6rem; font-size:.78rem; color:#475569;"><b>Rumus:</b> Σ Qty × Harga</span>
+                  </div>
+                </div>
+                """, unsafe_allow_html=True)
+                 # Subtotal
                 col1, col2, col3 = st.columns([2, 1, 2])
                 with col1:
                     st.markdown("""
                     <div class="subtotal-box">
-                        <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">📥 SUBTOTAL (DIHITUNG)</div>
-                        <div style="font-size: 1.6rem; font-weight: 800;">{}</div>
+                        <div style="font-size: 0.95rem; font-weight:700; opacity: 0.95; margin-bottom: 0.4rem;">Jumlah (DIHITUNG)</div>
+                        <div style="font-size: 1.7rem; font-weight: 800;">{}</div>
                     </div>
                     """.format(format_currency(calculated_total_items)), unsafe_allow_html=True)
                 with col2:
@@ -1004,16 +1027,15 @@ def display_results():
                             if abs(difference) > 1:
                                 st.markdown("""
                                 <div class="selisih-box">
-                                    <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">❌</div>
-                                    <div style="font-weight: 700; font-size: 0.9rem;">SELISIH</div>
-                                    <div style="font-weight: 800; font-size: 1.2rem; margin-top: 0.3rem;">{}</div>
+                                    <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">❌ SELISIH</div>
+                                    <div style="font-weight: 800; font-size: 1.1rem; margin-top: 0.3rem;">{}</div>
                                 </div>
                                 """.format(format_currency(difference)), unsafe_allow_html=True)
                             else:
                                 st.markdown("""
                                 <div class="sesuai-box">
-                                    <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">✅</div>
-                                    <div style="font-weight: 700; font-size: 0.9rem;">SESUAI</div>
+                                    <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">✅ COCOK</div>
+                                    <div style="font-weight: 700; font-size: .85rem; opacity:.9;">Jumlah benar</div>
                                 </div>
                                 """, unsafe_allow_html=True)
                         except:
@@ -1024,15 +1046,20 @@ def display_results():
                             excel_val = float(excel_subtotal)
                             st.markdown("""
                             <div class="subtotal-box">
-                                <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">📤 SUBTOTAL (DI EXCEL)</div>
-                                <div style="font-size: 1.6rem; font-weight: 800;">{}</div>
+                                <div style="font-size: 0.95rem; font-weight:700; opacity: 0.95; margin-bottom: 0.4rem;">Jumlah (DI EXCEL)</div>
+                                <div style="font-size: 1.7rem; font-weight: 800;">{}</div>
                             </div>
                             """.format(format_currency(excel_val)), unsafe_allow_html=True)
                         except:
                             pass
                 
-                # PPN single-section — hanya tampil jika Excel memang ada baris PPN; kalau tidak, sembunyikan
+                # PPN single — kartu Langkah 2
                 if has_ppn_single:
+                    st.markdown("""
+                    <div class="card" style="border:2px solid #fed7aa; background: linear-gradient(180deg, #fffbeb, #ffffff);">
+                      <div style="display:flex; gap:.6rem; align-items:center;"><span style="background:#f97316; color:white; border-radius:8px; padding:.35rem .7rem; font-weight:800;">Langkah 2</span><b>PPN 11%</b><span style="margin-left:auto; color:#9ca3af; font-size:.8rem;">Rumus: Jumlah × 11%</span></div>
+                    </div>
+                    """, unsafe_allow_html=True)
                     col1, col2, col3 = st.columns([2, 1, 2])
                     with col1:
                         st.markdown("""
@@ -1074,13 +1101,19 @@ def display_results():
                         except:
                             pass
                 
+                st.markdown("""
+                <div class="card" style="border:2px solid #86efac; background: linear-gradient(180deg, #ecfdf5, #ffffff);">
+                  <div style="display:flex; gap:.6rem; align-items:center;"><span style="background:#059669; color:white; border-radius:8px; padding:.35rem .7rem; font-weight:800;">Langkah 3</span><b>Grand Total — sudah termasuk PPN</b><span style="margin-left:auto; color:#9ca3af; font-size:.8rem;">Rumus: Jumlah + PPN</span></div>
+                </div>
+                """, unsafe_allow_html=True)
                 # Grand Total
                 col1, col2, col3 = st.columns([2, 1, 2])
                 with col1:
                     st.markdown("""
                     <div class="grandtotal-box">
-                        <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">📥 GRAND TOTAL (DIHITUNG)</div>
-                        <div style="font-size: 1.6rem; font-weight: 800;">{}</div>
+                        <div style="font-size: 0.95rem; font-weight:700; opacity: 0.95; margin-bottom: 0.4rem;">Grand Total — DIHITUNG</div>
+                        <div style="font-size: 1.7rem; font-weight: 800;">{}</div>
+                        <div style="font-size:.75rem; opacity:.85; margin-top:.2rem;">Jumlah + PPN</div>
                     </div>
                     """.format(format_currency(calculated_grand_total)), unsafe_allow_html=True)
                 with col2:
@@ -1091,16 +1124,15 @@ def display_results():
                             if abs(difference) > 1:
                                 st.markdown("""
                                 <div class="selisih-box">
-                                    <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">❌</div>
-                                    <div style="font-weight: 700; font-size: 0.9rem;">SELISIH</div>
-                                    <div style="font-weight: 800; font-size: 1.2rem; margin-top: 0.3rem;">{}</div>
+                                    <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">❌ SELISIH</div>
+                                    <div style="font-weight: 800; font-size: 1.1rem; margin-top: 0.3rem;">{}</div>
                                 </div>
                                 """.format(format_currency(difference)), unsafe_allow_html=True)
                             else:
                                 st.markdown("""
                                 <div class="sesuai-box">
-                                    <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">✅</div>
-                                    <div style="font-weight: 700; font-size: 0.9rem;">SESUAI</div>
+                                    <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">✅ COCOK</div>
+                                    <div style="font-weight: 700; font-size: .85rem; opacity:.9;">Grand benar</div>
                                 </div>
                                 """, unsafe_allow_html=True)
                         except:
@@ -1117,8 +1149,8 @@ def display_results():
                             excel_val = float(excel_grand_total)
                             st.markdown("""
                             <div class="grandtotal-box">
-                                <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">📤 GRAND TOTAL (DI EXCEL)</div>
-                                <div style="font-size: 1.6rem; font-weight: 800;">{}</div>
+                                <div style="font-size: 0.95rem; font-weight:700; opacity: 0.95; margin-bottom: 0.4rem;">Grand Total — DI EXCEL</div>
+                                <div style="font-size: 1.7rem; font-weight: 800;">{}</div>
                             </div>
                             """.format(format_currency(excel_val)), unsafe_allow_html=True)
                         except:
