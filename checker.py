@@ -23,10 +23,16 @@ class RABChecker:
         # 3. Cek data kosong
         self.check_empty_data(data)
         
-        # 4. Cek per section
+        # 4. Cek per section (sudah termasuk cek Jumlah/subtotal per section sebelum PPN)
         self.check_sections(data)
         
-        # 5. Cek grand total global
+        # 5. Cek Jumlah Global sebelum PPN (sum semua Jumlah section vs Jumlah/Total global)
+        self.check_global_subtotal(data)
+        
+        # 6. Cek PPN Global gabungan (11% * Jumlah Global)
+        self.check_global_ppn(data)
+        
+        # 7. Cek grand total global (sudah termasuk PPN)
         self.check_grand_total_global(data)
         
         return {
@@ -217,6 +223,69 @@ class RABChecker:
                         'section': section_letter
                     })
     
+    def check_global_subtotal(self, data: Dict[str, Any]) -> None:
+        """Cek Jumlah Global sebelum PPN: sum Jumlah per-section vs Jumlah Excel global."""
+        sections = data.get('sections', {})
+        if len(sections) <= 1:
+            return
+        subtotal_global_excel = safe_float(data.get('subtotal_value'))
+        # Jangan cek jika hanya auto-calc (semua section subtotal auto); tapi tetap cek jika ada nilai dari Excel
+        # Untuk membedakan, bandingkan sum subtotal calc vs excel global
+        sum_sub = 0
+        for sd in sections.values():
+            v = safe_float(sd.get('subtotal_value'))
+            if v is None:
+                # fallback dari items
+                calc = sum(safe_float(it.get('total')) or 0 for it in sd.get('items', []))
+                v = calc if calc else 0
+            sum_sub += v or 0
+        if subtotal_global_excel is None or sum_sub == 0:
+            return
+        if abs(sum_sub - subtotal_global_excel) > 1:
+            self.errors.append({
+                'type': 'GLOBAL_SUBTOTAL_ERROR',
+                'sheet': data.get('sheet_name'),
+                'row': data.get('subtotal_row'),
+                'item_name': 'Jumlah Global',
+                'detail': 'Jumlah (Total sebelum PPN) tidak sesuai — penjumlahan Jumlah per-section salah',
+                'calculation': f'Jumlah {len(sections)} section',
+                'expected': sum_sub,
+                'actual': subtotal_global_excel,
+                'difference': sum_sub - subtotal_global_excel,
+                'status': 'PERLU CEK'
+            })
+
+    def check_global_ppn(self, data: Dict[str, Any]) -> None:
+        """Cek PPN Global gabungan: PPN Excel global vs 11% * Jumlah Global."""
+        sections = data.get('sections', {})
+        if len(sections) <= 1:
+            return
+        global_ppn = safe_float(data.get('ppn_value'))
+        if global_ppn is None or not data.get('ppn_is_combined', False):
+            return
+        sum_sub = 0
+        for sd in sections.values():
+            v = safe_float(sd.get('subtotal_value'))
+            if v is None:
+                v = sum(safe_float(it.get('total')) or 0 for it in sd.get('items', []))
+            sum_sub += v or 0
+        if sum_sub == 0:
+            return
+        expected = sum_sub * 0.11
+        if abs(expected - global_ppn) > 1:
+            self.errors.append({
+                'type': 'GLOBAL_PPN_ERROR',
+                'sheet': data.get('sheet_name'),
+                'row': data.get('ppn_row'),
+                'item_name': 'PPN Global',
+                'detail': 'PPN Global tidak sesuai (harus 11% × Jumlah Global)',
+                'calculation': f'Jumlah Global ({sum_sub:,.0f}) × 11%',
+                'expected': expected,
+                'actual': global_ppn,
+                'difference': expected - global_ppn,
+                'status': 'PERLU CEK'
+            })
+
     def check_grand_total_global(self, data: Dict[str, Any]) -> None:
         """Cek Grand Total global — fleksibel: dukung PPN per-section atau PPN gabungan"""
         sections = data.get('sections', {})
