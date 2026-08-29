@@ -860,27 +860,29 @@ def display_results():
                             </div>
                             """.format(format_currency(section_total_excel)), unsafe_allow_html=True)
                 
-                # === TOTAL KATEGORI — untuk PPN 1 di akhir (3+) jangan hitung dulu, langsung PPN Global ===
+                # === TOTAL KATEGORI — jangan pakai label misleading jika 3+ section ===
                 sheet_dbg_global = excel_sheets_data.get(sheet_name, {}) or sheet_data
                 excel_ppn_global = sheet_dbg_global.get('ppn_value')
                 is_combined_global = sheet_dbg_global.get('ppn_is_combined', False)
                 has_any_section_ppn = any(sd.get('ppn_value') is not None for sd in sections.values())
                 _is_single_ppn = sum(1 for sd in sections.values() if sd.get('ppn_value') is not None) == 1 and len(sections) > 1
-                # Case 5 dinamis 3+: tidak perlu TOTAL kategori hitung dulu
-                _is_case5 = len(sections) >= 3 and is_combined_global
-                has_total_kategori = not _is_single_ppn and not _is_case5 and (sheet_dbg_global.get('subtotal_value') is not None or sheet_dbg_global.get('jumlah_global_excel') is not None)
+                # Case 5: 3+ section dinamis — label harus A+B+C, bukan A+B
+                letters = "+".join(sorted(sections.keys()))
+                total_label = f"Jumlah {' + '.join(sorted(sections.keys()))}" if len(sections) <= 4 else f"Jumlah {len(sections)} bagian"
+                has_total_kategori = not _is_single_ppn and (sheet_dbg_global.get('subtotal_value') is not None or sheet_dbg_global.get('jumlah_global_excel') is not None)
                 total_kategori_excel = sheet_dbg_global.get('jumlah_global_excel') if sheet_dbg_global.get('jumlah_global_excel') is not None else sheet_dbg_global.get('subtotal_value')
                 if has_total_kategori and len(sections) > 1:
                     sum_sub_for_total = sum(safe_float(sd.get('subtotal_value')) or 0 for sd in sections.values())
                     col1, col2, col3 = st.columns([2, 1, 2])
                     with col1:
+                        letters_plus = "+".join(sorted(sections.keys()))
                         st.markdown("""
                         <div class="subtotal-box">
                             <div style="font-size: 0.95rem; font-weight:700; opacity: 0.95; margin-bottom: 0.4rem;">TOTAL — DIHITUNG</div>
-                            <div style="font-size: 0.8rem; opacity:.85; margin-bottom:.3rem;">Jumlah A + Jumlah B[+C]</div>
+                            <div style="font-size: 0.8rem; opacity:.85; margin-bottom:.3rem;">{}</div>
                             <div style="font-size: 1.7rem; font-weight: 800;">{}</div>
                         </div>
-                        """.format(format_currency(sum_sub_for_total)), unsafe_allow_html=True)
+                        """.format(total_label, format_currency(sum_sub_for_total)), unsafe_allow_html=True)
                     with col2:
                         try:
                             excel_val_t = float(total_kategori_excel)
