@@ -180,12 +180,11 @@ class RABChecker:
                     calculated_subtotal += total
                     item_count += 1
             
-            # 1. Cek Subtotal (Jumlah X) — hanya jika ada baris Jumlah/Total kategori/section dari Excel
+            # 1. Cek Subtotal (Jumlah X)
             if subtotal_excel is not None:
                 is_calc = section_data.get('subtotal_is_calculated', False)
                 is_category = section_data.get('is_category', False)
                 if is_calc and is_category:
-                    # Kategori pemisah (Sparepart/Instalasi) tanpa baris Jumlah di Excel -> jangan error palsu
                     pass
                 elif is_calc:
                     pass
@@ -206,20 +205,13 @@ class RABChecker:
                             'section': section_letter
                         })
             
-            # 5-CASE mode-aware:
-            # - PPN GABUNGAN: validasi PPN per-section di-skip (sudah di GLOBAL_PPN_ERROR TOTAL×11%)
-            # - PPN 1 BAGIAN: hanya section yang memang punya PPN yang dicek (Jumlah B ×11%, Total B), section lain di-skip
-            # - PPN PER-SECTION: semua section yang punya PPN dicek (Jumlah A×11%, Jumlah B×11%)
-            is_combined = data.get('ppn_is_combined')
-            ppn_sections = [k for k, v in data.get('sections',{}).items() if safe_float(v.get('ppn_value')) is not None] if isinstance(data.get('sections'), dict) else []
-            is_single_ppn_section = len(ppn_sections) == 1 and len(data.get('sections',{})) > 1
-            if is_combined and safe_float(data.get('ppn_value')) is not None:
-                pass  # gabungan -> skip per-section
-            elif ppn_excel is not None and subtotal_excel is not None:
-                if section_data.get('is_category') and is_combined:
+            if ppn_excel is not None and subtotal_excel is not None:
+                # Pengaman: PPN Section A tidak boleh pakai subtotal A jika PPN itu milik B (PPN hanya di 1 bagian)
+                ppn_sections_dbg = [k for k,v in data.get('sections',{}).items() if safe_float(v.get('ppn_value')) is not None] if isinstance(data.get('sections'), dict) else []
+                if len(ppn_sections_dbg) == 1 and section_letter not in ppn_sections_dbg:
                     pass
-                elif is_single_ppn_section and section_letter not in ppn_sections:
-                    pass  # PPN hanya di 1 bagian (case 2): jangan cek PPN section yang tidak punya PPN
+                elif data.get('ppn_is_combined'):
+                    pass
                 else:
                     expected_ppn = subtotal_excel * 0.11
                     tolerance = 1
@@ -269,17 +261,18 @@ class RABChecker:
                     })
 
     def check_global_subtotal(self, data: Dict[str, Any]) -> None:
-        """CASE 4/5: TOTAL (A+B) / (A+B+C) = sum Total A/B/C (dinamis, bukan hardcode A/B/C)."""
+        """TOTAL gabungan: hanya cek jika ada baris TOTAL (A+B[+C]) eksplisit dari Excel."""
         sections = data.get('sections', {})
         if len(sections) <= 1:
             return
+        # Kategori tanpa Jumlah per-section (is_category) bukan section dijumlah — skip
+        if all(v.get('is_category') for v in sections.values()):
+            return
         subtotal_global_excel = safe_float(data.get('jumlah_global_excel'))
-        if subtotal_global_excel is None:
-            subtotal_global_excel = safe_float(data.get('subtotal_value'))
-        subtotal_row = data.get('jumlah_global_row') or data.get('subtotal_row')
+        subtotal_row = data.get('jumlah_global_row')
+        # Jangan fallback ke subtotal_value global random (yang isinya TOTAL A) — hanya jumlah_global_excel valid
         if subtotal_global_excel is None:
             return
-        # 5-CASE: jumlah sub bagian dinamis (A/B/C atau lebih) — hitung via loop
         sum_sub = 0
         for sd in sections.values():
             v = safe_float(sd.get('subtotal_value'))
@@ -305,43 +298,36 @@ class RABChecker:
             })
 
     def check_global_ppn(self, data: Dict[str, Any]) -> None:
-        """PPN global — CASE 4/5 gabungan: TOTAL (Jumlah Global) × 11%. Untuk PPN 1 BAGIAN & per-section, jangan double."""
+        """PPN global — CASE 4/5 gabungan: TOTAL (A+B[+C]) × 11%."""
         sections = data.get('sections', {})
         if not sections:
             return
         global_ppn = safe_float(data.get('ppn_value'))
         if global_ppn is None:
             return
-        is_combined = data.get('ppn_is_combined')
-        has_any_section_ppn = any(safe_float(v.get('ppn_value')) is not None for v in sections.values())
-        # Case 2 (PPN 1 Bagian) & per-section: jangan double pakai GLOBAL_PPN_ERROR
-        if len(sections) > 1 and len([k for k,v in sections.items() if safe_float(v.get('ppn_value')) is not None]) == 1:
-            return  # sudah di check_case2_single_ppn_section & section PPN, bukan global
-        if has_any_section_ppn and not is_combined and len(sections) > 1:
-            # per-section murni — tidak ada PPN global yang perlu dicek di sini
+        if not data.get('ppn_is_combined'):
             return
+        # PPN gabungan = TOTAL (A+B[+C]) × 11% — TOTAL adalah jumlah subtotal semua section
         total_global = safe_float(data.get('jumlah_global_excel'))
         if total_global is None:
-            total_global = safe_float(data.get('subtotal_value'))
-        if total_global is None:
+            # Jangan pakai subtotal_value global yang isinya Total A — sum semua section
             total_global = sum(safe_float(sd.get('subtotal_value')) or sum(safe_float(it.get('total')) or 0 for it in sd.get('items', [])) or 0 for sd in sections.values())
         if not total_global:
             return
-        if len(sections) > 1 and (is_combined or not has_any_section_ppn):
-            expected = total_global * 0.11
-            if abs(expected - global_ppn) > 1:
-                self.errors.append({
-                    'type': 'GLOBAL_PPN_ERROR',
-                    'sheet': data.get('sheet_name'),
-                    'row': data.get('ppn_row'),
-                    'item_name': 'PPN Global',
-                    'detail': 'PPN tidak sesuai — harus TOTAL × 11% (Jumlah A+B × 11%)',
-                    'calculation': f'TOTAL ({total_global:,.0f}) × 11%',
-                    'expected': expected,
-                    'actual': global_ppn,
-                    'difference': expected - global_ppn,
-                    'status': 'PERLU CEK'
-                })
+        expected = total_global * 0.11
+        if abs(expected - global_ppn) > 1:
+            self.errors.append({
+                'type': 'GLOBAL_PPN_ERROR',
+                'sheet': data.get('sheet_name'),
+                'row': data.get('ppn_row'),
+                'item_name': 'PPN Global',
+                'detail': 'PPN tidak sesuai — harus TOTAL (A+B[+C]) × 11%',
+                'calculation': f'TOTAL ({total_global:,.0f}) × 11%',
+                'expected': expected,
+                'actual': global_ppn,
+                'difference': expected - global_ppn,
+                'status': 'PERLU CEK'
+            })
 
     def check_without_ppn(self, data: Dict[str, Any]) -> None:
         """CASE 1: RAB TANPA PPN — GRAND TOTAL harus = TOTAL (SUM item), tanpa PPN."""

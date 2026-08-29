@@ -224,8 +224,8 @@ class ExcelReader:
         m3 = re.search(r'(?:TOTAL|JUMLAH|SUBTOTAL)([A-Z])\b', norm_jml.replace(' ', ''))
         if m3:
             return m3.group(1)
-        # Pattern: "TOTAL (A+B)" - ini grand total
-        if re.search(r'TOTAL\s*[\(]?\s*[A-Z]\s*[\+]\s*[A-Z]\s*[\)]?', norm):
+        # Pattern: "TOTAL (A+B)" atau "TOTAL (A+B+C)" - ini grand total (dinamis, beyond 5 case)
+        if re.search(r'TOTAL\s*[\(]?\s*[A-Z]\s*[\+]\s*[A-Z](?:\s*[\+]\s*[A-Z])*\s*[\)]?', norm):
             return 'GRAND'
         # Fuzzy fallback via rapidfuzz untuk label panjang
         try:
@@ -246,8 +246,8 @@ class ExcelReader:
         norm = self._normalize_label(cell_str)
         norm_jml = re.sub(r'\bJML\b', 'JUMLAH', norm)
         
-        # Grand Total — toleran: GRAND TOTAL / TOTAL A+B / GRANDTOTAL / TOTAL(A+B)
-        if 'GRAND TOTAL' in norm or 'GRANDTOTAL' in norm.replace(' ', '') or re.search(r'TOTAL\s*[\(]?\s*[A-Z]\s*[\+]\s*[A-Z]', norm):
+        # Grand Total — toleran: GRAND TOTAL / TOTAL A+B / TOTAL A+B+C / GRANDTOTAL
+        if 'GRAND TOTAL' in norm or 'GRANDTOTAL' in norm.replace(' ', '') or re.search(r'TOTAL\s*[\(]?\s*[A-Z]\s*[\+]\s*[A-Z](?:\s*[\+]\s*[A-Z])*\s*[\)]?', norm):
             return 'grand_total'
         # Fuzzy GRAND TOTAL
         try:
@@ -314,21 +314,21 @@ class ExcelReader:
             pass
         
         # Jumlah Global — JUMLAH/TOTAL sebelum PPN (multi-section).
-        # Untuk struktur A...B lalu "TOTAL" sebelum "PPN 11%" dan "GRAND TOTAL" (case user),
-        # "TOTAL" ini adalah Jumlah Global (sebelum PPN), bukan grand_total maupun per-section.
         norm_for_global = norm_jml.strip()
+        # GRAND TOTAL selalu grand_total, bukan jumlah_global — cek dulu
+        if 'GRAND TOTAL' in norm or 'GRANDTOTAL' in norm.replace(' ', ''):
+            return 'grand_total'
+        # TOTAL (A+B+C) atau TOTAL (A+B) -> grand_total sudah ditangani di atas, jangan jumlah_global
+        if re.search(r'TOTAL\s*[\(]?\s*[A-Z]\s*[\+]\s*[A-Z]', norm):
+            return 'grand_total'
         if norm_for_global in ('JUMLAH', 'TOTAL', 'SUBTOTAL', 'SUB TOTAL', 'JUMLAH SEBELUM PPN', 'TOTAL SEBELUM PPN', 'JUMLAH TOTAL', 'SUBTOTAL GLOBAL', 'TOTAL JUMLAH', 'JUMLAH GLOBAL'):
             return 'jumlah_global'
         if norm_for_global.startswith(('JUMLAH SEBELUM', 'TOTAL SEBELUM', 'SUBTOTAL SEBELUM')):
             return 'jumlah_global'
-        # Jika single word TOTAL/JUMLAH tanpa huruf section -> global
-        # Deteksi via norm_jml tanpa huruf section, tapi jangan false positive untuk "TOTAL A"
         if not self._detect_section_letter(cell_str):
             if norm_for_global in ('JUMLAH', 'TOTAL', 'SUB TOTAL', 'SUBTOTAL'):
                 return 'jumlah_global'
-            # Toleran: "JUMLAH" diikuti spasi/angka tanpa huruf section -> global
             if norm_for_global.startswith('JUMLAH') and not re.search(r'JUMLAH[\s\.]*[A-Z]\b', norm_for_global):
-                # Cek bukan typo subtotal per-section
                 if len(norm_for_global) <= 25:
                     return 'jumlah_global'
 
@@ -787,8 +787,9 @@ class ExcelReader:
             # Kategori kategori: jika belum ada Jumlah per-section dari Excel, flag kategori agar tidak dianggap section terpisah untuk total
             section_data['is_category'] = not is_labeled_section
         
-        # Hitung total items global
-        if result['subtotal_value'] is None:
+        # Jumlah Global: jika ada Jumlah Global eksplisit, jangan isi subtotal_value global dengan Total A
+        # (sudah dipisah via jumlah_global_excel). Untuk tanpa-Jumlah kasus, fallback SUM item hanya jika tanpa PPN / single.
+        if result['subtotal_value'] is None and len(result['sections']) <= 1:
             result['subtotal_value'] = 0
             for i in result['items']:
                 val = safe_float(i.get('total'))
@@ -853,10 +854,25 @@ class ExcelReader:
                     if jumlah_global_for_ppn is None:
                         jumlah_global_for_ppn = sum(safe_float(v.get('subtotal_value')) or 0 for v in result['sections'].values())
                     combined_candidate = None
+                    # PPN 1 BAGIAN (hanya B punya PPN) tidak boleh dianggap gabungan meski nilainya dekat TOTAL×11% secara kebetulan
+                    # Gabungan = 11% * Jumlah Global (A+B), sedangkan PPN B = 11% * Jumlah B — keduanya berbeda jika ada A
+                    # Jadi gabungan hanya jika PPN tidak dekat dengan salah satu Jumlah section
                     if len(remaining) >= 1 and jumlah_global_for_ppn and jumlah_global_for_ppn > 0:
                         expected_combined = jumlah_global_for_ppn * 0.11
                         for cand in remaining:
-                            if abs(cand['value'] - expected_combined) <= max(2, expected_combined * 0.008):
+                            cand_val = safe_float(cand.get('value'))
+                            if cand_val is None:
+                                continue
+                            # Cek bukan PPN per-section-nya B (11% * Jumlah B)
+                            is_ppn_per_section = False
+                            for sl, sd in result['sections'].items():
+                                sub = safe_float(sd.get('subtotal_value'))
+                                if sub and abs(cand_val - sub * 0.11) <= max(2, sub * 0.11 * 0.008):
+                                    is_ppn_per_section = True
+                                    break
+                            if is_ppn_per_section:
+                                continue
+                            if abs(cand_val - expected_combined) <= max(2, expected_combined * 0.008):
                                 combined_candidate = cand
                                 break
                     if combined_candidate is not None:
@@ -881,25 +897,23 @@ class ExcelReader:
                                     result['ppn_value'] = cand['value']
                                     result['ppn_row'] = cand['row']
                                 placed = True
-                    else:
+                        # Fallback global jika tidak ada yang match PPN per-section
                         for sl in section_order_sorted:
                             if result['sections'][sl]['ppn_value'] is None:
+                                sub_b = safe_float(result['sections'][sl].get('subtotal_value'))
+                                cand_ppn = safe_float(cand.get('value'))
+                                if sub_b and cand_ppn and abs(cand_ppn - sub_b * 0.11) > max(2, sub_b * 0.11 * 0.015):
+                                    continue
                                 result['sections'][sl]['ppn_value'] = cand['value']
                                 result['sections'][sl]['ppn_row'] = cand['row']
                                 placed = True
                                 break
-                        if not placed:
-                            if result.get('ppn_value') is None:
-                                result['ppn_value'] = cand['value']
-                                result['ppn_row'] = cand['row']
-                                result['ppn_is_combined'] = True
+                        if not placed and result.get('ppn_value') is None:
+                            result['ppn_value'] = cand['value']
+                            result['ppn_row'] = cand['row']
+                            result['ppn_is_combined'] = True
                     if len(result['sections']) == 1 and result.get('ppn_value') is None:
                         pass
-                        # Kategori A/B dengan PPN Global: Jangan duplikasi PPN Global ke section tunggal
-                        # only = list(result['sections'].values())[0]
-                        # if only.get('ppn_value') is not None:
-                        #     result['ppn_value'] = only['ppn_value']
-                        #     result['ppn_row'] = only['ppn_row']
 
         # Expose jumlah section dinamis (A/B/C atau lebih) untuk laporan
         result['detected_sections'] = sorted(result['sections'].keys())
@@ -995,12 +1009,14 @@ class ExcelReader:
                 result['grand_total_value'] = total_all
         # Grand total sudah ada tapi PPN gabungan belum terdeteksi: jangan timpa
         
-            # PPN global fallback ringkasan: jika tidak ada global tapi sections ada PPN, global = sum PPN sections (bukan combined)
-        if result.get('ppn_value') is None and len(result['sections']) > 1:
-            ppn_sum = sum(safe_float(v.get('ppn_value')) or 0 for v in result['sections'].values())
-            if ppn_sum > 0:
-                result['ppn_value'] = ppn_sum
-                result['ppn_is_combined'] = False
+            # PPN 1 BAGIAN: jangan sum ke global (itu gabungan palsu)
+            # Hanya sum jika PPN per-section murni (lebih dari 1 section punya PPN)
+            ppn_sections_cnt = sum(1 for v in result['sections'].values() if safe_float(v.get('ppn_value')) is not None)
+            if result.get('ppn_value') is None and ppn_sections_cnt > 1:
+                ppn_sum = sum(safe_float(v.get('ppn_value')) or 0 for v in result['sections'].values())
+                if ppn_sum > 0:
+                    result['ppn_value'] = ppn_sum
+                    result['ppn_is_combined'] = False
         result.setdefault('ppn_is_combined', False)
         result.setdefault('is_without_ppn', False)
 
