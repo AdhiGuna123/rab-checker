@@ -871,17 +871,17 @@ def display_results():
                             </div>
                             """.format(format_currency(section_total_excel)), unsafe_allow_html=True)
                 
-                # === TOTAL KATEGORI (Jumlah A + Jumlah B sebelum PPN) + PPN GLOBAL (urutan: Jumlah -> TOTAL -> PPN -> Grand Total) ===
+                # === TOTAL KATEGORI (hanya jika perlu) — simpan untuk ringkasan tapi tidak tampil jika 1 PPN ===
                 sheet_dbg_global = excel_sheets_data.get(sheet_name, {}) or sheet_data
                 excel_ppn_global = sheet_dbg_global.get('ppn_value')
                 is_combined_global = sheet_dbg_global.get('ppn_is_combined', False)
                 has_any_section_ppn = any(sd.get('ppn_value') is not None for sd in sections.values())
-                # Total kategori: Jumlah Global sebelum PPN (TOTAL 92.585.120 di PDF, belum tambah PPN)
-                has_total_kategori = sheet_dbg_global.get('subtotal_value') is not None or sheet_dbg_global.get('jumlah_global_excel') is not None
+                # TOTAL kategori: Jumlah Global sebelum PPN — jangan tampil jika 1 PPN (sudah ada per-section)
+                _is_single_ppn = sum(1 for sd in sections.values() if sd.get('ppn_value') is not None) == 1 and len(sections) > 1
+                has_total_kategori = not _is_single_ppn and (sheet_dbg_global.get('subtotal_value') is not None or sheet_dbg_global.get('jumlah_global_excel') is not None)
                 total_kategori_excel = sheet_dbg_global.get('jumlah_global_excel') if sheet_dbg_global.get('jumlah_global_excel') is not None else sheet_dbg_global.get('subtotal_value')
                 if has_total_kategori and len(sections) > 1:
                     sum_sub_for_total = sum(safe_float(sd.get('subtotal_value')) or 0 for sd in sections.values())
-                    # Selalu tampilkan TOTAL KATEGORI (belum PPN) — di atas PPN
                     col1, col2, col3 = st.columns([2, 1, 2])
                     with col1:
                         st.markdown("""
