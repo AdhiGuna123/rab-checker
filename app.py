@@ -15,545 +15,92 @@ st.set_page_config(
     layout="wide"
 )
 
-# Custom CSS - Modern Dark Theme Premium
+# RAB Checker — Human Readable UI (backend tidak diubah)
 st.markdown("""
 <style>
-/* Import Google Fonts */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Nunito:wght@600;700;800&display=swap');
 
-/* Global Styles */
-.stApp {
-    font-family: 'Inter', sans-serif;
-    background: linear-gradient(135deg, #0a0a1a 0%, #1a1a2e 50%, #0f0f23 100%);
-    color: #e0e0e0;
+:root{
+  --bg:#f4f6ff;
+  --card:#ffffff;
+  --ink:#1e293b;
+  --muted:#64748b;
+  --line:#e2e8f0;
+  --blue:#2563eb; --blue2:#3b82f6;
+  --orange:#f59e0b; --orange2:#fb923c;
+  --green:#059669; --green2:#10b981;
+  --red:#dc2626; --red2:#ef4444;
+  --purple:#7c3aed;
+  --radius:20px;
 }
-
-/* Main Container - Glassmorphism */
-.main .block-container {
-    background: rgba(20, 20, 40, 0.8);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(102, 126, 234, 0.2);
-    border-radius: 24px;
-    padding: 2.5rem;
-    box-shadow: 
-        0 25px 50px rgba(0, 0, 0, 0.5),
-        0 0 100px rgba(102, 126, 234, 0.1),
-        inset 0 1px 0 rgba(255, 255, 255, 0.1);
-    margin-top: 1.5rem;
-    margin-bottom: 2rem;
+.stApp{
+  font-family:'Inter',sans-serif;
+  background: linear-gradient(180deg, #eef2ff 0%, #f8fafc 40%, #ffffff 100%);
+  color: var(--ink);
 }
-
-/* Main Header - Premium Gradient */
-.main-header {
-    font-family: 'Poppins', sans-serif;
-    font-size: 3rem;
-    font-weight: 800;
-    text-align: center;
-    margin-bottom: 2.5rem;
-    padding: 2.5rem 2rem;
-    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 25%, #a855f7 50%, #d946ef 75%, #ec4899 100%);
-    background-size: 200% 200%;
-    animation: gradientShift 8s ease infinite;
-    color: white;
-    border-radius: 24px;
-    box-shadow: 
-        0 20px 60px rgba(139, 92, 246, 0.4),
-        0 0 40px rgba(168, 85, 247, 0.3),
-        inset 0 2px 0 rgba(255, 255, 255, 0.2);
-    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-    letter-spacing: 2px;
-    position: relative;
-    overflow: hidden;
+.main .block-container{
+  background: transparent;
+  padding-top: 1rem;
+  max-width: 1100px;
 }
-
-.main-header::before {
-    content: '';
-    position: absolute;
-    top: -50%;
-    left: -50%;
-    width: 200%;
-    height: 200%;
-    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 60%);
-    animation: shimmer 3s ease-in-out infinite;
+.hero{
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 45%, #a855f7 100%);
+  color:white; border-radius: 28px;
+  padding: 2.2rem 1.6rem;
+  text-align:center;
+  box-shadow: 0 18px 50px rgba(79,70,229,.35);
+  margin-bottom: 1.2rem;
 }
+.hero h1{font-family:'Nunito',sans-serif; font-size:2.15rem; font-weight:800; margin:0; letter-spacing:.5px;}
+.hero p{margin:.5rem 0 0 0; font-size:1rem; opacity:.95;}
+.hero .chips{margin-top:1rem; display:flex; gap:.5rem; justify-content:center; flex-wrap:wrap;}
+.chip{ background: rgba(255,255,255,.22); border:1px solid rgba(255,255,255,.35); color:white; padding:.35rem .75rem; border-radius:999px; font-size:.8rem; font-weight:600; }
+.stepper{ display:flex; gap:.6rem; justify-content:center; margin-top: .9rem; }
+.step{ display:flex; align-items:center; gap:.5rem; background: white; border:2px solid #e0e7ff; border-radius:999px; padding:.45rem .8rem; font-size:.82rem; font-weight:700; color:#4338ca; }
+.step.active{ background:#4338ca; color:white; border-color:#4338ca; }
+.step.done{ background:#ecfdf5; color:#065f46; border-color:#a7f3d0;}
+.step .num{ width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:.75rem; font-weight:800; background:#e0e7ff; color:#4338ca; }
+.step.active .num{ background:white; color:#4338ca; }
+.step.done .num{ background:#10b981; color:white; }
+.card{ background: var(--card); border:1px solid var(--line); border-radius: var(--radius); padding: 1.1rem 1.2rem; box-shadow: 0 10px 30px rgba(15,23,42,.06); margin: 1rem 0; }
+.card h3{ font-family:'Nunito',sans-serif; font-size:1.05rem; font-weight:800; margin:0 0 .35rem 0; color:#1e293b;}
+.card .hint{ color: var(--muted); font-size:.86rem; margin:0; line-height:1.5;}
+ .kpi{ background:white; border:1px solid #e2e8f0; border-radius:16px; padding:.9rem; text-align:center; box-shadow: 0 6px 20px rgba(15,23,42,.05);}
+ .kpi .label{ font-size:.72rem; letter-spacing:.04em; color:#64748b; font-weight:700; text-transform:uppercase;}
+ .kpi .value{ font-size:1.25rem; font-weight:800; margin-top:.25rem;}
+ .kpi.ok{ border-color:#a7f3d0; background: linear-gradient(180deg, #ecfdf5, #ffffff); }
+ .kpi.bad{ border-color:#fecaca; background: linear-gradient(180deg, #fef2f2, #ffffff); }
+.how{ display:grid; grid-template-columns: repeat(3,1fr); gap:.8rem; margin: .6rem 0; }
+.how .how-card{ background:white; border:1px solid #e2e8f0; border-radius:16px; padding:.9rem; display:flex; gap:.75rem; align-items:flex-start; }
+.how .how-card .icon{ width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:1.1rem; }
+.illust{ background: linear-gradient(135deg, #eef2ff, #f0fdfa); border:1px dashed #c7d2fe; border-radius:16px; padding:1rem; display:flex; gap:.9rem; align-items:center; }
+.illust .pic{ width:64px; height:64px; border-radius:14px; background:white; display:flex; align-items:center; justify-content:center; font-size:2rem; box-shadow: 0 6px 18px rgba(15,23,42,.08);}
 
-@keyframes gradientShift {
-    0%, 100% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-}
+.flow{ display:flex; align-items:center; gap:.5rem; flex-wrap:wrap; justify-content:center; margin:.6rem 0; }
+.flow .node{ background:white; border:1px solid #e2e8f0; border-radius:14px; padding:.6rem .75rem; min-width:140px; text-align:center; }
+.flow .arrow{ font-size:1.1rem; color:#94a3b8;}
 
-@keyframes shimmer {
-    0%, 100% { transform: translateX(-50%) translateY(-50%); }
-    50% { transform: translateX(50%) translateY(50%); }
-}
+.money{ font-variant-numeric: tabular-nums; }
+.badge{ display:inline-block; padding:.2rem .55rem; border-radius:999px; font-size:.72rem; font-weight:700;}
+.badge.ok{ background:#ecfdf5; color:#065f46; border:1px solid #a7f3d0;}
+.badge.bad{ background:#fef2f2; color:#991b1b; border:1px solid #fecaca;}
+.badge.neutral{ background:#f1f5f9; color:#475569; border:1px solid #e2e8f0;}
 
-/* Section Header */
-.section-header {
-    font-family: 'Poppins', sans-serif;
-    font-size: 1.3rem;
-    font-weight: 600;
-    color: white;
-    margin: 2rem 0 1.2rem 0;
-    padding: 1rem 1.5rem;
-    background: linear-gradient(90deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%);
-    border-radius: 16px;
-    box-shadow: 
-        0 8px 25px rgba(99, 102, 241, 0.35),
-        inset 0 1px 0 rgba(255, 255, 255, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-}
+.box{ border-radius:16px; padding:1rem; text-align:center; color:white; box-shadow: 0 10px 24px rgba(15,23,42,.10);}
+.box.blue{ background: linear-gradient(135deg, #1e40af, #3b82f6); }
+.box.orange{ background: linear-gradient(135deg, #c2410c, #f97316); }
+.box.green{ background: linear-gradient(135deg, #065f46, #10b981); }
+.box.red{ background: linear-gradient(135deg, #991b1b, #ef4444); }
+.box.dark{ background: #1e293b; }
+.center{ text-align:center;}
 
-/* Info Box - Glass Effect */
-.info-box {
-    background: rgba(99, 102, 241, 0.15);
-    backdrop-filter: blur(10px);
-    color: #a5b4fc;
-    padding: 1.2rem 1.5rem;
-    border-radius: 16px;
-    margin: 0.5rem 0;
-    border-left: 5px solid #6366f1;
-    font-size: 1rem;
-    box-shadow: 
-        0 8px 25px rgba(99, 102, 241, 0.2),
-        inset 0 1px 0 rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(99, 102, 241, 0.3);
-}
-
-/* Status OK - Premium Green */
-.status-ok {
-    background: linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%);
-    color: white;
-    padding: 2rem;
-    border-radius: 20px;
-    text-align: center;
-    font-size: 1.5rem;
-    font-weight: 700;
-    box-shadow: 
-        0 15px 40px rgba(16, 185, 129, 0.4),
-        0 0 30px rgba(16, 185, 129, 0.2),
-        inset 0 2px 0 rgba(255, 255, 255, 0.2);
-    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-/* Status Error - Premium Red */
-.status-error {
-    background: linear-gradient(135deg, #ef4444 0%, #dc2626 50%, #b91c1c 100%);
-    color: white;
-    padding: 2rem;
-    border-radius: 20px;
-    text-align: center;
-    font-size: 1.5rem;
-    font-weight: 700;
-    box-shadow: 
-        0 15px 40px rgba(239, 68, 68, 0.4),
-        0 0 30px rgba(239, 68, 68, 0.2),
-        inset 0 2px 0 rgba(255, 255, 255, 0.2);
-    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-/* Error Card - Glass Orange */
-.error-card {
-    background: rgba(249, 115, 22, 0.12);
-    backdrop-filter: blur(10px);
-    border-left: 5px solid #f97316;
-    padding: 1.5rem;
-    margin: 0.8rem 0;
-    border-radius: 16px;
-    box-shadow: 
-        0 8px 25px rgba(249, 115, 22, 0.2),
-        inset 0 1px 0 rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(249, 115, 22, 0.3);
-}
-
-.error-card strong {
-    color: #fb923c;
-    font-size: 1rem;
-    font-weight: 600;
-}
-
-.error-card span {
-    color: #e0e0e0;
-    font-size: 0.95rem;
-}
-
-/* Warning Card - Glass Green */
-.warning-card {
-    background: rgba(34, 197, 94, 0.12);
-    backdrop-filter: blur(10px);
-    border-left: 5px solid #22c55e;
-    padding: 1.5rem;
-    margin: 0.8rem 0;
-    border-radius: 16px;
-    box-shadow: 
-        0 8px 25px rgba(34, 197, 94, 0.2),
-        inset 0 1px 0 rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(34, 197, 94, 0.3);
-}
-
-.warning-card strong {
-    color: #4ade80;
-    font-size: 1rem;
-    font-weight: 600;
-}
-
-.warning-card span {
-    color: #e0e0e0;
-    font-size: 0.95rem;
-}
-
-/* Result Labels */
-.result-label {
-    font-weight: 600;
-    color: #c4b5fd;
-    font-size: 0.9rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.result-value {
-    color: #a5b4fc;
-    font-size: 1.1rem;
-    font-weight: 700;
-}
-
-/* Difference Colors */
-.diff-positive {
-    color: #fca5a5;
-    font-weight: 700;
-}
-
-.diff-negative {
-    color: #86efac;
-    font-weight: 700;
-}
-
-/* Buttons - Premium */
-.stButton > button {
-    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%);
-    color: white;
-    border: none;
-    padding: 1rem 2.5rem;
-    border-radius: 14px;
-    font-weight: 600;
-    font-size: 1rem;
-    box-shadow: 
-        0 8px 25px rgba(99, 102, 241, 0.4),
-        inset 0 2px 0 rgba(255, 255, 255, 0.2);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.stButton > button:hover {
-    transform: translateY(-3px);
-    box-shadow: 
-        0 12px 35px rgba(99, 102, 241, 0.5),
-        0 0 20px rgba(139, 92, 246, 0.3);
-}
-
-.stButton > button:active {
-    transform: translateY(-1px);
-}
-
-/* File Uploader - Glass */
-.stFileUploader {
-    border: 2px dashed rgba(99, 102, 241, 0.5);
-    border-radius: 16px;
-    padding: 1.5rem;
-    background: rgba(99, 102, 241, 0.08);
-    backdrop-filter: blur(10px);
-}
-
-/* Expander - Glass */
-.stExpander {
-    border: 1px solid rgba(99, 102, 241, 0.3);
-    border-radius: 16px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-    background: rgba(30, 30, 50, 0.6);
-    backdrop-filter: blur(10px);
-}
-
-/* Messages - Glass */
-.stSuccess {
-    background: rgba(16, 185, 129, 0.15) !important;
-    border-left: 5px solid #10b981 !important;
-    border-radius: 12px !important;
-    color: #6ee7b7 !important;
-}
-
-.stWarning {
-    background: rgba(245, 158, 11, 0.15) !important;
-    border-left: 5px solid #f59e0b !important;
-    border-radius: 12px !important;
-    color: #fcd34d !important;
-}
-
-.stError {
-    background: rgba(239, 68, 68, 0.15) !important;
-    border-left: 5px solid #ef4444 !important;
-    border-radius: 12px !important;
-    color: #fca5a5 !important;
-}
-
-.stInfo {
-    background: rgba(99, 102, 241, 0.15) !important;
-    border-left: 5px solid #6366f1 !important;
-    border-radius: 12px !important;
-    color: #a5b4fc !important;
-}
-
-/* Divider */
-hr {
-    border: none;
-    height: 2px;
-    background: linear-gradient(90deg, transparent 0%, #6366f1 50%, transparent 100%);
-    margin: 2rem 0;
-}
-
-/* Sidebar */
-[data-testid="stSidebar"] {
-    background: linear-gradient(180deg, #12121f 0%, #1a1a2e 100%) !important;
-    border-right: 1px solid rgba(99, 102, 241, 0.2);
-}
-
-[data-testid="stSidebar"] .stMarkdown {
-    color: #c4b5fd;
-}
-
-/* Progress Bar */
-.stProgress > div > div {
-    background: linear-gradient(90deg, #6366f1 0%, #a855f7 100%);
-    border-radius: 10px;
-}
-
-/* Tabs */
-.stTabs [data-baseweb="tab-list"] {
-    gap: 8px;
-    background: rgba(30, 30, 50, 0.5);
-    padding: 8px;
-    border-radius: 12px;
-}
-
-.stTabs [data-baseweb="tab"] {
-    border-radius: 10px;
-    padding: 12px 24px;
-    font-weight: 500;
-    color: #a5b4fc;
-    border: 1px solid transparent;
-}
-
-.stTabs [aria-selected="true"] {
-    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;
-    color: white !important;
-    box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-/* Subtotal Box - Clean Blue */
-.subtotal-box {
-    background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
-    border-radius: 16px;
-    padding: 1.5rem;
-    text-align: center;
-    box-shadow: 0 10px 30px rgba(59, 130, 246, 0.3);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: white;
-}
-
-/* PPN Box - Clean Orange */
-.ppn-box {
-    background: linear-gradient(135deg, #c2410c 0%, #f97316 100%);
-    border-radius: 16px;
-    padding: 1.5rem;
-    text-align: center;
-    box-shadow: 0 10px 30px rgba(249, 115, 22, 0.3);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: white;
-}
-
-/* Grand Total Box - Clean Green */
-.grandtotal-box {
-    background: linear-gradient(135deg, #15803d 0%, #22c55e 100%);
-    border-radius: 16px;
-    padding: 1.5rem;
-    text-align: center;
-    box-shadow: 0 10px 30px rgba(34, 197, 94, 0.3);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: white;
-}
-
-/* Comparison Box - Clean Dark */
-.comparison-box {
-    background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
-    border-radius: 12px;
-    padding: 1rem;
-    margin: 0.5rem 0;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-    color: white;
-}
-
-/* Selisih Box - Clean Red */
-.selisih-box {
-    background: linear-gradient(135deg, #991b1b 0%, #ef4444 100%);
-    border-radius: 12px;
-    padding: 1rem;
-    text-align: center;
-    box-shadow: 0 8px 25px rgba(239, 68, 68, 0.3);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: white;
-}
-
-/* Sesuai Box - Clean Green */
-.sesuai-box {
-    background: linear-gradient(135deg, #166534 0%, #22c55e 100%);
-    border-radius: 12px;
-    padding: 1rem;
-    text-align: center;
-    box-shadow: 0 8px 25px rgba(34, 197, 94, 0.3);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: white;
-}
-
-/* Dataframe */
-[data-testid="stDataFrame"] {
-    border-radius: 16px;
-    overflow: hidden;
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
-    border: 1px solid rgba(99, 102, 241, 0.2);
-}
-
-/* Input Fields */
-.stTextInput > div > div > input {
-    border-radius: 12px;
-    border: 2px solid rgba(99, 102, 241, 0.3);
-    padding: 0.75rem 1rem;
-    background: rgba(30, 30, 50, 0.6);
-    color: white;
-    backdrop-filter: blur(10px);
-}
-
-.stTextInput > div > div > input:focus {
-    border-color: #8b5cf6;
-    box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.2);
-}
-
-/* Radio */
-.stRadio > div {
-    background: rgba(30, 30, 50, 0.6);
-    padding: 0.75rem;
-    border-radius: 12px;
-    border: 1px solid rgba(99, 102, 241, 0.2);
-    color: #c4b5fd;
-}
-
-/* Selectbox */
-.stSelectbox > div > div {
-    background: rgba(30, 30, 50, 0.6);
-    border-radius: 12px;
-    border: 1px solid rgba(99, 102, 241, 0.3);
-}
-
-/* Text Colors */
-.stMarkdown {
-    color: #d1d5db;
-}
-
-h1, h2, h3, h4, h5, h6 {
-    color: white !important;
-    font-family: 'Poppins', sans-serif;
-}
-
-p {
-    color: #d1d5db;
-}
-
-/* Metric */
-[data-testid="stMetricValue"] {
-    color: white !important;
-    font-weight: 700;
-}
-
-[data-testid="stMetricLabel"] {
-    color: #a5b4fc !important;
-}
-
-/* Spinner */
-.stSpinner > div {
-    border-color: #8b5cf6 transparent transparent transparent;
-}
-
-/* Glow Animation */
-@keyframes pulse {
-    0%, 100% { box-shadow: 0 0 20px rgba(99, 102, 241, 0.3); }
-    50% { box-shadow: 0 0 40px rgba(139, 92, 246, 0.5); }
-}
-
-.glow {
-    animation: pulse 2s ease-in-out infinite;
-}
-
-/* Badge */
-.badge-ok {
-    display: inline-block;
-    background: linear-gradient(135deg, #10b981, #059669);
-    color: white;
-    padding: 0.4rem 1rem;
-    border-radius: 20px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
-}
-
-.badge-error {
-    display: inline-block;
-    background: linear-gradient(135deg, #ef4444, #dc2626);
-    color: white;
-    padding: 0.4rem 1rem;
-    border-radius: 20px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
-}
-
-/* Fade In Animation */
-@keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(30px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.fade-in {
-    animation: fadeInUp 0.6s ease-out;
-}
-
-/* Scrollbar */
-::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-}
-
-::-webkit-scrollbar-track {
-    background: rgba(30, 30, 50, 0.5);
-    border-radius: 10px;
-}
-
-::-webkit-scrollbar-thumb {
-    background: linear-gradient(135deg, #6366f1, #8b5cf6);
-    border-radius: 10px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(135deg, #8b5cf6, #a855f7);
-}
-
+.stButton > button{ background: linear-gradient(135deg, #4f46e5, #7c3aed); color:white; border:none; border-radius:14px; padding:.9rem 1.4rem; font-weight:800; letter-spacing:.02em; box-shadow: 0 10px 24px rgba(79,70,229,.30); }
+.stButton > button:hover{ transform: translateY(-1px); box-shadow: 0 14px 28px rgba(79,70,229,.35); }
+.stFileUploader{ border: 2px dashed #c7d2fe; background: #f8fafc; border-radius:16px; }
+.stExpander{ border:1px solid #e2e8f0; border-radius:16px; background:white;}
+[data-testid="stDataFrame"]{ border-radius:16px; overflow:hidden; border:1px solid #e2e8f0;}
+hr{ border:none; height:1px; background: linear-gradient(90deg, transparent, #c7d2fe, transparent); margin:1.2rem 0;}
+@media (max-width: 768px){ .how{ grid-template-columns: 1fr; } .hero h1{ font-size:1.6rem;} }
 </style>
 """, unsafe_allow_html=True)
 
@@ -599,8 +146,17 @@ def format_currency(value):
         return str(value)
 
 def main():
-    # Header
-    st.markdown('<div class="main-header">LOCAL RAB MATHEMATICAL CHECKER</div>', unsafe_allow_html=True)
+    st.markdown("""
+    <div class="hero">
+      <h1>🔍 RAB Checker — Cek Hitungan Otomatis</h1>
+      <p>Upload Excel RAB → kami hitung ulang <b>Qty × Harga</b>, <b>Jumlah</b>, <b>PPN 11%</b> & <b>Grand Total</b>. Salah hitung langsung terlihat.</p>
+      <div class="chips"><span class="chip">✅ Tanpa langganan AI</span><span class="chip">🧠 Toleran typo (JML / JumlahA)</span><span class="chip">📊 Kategori & Section fleksibel</span></div>
+      <div class="illust" style="margin-top:1rem; text-align:left;">
+        <div class="pic">📊</div>
+        <div><b style="color:#1e293b;">Gimana bacanya?</b><br><span style="color:#475569; font-size:.9rem;">Biru = <b>Jumlah</b> (sebelum PPN) &nbsp;•&nbsp; Oranye = <b>PPN 11%</b> &nbsp;•&nbsp; Hijau = <b>Grand Total</b> &nbsp;•&nbsp; Merah = <b>Selisih</b></span></div>
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
     
     # Inisialisasi session state
     if 'check_results' not in st.session_state:
@@ -614,10 +170,28 @@ def main():
     if 'excel_data' not in st.session_state:
         st.session_state.excel_data = None
     
-    # Upload file
-    st.markdown('<div class="section-header">UPLOAD FILE</div>', unsafe_allow_html=True)
+    # Stepper (awam: 3 langkah)
+    cur_step = 1
+    if st.session_state.get('check_results'): cur_step = 3
+    elif st.session_state.get('file_name'): cur_step = 2
+    st.markdown(f"""
+    <div class="stepper">
+      <div class="step {'active' if cur_step==1 else 'done' if cur_step>1 else ''}"><span class="num">1</span> Upload Excel</div>
+      <div class="step {'active' if cur_step==2 else 'done' if cur_step>2 else ''}"><span class="num">2</span> Atur & Cek</div>
+      <div class="step {'active' if cur_step==3 else ''}"><span class="num">3</span> Lihat Hasil</div>
+    </div>
+    """, unsafe_allow_html=True)
+    st.markdown("""
+    <div class="how">
+      <div class="how-card"><div class="icon" style="background:#e0e7ff;">📤</div><div><b>1. Upload</b><br><span style="color:#64748b; font-size:.85rem;">Pilih file .xlsx RAB</span></div></div>
+      <div class="how-card"><div class="icon" style="background:#ffedd5;">⚙️</div><div><b>2. Cek</b><br><span style="color:#64748b; font-size:.85rem;">Sistem hitung ulang otomatis</span></div></div>
+      <div class="how-card"><div class="icon" style="background:#dcfce7;">✅</div><div><b>3. Hasil</b><br><span style="color:#64748b; font-size:.85rem;">Selisih langsung terlihat</span></div></div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown('<div class="card"><h3>📤 Langkah 1 — Upload File Excel</h3><p class="hint">Pilih file RAB/Quotation (.xlsx). Tidak perlu ubah format — sistem toleran typo <i>Jumlah/TOTAL/JML</i>.</p></div>', unsafe_allow_html=True)
     uploaded_file = st.file_uploader(
-        "Choose Excel File",
+        "Tarik file ke sini atau klik Browse",
         type=['xlsx', 'xls'],
         help="Upload file Excel RAB/Quotation yang ingin dicek"
     )
@@ -631,20 +205,13 @@ def main():
         st.session_state.file_name = uploaded_file.name
         st.session_state.tmp_file_path = tmp_file_path
         
-        # Tampilkan info file
-        col1, col2 = st.columns(2)
-        with col1:
-            st.markdown(f"""
-            <div class="info-box">
-                <strong>📁 Nama File:</strong> {uploaded_file.name}
-            </div>
-            """, unsafe_allow_html=True)
-        with col2:
-            st.markdown(f"""
-            <div class="info-box">
-                <strong>💾 Ukuran:</strong> {uploaded_file.size / 1024:.2f} KB
-            </div>
-            """, unsafe_allow_html=True)
+        st.markdown(f"""
+        <div class="card" style="display:flex; gap:1rem; align-items:center;">
+          <div style="font-size:1.6rem;">📄</div>
+          <div style="flex:1;"><b>File terpilih:</b> {uploaded_file.name}<br><span style="color:#64748b; font-size:.85rem;">Ukuran {uploaded_file.size/1024:.1f} KB • Siap dicek</span></div>
+          <span class="badge ok">Siap</span>
+        </div>
+        """, unsafe_allow_html=True)
         
         # Pilih sheet
         reader = ExcelReader(tmp_file_path)
@@ -665,8 +232,9 @@ def main():
                 sheets_to_check = sheet_names
                 st.info(f"📋 Akan mengecek {len(sheets_to_check)} sheet: {', '.join(sheets_to_check)}")
             
+            st.markdown('<div class="card"><h3>📋 Langkah 2 — Pilih Sheet & Mulai Cek</h3><p class="hint">Pilih 1 sheet atau semua sheet. Jika hasil tidak sesuai, buka <b>Pengaturan Lanjutan</b> di bawah — tetap gratis tanpa AI.</p></div>', unsafe_allow_html=True)
             # === PENGATURAN LANJUTAN (Hybrid, tanpa AI, 100% lokal) ===
-            with st.expander("⚙️ Pengaturan Lanjutan (override auto-detect, tanpa AI)", expanded=False):
+            with st.expander("⚙️ Pengaturan Lanjutan (jika perlu) — tetap gratis tanpa AI", expanded=False):
                 st.caption("Kosongkan = auto-detect. Isi hanya jika hasil auto salah (mis. PPN gabungan vs per-section). Tetap berjalan lokal tanpa langganan.")
                 c1, c2, c3, c4 = st.columns(4)
                 with c1:
@@ -808,74 +376,53 @@ def main():
             pass
 
 def display_results():
-    """Tampilkan hasil pemeriksaan"""
+    """Tampilkan hasil pemeriksaan — ramah awam: angka besar, warna jelas, bahasa sederhana."""
     results = st.session_state.check_results
     errors = st.session_state.errors
     warnings = st.session_state.warnings
     sheets_checked = st.session_state.get('sheets_checked', [])
     all_items = st.session_state.get('all_items', [])
     
-    st.divider()
-    st.markdown('<div class="section-header">HASIL PEMERIKSAAN</div>', unsafe_allow_html=True)
+    st.markdown('<div class="card" style="text-align:center; border: 2px solid #c7d2fe;"><h3 style="margin:0;">📊 Langkah 3 — Hasil Pemeriksaan</h3><p class="hint" style="margin:.25rem 0 0 0;">Biru = Jumlah (sebelum PPN) • Oranye = PPN 11% • Hijau = Grand Total • Merah = Selisih</p></div>', unsafe_allow_html=True)
     
     # Tampilkan sheet yang diperiksa
     if sheets_checked and len(sheets_checked) > 1:
         st.info(f"📋 Sheet yang diperiksa: {', '.join(sheets_checked)}")
     
-    # Status
+    # Status — bahasa awam
     if results['total_errors'] == 0:
-        st.markdown(
-            '<div class="status-ok">✓ SEMUA PERHITUNGAN SESUAI</div>',
-            unsafe_allow_html=True
-        )
+        st.markdown("""
+        <div class="card" style="background: linear-gradient(135deg, #ecfdf5, #d1fae5); border:2px solid #6ee7b7; text-align:center; padding:1.4rem;">
+          <div style="font-size:2rem;">✅</div>
+          <div style="font-weight:800; font-size:1.2rem; color:#065f46;">Semua hitungan COCOK</div>
+          <div style="color:#047857; font-size:.9rem;">Qty × Harga, Jumlah, PPN & Grand Total sudah benar</div>
+        </div>
+        """, unsafe_allow_html=True)
     else:
-        st.markdown(
-            f'<div class="status-error">⚠ DITEMUKAN {results["total_errors"]} KESALAHAN</div>',
-            unsafe_allow_html=True
-        )
+        st.markdown(f"""
+        <div class="card" style="background: linear-gradient(135deg, #fef2f2, #fee2e2); border:2px solid #fca5a5; text-align:center; padding:1.4rem;">
+          <div style="font-size:2rem;">⚠️</div>
+          <div style="font-weight:800; font-size:1.2rem; color:#991b1b;">Ditemukan {results["total_errors"]} yang perlu dicek</div>
+          <div style="color:#b91c1c; font-size:.9rem;">Lihat kotak <b>SELISIH</b> merah di bawah — nilai yang benar ada di kolom <b>DIHITUNG</b></div>
+        </div>
+        """, unsafe_allow_html=True)
     
     st.markdown("<br>", unsafe_allow_html=True)
     
-    # Summary Cards
-    col1, col2, col3, col4, col5 = st.columns(5)
-    with col1:
-        st.metric(
-            label="📋 Sheet",
-            value=len(sheets_checked) if sheets_checked else 1,
-            help="Jumlah sheet yang diperiksa"
-        )
-    with col2:
-        st.metric(
-            label="📦 Total Item",
-            value=results['total_items'],
-            help="Jumlah item yang diperiksa"
-        )
-    with col3:
-        st.metric(
-            label="❌ Error",
-            value=results['total_errors'],
-            help="Jumlah kesalahan ditemukan"
-        )
-    with col4:
-        st.metric(
-            label="⚠️ Warning",
-            value=results['total_warnings'],
-            help="Jumlah peringatan"
-        )
-    with col5:
-        status = "✅ OK" if results['total_errors'] == 0 else "🔴 PERLU CEK"
-        st.metric(
-            label="📊 Status",
-            value=status,
-            help="Status akhir pemeriksaan"
-        )
+    # KPI awam
+    k1,k2,k3,k4 = st.columns(4)
+    with k1: st.markdown(f"<div class='kpi'><div class='label'>Sheet dicek</div><div class='value'>{len(sheets_checked) if sheets_checked else 1}</div></div>", unsafe_allow_html=True)
+    with k2: st.markdown(f"<div class='kpi'><div class='label'>Jumlah item</div><div class='value'>{results['total_items']}</div></div>", unsafe_allow_html=True)
+    with k3: st.markdown(f"<div class='kpi {'bad' if results['total_errors'] else 'ok'}'><div class='label'>Perlu cek</div><div class='value' style=\"color:{'#dc2626' if results['total_errors'] else '#059669'};\">{results['total_errors']}</div></div>", unsafe_allow_html=True)
+    with k4:
+        ok = results['total_errors']==0
+        st.markdown(f"<div class='kpi { 'ok' if ok else 'bad'}'><div class='label'>Status</div><div class='value' style=\"color:{'#059669' if ok else '#dc2626'};\">{'✅ COCOK' if ok else '🔴 CEK LAGI'}</div></div>", unsafe_allow_html=True)
     
     st.markdown("<br>", unsafe_allow_html=True)
     
-    # Preview Items - Group by Sheet (build from ALL sheets in excel_sheets_data so second sheet always shows even with 0 items)
+    # Preview Items — ramah awam
     if all_items or st.session_state.get('excel_sheets_data'):
-        st.markdown('<div class="section-header">📋 ITEM YANG TERBACA</div>', unsafe_allow_html=True)
-        st.caption("Berikut adalah semua item yang berhasil dibaca dari Excel, dikelompokkan per sheet.")
+        st.markdown('<div class="card"><h3>🧾 Daftar Item (Qty × Harga = Jumlah)</h3><p class="hint">Ini yang dibaca dari Excel. <b>Total</b> dihitung ulang <b>Qty × Harga Satuan</b>.</p></div>', unsafe_allow_html=True)
         
         # Group items by sheet
         sheets_data = {}
@@ -891,7 +438,7 @@ def display_results():
         
         # Tampilkan per sheet
         for sheet_name, items in sheets_data.items():
-            st.markdown(f"### 📄 Sheet: {sheet_name}")
+            st.markdown(f"<div class='card' style='border-left: 6px solid #6366f1;'><b>📄 Sheet:</b> {sheet_name} &nbsp;<span class='badge neutral'>{len(items)} item</span></div>", unsafe_allow_html=True)
             
             # Buat DataFrame
             item_data = []
@@ -1004,17 +551,29 @@ def display_results():
             # Hitung total items yang dibaca
             calculated_total_items = sheet_total_calculated
             
+            # Alur hitungan awam
+            st.markdown("""
+            <div class="flow">
+              <div class="node"><b>Jumlah</b><br><span style="color:#64748b; font-size:.8rem;">Qty × Harga</span></div>
+              <div class="arrow">→</div>
+              <div class="node"><b>TOTAL</b><br><span style="color:#64748b; font-size:.8rem;">Jumlah A+B</span></div>
+              <div class="arrow">→</div>
+              <div class="node"><b>PPN 11%</b><br><span style="color:#64748b; font-size:.8rem;">TOTAL × 11%</span></div>
+              <div class="arrow">→</div>
+              <div class="node" style="border-color:#86efac; background:#ecfdf5;"><b>GRAND TOTAL</b><br><span style="color:#065f46; font-size:.8rem;">TOTAL + PPN</span></div>
+            </div>
+            """, unsafe_allow_html=True)
             # Header Ringkasan
             st.markdown("""
-            <div style="background: linear-gradient(90deg, #1e40af 0%, #7c3aed 50%, #db2777 100%); 
+            <div style="background: linear-gradient(90deg, #2563eb 0%, #7c3aed 50%, #059669 100%); 
                         color: white; 
-                        padding: 1.2rem; 
+                        padding: 1rem; 
                         border-radius: 16px; 
                         text-align: center;
-                        margin: 1.5rem 0;
-                        box-shadow: 0 10px 30px rgba(124, 58, 237, 0.4);
-                        border: 1px solid rgba(255, 255, 255, 0.2);">
-                <h3 style="margin: 0; color: white; font-weight: 700;">📊 RINGKASAN PERHITUNGAN</h3>
+                        margin: 1rem 0;
+                        box-shadow: 0 10px 30px rgba(37,99,235,.25);">
+                <h3 style="margin: 0; color: white; font-weight: 800; font-size:1.05rem;">📊 RINGKASAN — Bandingkan DIHITUNG vs DI EXCEL</h3>
+                <div style="font-size:.82rem; opacity:.95; margin-top:.2rem;">Kiri = hitungan sistem &nbsp;•&nbsp; Tengah = cocok/selisih &nbsp;•&nbsp; Kanan = angka di Excel</div>
             </div>
             """, unsafe_allow_html=True)
             
