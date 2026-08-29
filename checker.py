@@ -187,8 +187,12 @@ class RABChecker:
                     })
             # Jika PPN tidak ada di section tapi ada global, jangan anggap salah — kasus PPN gabungan A+B
             
-            # 3. Cek Total Section (Subtotal + PPN - Diskon)
-            if total_excel is not None:
+            # 3. Cek Total Section — fleksibel: kalau grand_total sudah dipromosikan, jangan dobel cek sebagai SECTION_TOTAL
+            # Jika hanya ada 1 Total global (kasus tanpa Total per-section), section_total dianggap kosong
+            is_global_case = data.get('grand_total_value') is not None and all(
+                safe_float(v.get('total_value')) is None for v in sections.values()
+            )
+            if total_excel is not None and not (is_global_case and len(sections) > 1):
                 base = subtotal_excel if subtotal_excel is not None else calculated_subtotal
                 ppn = ppn_excel if ppn_excel else 0
                 discount = discount_excel if discount_excel else 0
