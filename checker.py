@@ -155,11 +155,14 @@ class RABChecker:
                     calculated_subtotal += total
                     item_count += 1
             
-            # 1. Cek Subtotal (Jumlah X) — jangan salahkan jika nilai Excel adalah auto-calc (subtotal_is_calculated)
+            # 1. Cek Subtotal (Jumlah X) — hanya jika ada baris Jumlah/Total kategori/section dari Excel
             if subtotal_excel is not None:
                 is_calc = section_data.get('subtotal_is_calculated', False)
-                if is_calc:
-                    # Nilai Jumlah adalah hitungan kita sendiri, bukan dari Excel -> jangan error palsu
+                is_category = section_data.get('is_category', False)
+                if is_calc and is_category:
+                    # Kategori pemisah (Sparepart/Instalasi) tanpa baris Jumlah di Excel -> jangan error palsu
+                    pass
+                elif is_calc:
                     pass
                 else:
                     tolerance = 1

@@ -1038,15 +1038,18 @@ def display_results():
                         if total_val is not None:
                             section_calculated += total_val
                     
-                    # Header Section
+                    # Header Section — kategori vs section dijumlah terpisah
+                    is_cat = section_data.get('is_category', False)
+                    label_suffix = " (Kategori)" if is_cat else ""
+                    hdr_color = "linear-gradient(135deg, #475569 0%, #64748b 100%)" if is_cat else "linear-gradient(135deg, #059669 0%, #10b981 100%)"
                     st.markdown(f"""
-                    <div style="background: linear-gradient(135deg, #059669 0%, #10b981 100%); 
+                    <div style="background: {hdr_color}; 
                                 color: white; 
                                 padding: 0.8rem; 
                                 border-radius: 12px; 
                                 text-align: center;
                                 margin: 1rem 0;">
-                        <h4 style="margin: 0; color: white;">📁 SECTION {section_letter}</h4>
+                        <h4 style="margin: 0; color: white;">📁 {"KATEGORI" if is_cat else "SECTION"} {section_letter}{label_suffix}</h4>
                     </div>
                     """, unsafe_allow_html=True)
                     

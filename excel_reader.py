@@ -765,6 +765,12 @@ class ExcelReader:
             pass
 
         # Hitung subtotal per section jika belum ada — TETAP tampil Jumlah A/B sebelum PPN
+        # Case Sparepart/Instalasi: A/B hanya pemisah kategori, bukan section dijumlah terpisah.
+        # TOTAL tanpa huruf (Row 28) = Jumlah Global sebelum PPN -> pisahkan dari Grand agar tidak dobel.
+        is_labeled_section = any(v.get('subtotal_value') is not None and not v.get('subtotal_is_calculated', True)
+                                 or v.get('total_value') is not None for v in result['sections'].values())
+        # Jika tidak ada Total/Jumlah per-section dari Excel (hanya A/B kategori), TOTAL global adalah Jumlah Global, bukan Grand
+        # Tandai agar checker tidak cek section sebagai error dan kategori tetap tampil Jumlah A/B
         for section_letter, section_data in result['sections'].items():
             if section_data['subtotal_value'] is None:
                 calc_subtotal = 0
@@ -776,6 +782,8 @@ class ExcelReader:
                 section_data['subtotal_is_calculated'] = True
             else:
                 section_data['subtotal_is_calculated'] = False
+            # Kategori kategori: jika belum ada Jumlah per-section dari Excel, flag kategori agar tidak dianggap section terpisah untuk total
+            section_data['is_category'] = not is_labeled_section
         
         # Hitung total items global
         if result['subtotal_value'] is None:
