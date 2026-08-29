@@ -939,13 +939,17 @@ def display_results():
                     </div>
                     """, unsafe_allow_html=True)
 
-                # NORMAL single-section: PPN global adalah untuk single, tampilkan Langkah 2
+                # NORMAL: PPN di section A — tampilkan Langkah 2 dari section
                 is_single = len(sections) == 1
-                # PPN GLOBAL — multi Langkah 2 sesuai kondisi, single juga jika 1 section punya PPN
-                show_global_ppn = not _is_without and excel_ppn_global is not None and (is_combined_global or not has_any_section_ppn or (is_single and excel_ppn_global is not None))
+                show_global_ppn = not _is_without and excel_ppn_global is not None and (is_combined_global or not has_any_section_ppn or (is_single and list(sections.values())[0].get('ppn_value') is not None))
                 if show_global_ppn:
                     if is_single:
-                        sum_sub_for_ppn = safe_float(sheet_dbg_global.get('jumlah_global_excel')) or safe_float(sections[list(sections.keys())[0]].get('subtotal_value')) or 0
+                        sd0 = list(sections.values())[0]
+                        sum_sub_for_ppn = safe_float(sd0.get('subtotal_value')) or safe_float(sheet_dbg_global.get('jumlah_global_excel')) or 0
+                        # Override ke PPN section untuk NORMAL
+                        if sd0.get('ppn_value') is not None:
+                            excel_ppn_global = safe_float(sd0.get('ppn_value'))
+                            is_combined_global = False
                     else:
                         sum_sub_for_ppn = safe_float(sheet_dbg_global.get('jumlah_global_excel')) or sum(safe_float(sd.get('subtotal_value')) or 0 for sd in sections.values())
                     calc_ppn_global = sum_sub_for_ppn * 0.11
