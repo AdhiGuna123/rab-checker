@@ -206,25 +206,32 @@ class RABChecker:
                             'section': section_letter
                         })
             
-            # 2. Cek PPN per section (fleksibel: jika ada PPN global gabungan, jangan validasi PPN section kosong sebagai error)
-            if ppn_excel is not None and subtotal_excel is not None:
-                expected_ppn = subtotal_excel * 0.11
-                tolerance = 1
-                if abs(expected_ppn - ppn_excel) > tolerance:
-                    self.errors.append({
-                        'type': 'SECTION_PPN_ERROR',
-                        'sheet': data.get('sheet_name'),
-                        'row': section_data.get('ppn_row'),
-                        'item_name': f'PPN Section {section_letter}',
-                        'detail': f'PPN Section {section_letter} tidak sesuai',
-                        'calculation': f'Subtotal ({subtotal_excel}) × 11%',
-                        'expected': expected_ppn,
-                        'actual': ppn_excel,
-                        'difference': expected_ppn - ppn_excel,
-                        'status': 'PERLU CEK',
-                        'section': section_letter
-                    })
-            # Jika PPN tidak ada di section tapi ada global, jangan anggap salah — kasus PPN gabungan A+B
+            # PPN per-section TIDAK dicek di sini untuk case PPN gabungan (ada PPN global)
+            # Jika ada PPN global gabungan, PPN per-section adalah noise — validasi ada di check_global_ppn (TOTAL×11%)
+            if data.get('ppn_is_combined') and safe_float(data.get('ppn_value')) is not None:
+                pass
+            elif ppn_excel is not None and subtotal_excel is not None:
+                # Hanya cek PPN per-section untuk case PPN 1 Bagian / per-section murni
+                # Untuk kategori A/B (PPN Global), subtotal per-section bukan dasar PPN — skip
+                if section_data.get('is_category') and data.get('ppn_is_combined'):
+                    pass
+                else:
+                    expected_ppn = subtotal_excel * 0.11
+                    tolerance = 1
+                    if abs(expected_ppn - ppn_excel) > tolerance:
+                        self.errors.append({
+                            'type': 'SECTION_PPN_ERROR',
+                            'sheet': data.get('sheet_name'),
+                            'row': section_data.get('ppn_row'),
+                            'item_name': f'PPN Section {section_letter}',
+                            'detail': f'PPN Section {section_letter} tidak sesuai',
+                            'calculation': f'Subtotal ({subtotal_excel}) × 11%',
+                            'expected': expected_ppn,
+                            'actual': ppn_excel,
+                            'difference': expected_ppn - ppn_excel,
+                            'status': 'PERLU CEK',
+                            'section': section_letter
+                        })
             
             # 3. Cek Total Section — fleksibel: skip jika ini kasus 1 Total global yang sudah dipromosikan jadi Grand Total
             # Jangan cek total section jika nilainya memang adalah grand_total (sudah dipindahkan)

@@ -892,10 +892,12 @@ class ExcelReader:
                                 result['ppn_row'] = cand['row']
                                 result['ppn_is_combined'] = True
                     if len(result['sections']) == 1 and result.get('ppn_value') is None:
-                        only = list(result['sections'].values())[0]
-                        if only.get('ppn_value') is not None:
-                            result['ppn_value'] = only['ppn_value']
-                            result['ppn_row'] = only['ppn_row']
+                        pass
+                        # Kategori A/B dengan PPN Global: Jangan duplikasi PPN Global ke section tunggal
+                        # only = list(result['sections'].values())[0]
+                        # if only.get('ppn_value') is not None:
+                        #     result['ppn_value'] = only['ppn_value']
+                        #     result['ppn_row'] = only['ppn_row']
 
         # Expose jumlah section dinamis (A/B/C atau lebih) untuk laporan
         result['detected_sections'] = sorted(result['sections'].keys())
