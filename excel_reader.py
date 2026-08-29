@@ -386,31 +386,34 @@ class ExcelReader:
                 
                 has_valid_data = False
                 
-                # Hitung total dari qty × unit_price jika total None atau bukan angka
+                # Konversi total ke angka
                 if item.get('total') is not None:
                     converted = safe_float(item.get('total'))
                     if converted is not None:
                         item['total'] = converted
                         has_valid_data = True
-                    else:
-                        # Total ada tapi bukan angka, coba hitung dari qty × unit_price
-                        qty = safe_float(item.get('qty'))
-                        up = safe_float(item.get('unit_price'))
-                        if qty is not None and up is not None:
-                            item['total'] = qty * up
-                            has_valid_data = True
-                else:
-                    # Total None, coba hitung dari qty × unit_price
-                    qty = safe_float(item.get('qty'))
-                    up = safe_float(item.get('unit_price'))
+                
+                # Pastikan total selalu ada: hitung dari qty × unit_price jika perlu
+                qty = safe_float(item.get('qty'))
+                up = safe_float(item.get('unit_price'))
+                
+                if item.get('total') is None or (isinstance(item.get('total'), str)):
                     if qty is not None and up is not None:
                         item['total'] = qty * up
                         has_valid_data = True
+                elif qty is not None and up is not None:
+                    expected = qty * up
+                    current_total = safe_float(item.get('total'))
+                    if current_total is None:
+                        item['total'] = expected
+                    # Biarkan total dari Excel, jangan ditimpa
                 
                 if not has_valid_data:
-                    if item.get('qty') is not None:
-                        converted_qty = safe_float(item.get('qty'))
-                        if converted_qty is not None:
+                    if qty is not None:
+                        has_valid_data = True
+                    elif item.get('total') is not None:
+                        converted = safe_float(item.get('total'))
+                        if converted is not None:
                             has_valid_data = True
                 
                 if has_valid_data:
