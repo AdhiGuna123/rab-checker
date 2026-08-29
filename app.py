@@ -123,15 +123,18 @@ st.markdown("""
 .stRadio [role="radiogroup"] label:has(input:checked) p{ color:white !important;}
 [data-testid="stMultiSelect"]{ background:white; border-radius:12px;}
 [data-testid="stMultiSelect"] span{ color:#1e293b !important;}
-[data-testid="stDataFrame"]{ border-radius:16px; overflow:hidden; border:1px solid #e2e8f0; background:white;}
-/* Tabel — latar PUTIH (bukan hitam), teks abu gelap, header biru soft */
-[data-testid="stDataFrame"]{ background:#ffffff !important; border:1px solid #e2e8f0 !important;}
+[data-testid="stDataFrame"]{ border-radius:16px; overflow:hidden; border:1.5px solid #cbd5e1 !important; background:#ffffff !important; box-shadow: 0 8px 24px rgba(15,23,42,.08) !important; }
+/* Tabel — PUTIH bersih, bukan hitam; header tengah, body tengah, garis halus */
 [data-testid="stDataFrame"] div[data-testid="stDataFrameResizable"]{ background:#ffffff !important;}
-[data-testid="stDataFrame"] [role="grid"]{ background:#ffffff !important;}
-[data-testid="stDataFrame"] [role="columnheader"]{ background:#e0e7ff !important; color:#4338ca !important; font-weight:800 !important; font-size:.82rem !important; border-bottom: 2px solid #a5b4fc !important; border-right:1px solid #e0e7ff !important;}
-[data-testid="stDataFrame"] [role="gridcell"]{ color:#334155 !important; font-weight:500 !important; border-bottom:1px solid #eef2ff !important; border-right:1px solid #f1f5f9 !important; background:#ffffff !important;}
+[data-testid="stDataFrame"] [role="grid"]{ background:#ffffff !important; text-align:center !important;}
+[data-testid="stDataFrame"] [role="columnheader"]{ background:#eef2ff !important; color:#3730a3 !important; font-weight:800 !important; font-size:.82rem !important; border-bottom: 2px solid #a5b4fc !important; border-right:1px solid #e0e7ff !important; text-align:center !important; justify-content:center !important;}
+[data-testid="stDataFrame"] [role="columnheader"] div{ justify-content:center !important; text-align:center !important; }
+[data-testid="stDataFrame"] [role="gridcell"]{ color:#1e293b !important; font-weight:500 !important; border-bottom:1px solid #eef2ff !important; border-right:1px solid #f1f5f9 !important; background:#ffffff !important; text-align:center !important; justify-content:center !important;}
+[data-testid="stDataFrame"] [role="gridcell"] div{ justify-content:center !important; text-align:center !important; }
 [data-testid="stDataFrame"] [role="row"]:nth-child(even) [role="gridcell"]{ background:#f8fafc !important;}
-[data-testid="stDataFrame"] [role="row"]:hover [role="gridcell"]{ background:#eef2ff !important; }
+[data-testid="stDataFrame"] [role="row"]:hover [role="gridcell"]{ background:#e0e7ff !important; }
+/* Hapus sisa background gelap */
+[data-testid="stDataFrame"] canvas{ background:#ffffff !important;}
 hr{ border:none; height:1px; background: linear-gradient(90deg, transparent, #c7d2fe, transparent); margin:1.2rem 0;}
 @media (max-width: 768px){ .how{ grid-template-columns: 1fr; } .hero h1{ font-size:1.6rem;} }
 </style>
@@ -510,7 +513,8 @@ def display_results():
                     except:
                         pass
             df_items = pd.DataFrame(item_data)
-            st.dataframe(df_items, use_container_width=True, hide_index=True, height=min(420, 44+len(df_items)*34))
+            # Header rata tengah, isi tengah
+            st.dataframe(df_items, use_container_width=True, hide_index=True, height=min(520, 44+len(df_items)*36))
 
             # === PANEL DEBUG (tanpa perlu kirim gambar/file) ===
             # Simpan raw values di display debug — copy-paste teks ini ke chat
