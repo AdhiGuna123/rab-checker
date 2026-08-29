@@ -723,13 +723,15 @@ def main():
                             progress.progress((idx + 1) / len(sheets_to_check))
                             status_text.text(f"Memeriksa sheet: {sheet_name}...")
                             
-                            # Baca data (dengan override jika ada)
+                            # Baca data (dengan override jika ada) + fallback defensif jika read_data crash/return None
                             overrides = st.session_state.get('adv_overrides_preview', {})
-                            # bersihkan None agar tidak override auto dengan kosong
                             overrides = {k: v for k, v in overrides.items() if v is not None}
-                            data = reader.read_data(sheet_name, overrides=overrides if overrides else None)
-                            
-                            # Simpan data Excel untuk perbandingan (termasuk sections)
+                            try:
+                                data = reader.read_data(sheet_name, overrides=overrides if overrides else None)
+                            except Exception as _e:
+                                data = {'sheet_name': sheet_name, 'subtotal_value': None, 'ppn_value': None, 'grand_total_value': None, 'sections': {}, 'skipped_rows': [{'row': '?', 'dump': [f'read_data error: {str(_e)[:120]}'] }], 'classifications': [], 'summary_rows_debug': [], 'columns': {}, 'overrides_applied': {}, 'header_values_debug': [], 'items': []}
+                            if not isinstance(data, dict):
+                                data = {'sheet_name': sheet_name, 'subtotal_value': None, 'ppn_value': None, 'grand_total_value': None, 'sections': {}, 'skipped_rows': [{'row': '?', 'dump': [f'data type {type(data)}'] }], 'classifications': [], 'summary_rows_debug': [], 'columns': {}, 'overrides_applied': {}, 'header_values_debug': [], 'items': []}
                             if 'excel_sheets_data' not in st.session_state:
                                 st.session_state.excel_sheets_data = {}
                             st.session_state.excel_sheets_data[sheet_name] = {
