@@ -420,27 +420,27 @@ def display_results():
     sheets_checked = st.session_state.get('sheets_checked', [])
     all_items = st.session_state.get('all_items', [])
     
-    st.markdown('<div class="card" style="text-align:center; border: 2px solid #c7d2fe;"><h3 style="margin:0;">📊 Langkah 3 — Hasil Pemeriksaan</h3><p class="hint" style="margin:.25rem 0 0 0;">Biru = Jumlah (sebelum PPN) • Oranye = PPN 11% • Hijau = Grand Total • Merah = Selisih</p></div>', unsafe_allow_html=True)
+    st.markdown('<div class="card" style="text-align:center; max-width:760px; margin:1rem auto; border: 2px solid #c7d2fe;"><h3 style="margin:0; text-align:center;">📊 Langkah 3 — Hasil Pemeriksaan</h3><p class="hint" style="margin:.25rem 0 0 0; text-align:center;">Biru = Jumlah (sebelum PPN) • Oranye = PPN 11% • Hijau = Grand Total • Merah = Selisih</p></div>', unsafe_allow_html=True)
     
     # Tampilkan sheet yang diperiksa
     if sheets_checked and len(sheets_checked) > 1:
         st.info(f"📋 Sheet yang diperiksa: {', '.join(sheets_checked)}")
     
-    # Status — bahasa awam
+    # Status — center
     if results['total_errors'] == 0:
         st.markdown("""
-        <div class="card" style="background: linear-gradient(135deg, #ecfdf5, #d1fae5); border:2px solid #6ee7b7; text-align:center; padding:1.4rem;">
-          <div style="font-size:2rem;">✅</div>
-          <div style="font-weight:800; font-size:1.2rem; color:#065f46;">Semua hitungan COCOK</div>
-          <div style="color:#047857; font-size:.9rem;">Qty × Harga, Jumlah, PPN & Grand Total sudah benar</div>
+        <div class="card" style="background: linear-gradient(135deg, #ecfdf5, #d1fae5); border:2px solid #6ee7b7; text-align:center; padding:1.4rem; max-width:760px; margin:1rem auto;">
+          <div style="font-size:2rem; text-align:center;">✅</div>
+          <div style="font-weight:800; font-size:1.2rem; color:#065f46; text-align:center;">Semua hitungan COCOK</div>
+          <div style="color:#047857; font-size:.9rem; text-align:center;">Qty × Harga, Jumlah, PPN & Grand Total sudah benar</div>
         </div>
         """, unsafe_allow_html=True)
     else:
         st.markdown(f"""
-        <div class="card" style="background: linear-gradient(135deg, #fef2f2, #fee2e2); border:2px solid #fca5a5; text-align:center; padding:1.4rem;">
-          <div style="font-size:2rem;">⚠️</div>
-          <div style="font-weight:800; font-size:1.2rem; color:#991b1b;">Ditemukan {results["total_errors"]} yang perlu dicek</div>
-          <div style="color:#b91c1c; font-size:.9rem;">Lihat kotak <b>SELISIH</b> merah di bawah — nilai yang benar ada di kolom <b>DIHITUNG</b></div>
+        <div class="card" style="background: linear-gradient(135deg, #fef2f2, #fee2e2); border:2px solid #fca5a5; text-align:center; padding:1.4rem; max-width:760px; margin:1rem auto;">
+          <div style="font-size:2rem; text-align:center;">⚠️</div>
+          <div style="font-weight:800; font-size:1.2rem; color:#991b1b; text-align:center;">Ditemukan {results["total_errors"]} yang perlu dicek</div>
+          <div style="color:#b91c1c; font-size:.9rem; text-align:center;">Lihat kotak <b>SELISIH</b> merah di bawah — nilai yang benar ada di kolom <b>DIHITUNG</b></div>
         </div>
         """, unsafe_allow_html=True)
     
@@ -622,17 +622,19 @@ def display_results():
               <div class="node" style="border-color:#86efac; background:#ecfdf5;"><b>GRAND TOTAL</b><br><span style="color:#065f46; font-size:.8rem;">TOTAL + PPN</span></div>
             </div>
             """, unsafe_allow_html=True)
-            # Header Ringkasan
+            st.markdown("<div style='text-align:center;'><span class='badge neutral'>RINGKASAN — DIHITUNG vs DI EXCEL</span></div>", unsafe_allow_html=True)
+            # Header Ringkasan — center
             st.markdown("""
             <div style="background: linear-gradient(90deg, #2563eb 0%, #7c3aed 50%, #059669 100%); 
                         color: white; 
                         padding: 1rem; 
                         border-radius: 16px; 
                         text-align: center;
-                        margin: 1rem 0;
+                        margin: 1rem auto;
+                        max-width: 760px;
                         box-shadow: 0 10px 30px rgba(37,99,235,.25);">
-                <h3 style="margin: 0; color: white; font-weight: 800; font-size:1.05rem;">📊 RINGKASAN — Bandingkan DIHITUNG vs DI EXCEL</h3>
-                <div style="font-size:.82rem; opacity:.95; margin-top:.2rem;">Kiri = hitungan sistem &nbsp;•&nbsp; Tengah = cocok/selisih &nbsp;•&nbsp; Kanan = angka di Excel</div>
+                <h3 style="margin: 0; color: white; font-weight: 800; font-size:1.05rem; text-align:center;">📊 RINGKASAN — Bandingkan DIHITUNG vs DI EXCEL</h3>
+                <div style="font-size:.82rem; opacity:.95; margin-top:.2rem; text-align:center;">Kiri = hitungan sistem &nbsp;•&nbsp; Tengah = cocok/selisih &nbsp;•&nbsp; Kanan = angka di Excel</div>
             </div>
             """, unsafe_allow_html=True)
             
@@ -1020,6 +1022,7 @@ def display_results():
                         </div>
                         """.format(format_currency(excel_grand_total)), unsafe_allow_html=True)
                     st.markdown("<div style='height:1rem;'></div>", unsafe_allow_html=True)
+                st.markdown("<div style='text-align:center; color:#64748b; font-size:.82rem; margin:.4rem 0;'>⬆️ Semua hasil di atas sudah rata tengah</div>", unsafe_allow_html=True)
             
             else:
                 has_ppn_single = excel_ppn is not None
