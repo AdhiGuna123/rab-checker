@@ -878,13 +878,13 @@ class ExcelReader:
                                     result['ppn_value'] = cand['value']
                                     result['ppn_row'] = cand['row']
                                 placed = True
-                        else:
-                            for sl in section_order_sorted:
-                                if result['sections'][sl]['ppn_value'] is None and not result.get('ppn_is_combined'):
-                                    result['sections'][sl]['ppn_value'] = cand['value']
-                                    result['sections'][sl]['ppn_row'] = cand['row']
-                                    placed = True
-                                    break
+                    else:
+                        for sl in section_order_sorted:
+                            if result['sections'][sl]['ppn_value'] is None:
+                                result['sections'][sl]['ppn_value'] = cand['value']
+                                result['sections'][sl]['ppn_row'] = cand['row']
+                                placed = True
+                                break
                         if not placed:
                             if result.get('ppn_value') is None:
                                 result['ppn_value'] = cand['value']
@@ -895,6 +895,29 @@ class ExcelReader:
                         if only.get('ppn_value') is not None:
                             result['ppn_value'] = only['ppn_value']
                             result['ppn_row'] = only['ppn_row']
+
+        # Expose jumlah section dinamis (A/B/C atau lebih) untuk laporan
+        result['detected_sections'] = sorted(result['sections'].keys())
+
+        # CASE 1: RAB TANPA PPN — jika tidak ada PPN di mana pun, GRAND TOTAL = TOTAL (atau Jumlah Global)
+        if result.get('ppn_value') is None and all(safe_float(v.get('ppn_value')) is None for v in result['sections'].values()):
+            result['is_without_ppn'] = True
+            # Grand = TOTAL gabungan jika ada, else Jumlah Global / subtotal
+            if result['grand_total_value'] is None:
+                cand = result.get('jumlah_global_excel') or result.get('subtotal_value')
+                if cand is not None:
+                    result['grand_total_value'] = safe_float(cand)
+                    result['grand_total_row'] = result.get('jumlah_global_row') or result.get('subtotal_row')
+                elif len(result['sections']) > 1:
+                    s = sum(safe_float(v.get('subtotal_value')) or 0 for v in result['sections'].values())
+                    if s:
+                        result['grand_total_value'] = s
+                elif result['sections']:
+                    only = list(result['sections'].values())[0]
+                    if safe_float(only.get('subtotal_value')) is not None:
+                        result['grand_total_value'] = safe_float(only.get('subtotal_value'))
+        else:
+            result['is_without_ppn'] = False
 
         # === VALUE INTELLIGENCE: reconciliator Jumlah Global vs Grand Total via angka ===
         # Jika GRAND TOTAL masih kosong tapi Jumlah Global ada + PPN gabungan, derived Grand = Jumlah Global + PPN
@@ -932,7 +955,8 @@ class ExcelReader:
                 result['ppn_value'] = ppn_sum
                 result['ppn_is_combined'] = False
         result.setdefault('ppn_is_combined', False)
-            
+        result.setdefault('is_without_ppn', False)
+
         result['skipped_rows'] = skipped_rows
         result['classifications'] = classifications
         result['columns'] = columns

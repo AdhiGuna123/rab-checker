@@ -894,17 +894,28 @@ def display_results():
                         </div>
                         """.format(format_currency(total_kategori_excel)), unsafe_allow_html=True)
 
-                # === Alur awam: tampilkan urutan -->
-                st.markdown("""
-                <div style="display:flex; align-items:center; justify-content:center; gap:.5rem; margin:1rem 0; flex-wrap:wrap;">
-                  <span class="badge ok">1. Jumlah A+B = TOTAL</span><span style="color:#94a3b8;">→</span>
-                  <span class="badge neutral">2. TOTAL × 11% = PPN</span><span style="color:#94a3b8;">→</span>
-                  <span class="badge ok" style="background:#dcfce7; border-color:#86efac;">3. TOTAL + PPN = GRAND</span>
-                </div>
-                """, unsafe_allow_html=True)
+                # === Mode badge (auto-detect 5 case) ===
+                _is_without = sheet_dbg_global.get('is_without_ppn', False) if isinstance(sheet_dbg_global, dict) else False
+                _mode = "TANPA PPN" if _is_without else ("PPN GABUNGAN" if is_combined_global else ("PPN 1 BAGIAN" if sum(1 for sd in sections.values() if sd.get('ppn_value') is not None)==1 and len(sections)>1 else ("NORMAL" if len(sections)<=1 else "MULTI")))
+                st.markdown(f"<div style='text-align:center; margin:.4rem 0;'><span class='badge neutral'>Mode: {_mode}</span></div>", unsafe_allow_html=True)
+                if not _is_without:
+                    st.markdown("""
+                    <div style="display:flex; align-items:center; justify-content:center; gap:.5rem; margin:1rem 0; flex-wrap:wrap;">
+                      <span class="badge ok">1. Jumlah A+B = TOTAL</span><span style="color:#94a3b8;">→</span>
+                      <span class="badge neutral">2. TOTAL × 11% = PPN</span><span style="color:#94a3b8;">→</span>
+                      <span class="badge ok" style="background:#dcfce7; border-color:#86efac;">3. TOTAL + PPN = GRAND</span>
+                    </div>
+                    """, unsafe_allow_html=True)
+                else:
+                    st.markdown("""
+                    <div style="display:flex; align-items:center; justify-content:center; gap:.5rem; margin:1rem 0; flex-wrap:wrap;">
+                      <span class="badge ok">1. Σ Item = TOTAL</span><span style="color:#94a3b8;">→</span>
+                      <span class="badge ok" style="background:#dcfce7; border-color:#86efac;">GRAND = TOTAL (tanpa PPN)</span>
+                    </div>
+                    """, unsafe_allow_html=True)
 
-                # PPN GLOBAL — kartu besar, judul jelas, rumus
-                show_global_ppn = excel_ppn_global is not None and (is_combined_global or not has_any_section_ppn)
+                # PPN GLOBAL — kartu besar; TANPA PPN tidak tampil
+                show_global_ppn = not _is_without and excel_ppn_global is not None and (is_combined_global or not has_any_section_ppn)
                 if show_global_ppn:
                     sum_sub_for_ppn = sum(safe_float(sd.get('subtotal_value')) or 0 for sd in sections.values())
                     calc_ppn_global = sum_sub_for_ppn * 0.11
@@ -1189,11 +1200,19 @@ def display_results():
             
             st.markdown("---")
     
+    # Download RAB AUDIT REPORT (Excel) — tidak mengubah file asli, hanya laporan
+    try:
+        rg = ReportGenerator()
+        rpt_bytes = rg.build_bytes(file_name=st.session_state.get('file_name','RAB.xlsx'), check_results=results, errors=errors, warnings=warnings, sheets_data=st.session_state.get('excel_sheets_data',{}))
+        st.download_button("📥 Download RAB AUDIT REPORT (.xlsx)", data=rpt_bytes, file_name=f"{(st.session_state.get('file_name','RAB').rsplit('.',1)[0])}_RAB_AUDIT_REPORT.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
+    except Exception as _e:
+        st.caption(f"Gagal buat laporan: {_e}")
+
     st.markdown("<br>", unsafe_allow_html=True)
     
-    # Detail Errors
+    # Detail Errors — RAB AUDIT REPORT style (lokasi, Excel, Seharusnya, Selisih)
     if errors:
-        st.markdown('<div class="section-header">DETAIL KESALAHAN</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-header">📋 RAB AUDIT REPORT — DETAIL TEMUAN</div>', unsafe_allow_html=True)
         
         for i, error in enumerate(errors, 1):
             item_name = error.get('item_name', 'Unknown')
