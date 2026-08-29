@@ -994,15 +994,18 @@ def display_results():
                         </div>
                         """.format(format_currency(excel_ppn_global)), unsafe_allow_html=True)
 
-                # Fallback Normal: PPN Section A → isi global agar Langkah 2 tampil (check sudah pakai ini)
-                if not show_global_ppn and len(sections) == 1 and not sheet_dbg_global.get('is_without_ppn', False):
-                    sd0 = list(sections.values())[0]
-                    if sd0.get('ppn_value') is not None and sd0.get('subtotal_value') is not None and excel_ppn_global is None:
-                        excel_ppn_global = safe_float(sd0.get('ppn_value'))
+                # Fallback Normal umum: jika ada PPN di section (PPN 11% 1,344,420 di A) tapi show_global_ppn False, tampilkan Langkah 2
+                _sheet_fallback_ppn = False
+                if not show_global_ppn and has_any_section_ppn and not sheet_dbg_global.get('is_without_ppn', False):
+                    # Ambil PPN pertama yang ada (NORMAL / PPN 1 BAGIAN)
+                    first_ppn = next((safe_float(sd.get('ppn_value')) for sd in sections.values() if sd.get('ppn_value') is not None), None)
+                    first_sub = next((safe_float(sd.get('subtotal_value')) for sd in sections.values() if sd.get('subtotal_value') is not None), 0)
+                    if first_ppn is not None:
+                        excel_ppn_global = first_ppn
+                        sum_sub_for_ppn = first_sub
+                        calc_ppn_global = sum_sub_for_ppn * 0.11 if sum_sub_for_ppn else first_ppn
                         show_global_ppn = True
-                        # Override sum untuk NORMAL single
-                        sum_sub_for_ppn = safe_float(sd0.get('subtotal_value')) or 0
-                        calc_ppn_global = sum_sub_for_ppn * 0.11
+                        _sheet_fallback_ppn = True
                         st.markdown("""
                         <div class="card" style="border:2px solid #fed7aa; background: linear-gradient(180deg, #fffbeb, #ffffff);">
                           <div style="display:flex; align-items:center; gap:.6rem; margin-bottom:.6rem;">
