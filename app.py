@@ -939,20 +939,26 @@ def display_results():
                     </div>
                     """, unsafe_allow_html=True)
 
-                # NORMAL: PPN di section A — tampilkan Langkah 2 dari section
+                # Langkah 2 — selalu tampil jika ada PPN (global gabungan ATAU per-section)
                 is_single = len(sections) == 1
-                show_global_ppn = not _is_without and excel_ppn_global is not None and (is_combined_global or not has_any_section_ppn or (is_single and list(sections.values())[0].get('ppn_value') is not None))
+                has_ppn_section = has_any_section_ppn
+                show_global_ppn = not _is_without and (excel_ppn_global is not None and (is_combined_global or not has_ppn_section) or (is_single and has_ppn_section) or (not is_single and has_ppn_section and not is_combined_global))
                 if show_global_ppn:
-                    if is_single:
+                    if is_single and has_ppn_section:
                         sd0 = list(sections.values())[0]
                         sum_sub_for_ppn = safe_float(sd0.get('subtotal_value')) or safe_float(sheet_dbg_global.get('jumlah_global_excel')) or 0
-                        # Override ke PPN section untuk NORMAL
-                        if sd0.get('ppn_value') is not None:
-                            excel_ppn_global = safe_float(sd0.get('ppn_value'))
-                            is_combined_global = False
+                        excel_ppn_global = safe_float(sd0.get('ppn_value')) or excel_ppn_global
+                        is_combined_global = False
+                    elif has_ppn_section and not is_combined_global:
+                        # MULTI tapi PPN per-section (NORMAL single-section ganda): pakai TOTAL global vs PPN section pertama
+                        sum_sub_for_ppn = safe_float(sheet_dbg_global.get('jumlah_global_excel')) or sum(safe_float(sd.get('subtotal_value')) or 0 for sd in sections.values())
+                        # Jika gap global, fallback ke PPN section pertama
+                        if excel_ppn_global is None:
+                            first_ppn = next((safe_float(sd.get('ppn_value')) for sd in sections.values() if sd.get('ppn_value') is not None), None)
+                            excel_ppn_global = first_ppn
                     else:
                         sum_sub_for_ppn = safe_float(sheet_dbg_global.get('jumlah_global_excel')) or sum(safe_float(sd.get('subtotal_value')) or 0 for sd in sections.values())
-                    calc_ppn_global = sum_sub_for_ppn * 0.11
+                    calc_ppn_global = sum_sub_for_ppn * 0.11 if sum_sub_for_ppn else 0
                     st.markdown("""
                     <div class="card" style="border:2px solid #fed7aa; background: linear-gradient(180deg, #fffbeb, #ffffff);">
                       <div style="display:flex; align-items:center; gap:.6rem; margin-bottom:.6rem;">
