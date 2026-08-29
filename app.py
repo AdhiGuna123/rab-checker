@@ -870,21 +870,18 @@ def display_results():
                 letters = "+".join(sorted(sections.keys()))
                 total_label = f"Jumlah {' + '.join(sorted(sections.keys()))}" if len(sections) <= 4 else f"Jumlah {len(sections)} bagian"
                 has_total_kategori = not _is_single_ppn and (sheet_dbg_global.get('jumlah_global_excel') is not None or sheet_dbg_global.get('subtotal_value') is not None or sum(safe_float(sd.get('subtotal_value')) or 0 for sd in sections.values()) > 0)
-                # Case 5: TOTAL (A+B+C) belum jadi jumlah_global, pakai SUM sections atau grand-PPN
+                # Case 5: TOTAL (A+B+C) = GRAND - PPN (nilai Excel langsung)
                 if sheet_dbg_global.get('jumlah_global_excel') is not None:
                     total_kategori_excel = safe_float(sheet_dbg_global.get('jumlah_global_excel'))
+                elif is_combined_global and len(sections) >= 2:
+                    g = safe_float(sheet_dbg_global.get('grand_total_value'))
+                    pg = safe_float(sheet_dbg_global.get('ppn_value'))
+                    if g is not None and pg is not None and g > pg:
+                        total_kategori_excel = g - pg
+                    else:
+                        total_kategori_excel = sum(safe_float(sd.get('subtotal_value')) or 0 for sd in sections.values())
                 elif sheet_dbg_global.get('is_without_ppn') and sum(safe_float(sd.get('subtotal_value')) or 0 for sd in sections.values()) > 0:
                     total_kategori_excel = sum(safe_float(sd.get('subtotal_value')) or 0 for sd in sections.values())
-                elif is_combined_global and len(sections) >= 2:
-                    # PPN 1 di akhir (A+B+C): TOTAL = sum sections (yang di-compare di checker GLOBAL_PPN/GRAND)
-                    total_kategori_excel = sum(safe_float(sd.get('subtotal_value')) or 0 for sd in sections.values())
-                    # Override dengan nilai Excel TOTAL (A+B+C) jika ada (grand-PPN)
-                    try:
-                        g = safe_float(sheet_dbg_global.get('grand_total_value'))
-                        pg = safe_float(sheet_dbg_global.get('ppn_value'))
-                        if g is not None and pg is not None and g > pg:
-                            total_kategori_excel = g - pg
-                    except: pass
                 else:
                     total_kategori_excel = safe_float(sheet_dbg_global.get('subtotal_value'))
                 if has_total_kategori and len(sections) > 1:
