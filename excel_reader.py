@@ -360,7 +360,7 @@ class ExcelReader:
             total_mode: 'auto' | 'per_section' | 'combined'  — combined = 1 Total global
         """
         overrides = overrides or {}
-        result = {
+        result: Dict[str, Any] = {
             'sheet_name': sheet_name,
             'header_row': None,
             'columns': None,
@@ -849,13 +849,13 @@ class ExcelReader:
                             result['sections'][pref]['ppn_value'] = cand['value']
                             result['sections'][pref]['ppn_row'] = cand['row']
                             placed = True
-                        else:
-                            for sl in section_order_sorted:
-                                if result['sections'][sl]['ppn_value'] is None:
-                                    result['sections'][sl]['ppn_value'] = cand['value']
-                                    result['sections'][sl]['ppn_row'] = cand['row']
-                                    placed = True
-                                    break
+                    else:
+                        for sl in section_order_sorted:
+                            if result['sections'][sl]['ppn_value'] is None:
+                                result['sections'][sl]['ppn_value'] = cand['value']
+                                result['sections'][sl]['ppn_row'] = cand['row']
+                                placed = True
+                                break
                         if not placed:
                             if result.get('ppn_value') is None:
                                 result['ppn_value'] = cand['value']
@@ -866,7 +866,7 @@ class ExcelReader:
                         if only.get('ppn_value') is not None:
                             result['ppn_value'] = only['ppn_value']
                             result['ppn_row'] = only['ppn_row']
-        
+            
         # Hitung grand total dari sections jika belum ada (fleksibel)
         if result['grand_total_value'] is None and len(result['sections']) > 1:
             total_all = 0
@@ -889,30 +889,30 @@ class ExcelReader:
             if ppn_sum > 0:
                 result['ppn_value'] = ppn_sum
                 result['ppn_is_combined'] = False
-        result.setdefault('ppn_is_combined', False)
-        
-        result['skipped_rows'] = skipped_rows
-        result['classifications'] = classifications
-        result['columns'] = columns
-        # Simpan raw values untuk rows jumlah_global/grand_total agar DEBUG menampilkan nilainya
-        result['summary_rows_debug'] = []
-        for k in classifications:
-            try:
-                v_dbg = self._get_total_value(k['row'], total_col)
-                if v_dbg is None:
-                    for c2 in range(self.ws.max_column, 0, -1):
-                        v2 = self.ws_data.cell(row=k['row'], column=c2).value
-                        if v2 is None:
-                            v2 = self.ws.cell(row=k['row'], column=c2).value
-                        sf = safe_float(v2)
-                        if sf is not None and sf > 0:
-                            v_dbg = sf
-                            break
-                k2 = dict(k)
-                k2['value'] = v_dbg
-                result['summary_rows_debug'].append(k2)
-            except:
-                pass
+            result.setdefault('ppn_is_combined', False)
+            
+            result['skipped_rows'] = skipped_rows
+            result['classifications'] = classifications
+            result['columns'] = columns
+            result['summary_rows_debug'] = []
+            for k in classifications:
+                try:
+                    v_dbg = self._get_total_value(k['row'], total_col)
+                    if v_dbg is None:
+                        for c2 in range(self.ws.max_column, 0, -1):
+                            v2 = self.ws_data.cell(row=k['row'], column=c2).value
+                            if v2 is None:
+                                v2 = self.ws.cell(row=k['row'], column=c2).value
+                            sf = safe_float(v2)
+                            if sf is not None and sf > 0:
+                                v_dbg = sf
+                                break
+                    k2 = dict(k)
+                    k2['value'] = v_dbg
+                    result['summary_rows_debug'].append(k2)
+                except Exception:
+                    pass
+        return result
     
     def read_item(self, row: int, columns: Dict[str, int]) -> Dict[str, Any]:
         """Membaca satu baris item dengan formula dan nilai"""

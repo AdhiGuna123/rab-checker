@@ -729,9 +729,10 @@ def main():
                             try:
                                 data = reader.read_data(sheet_name, overrides=overrides if overrides else None)
                             except Exception as _e:
-                                data = {'sheet_name': sheet_name, 'subtotal_value': None, 'ppn_value': None, 'grand_total_value': None, 'sections': {}, 'skipped_rows': [{'row': '?', 'dump': [f'read_data error: {str(_e)[:120]}'] }], 'classifications': [], 'summary_rows_debug': [], 'columns': {}, 'overrides_applied': {}, 'header_values_debug': [], 'items': []}
+                                import traceback
+                                data = {'sheet_name': sheet_name, 'subtotal_value': None, 'ppn_value': None, 'grand_total_value': None, 'sections': {}, 'skipped_rows': [{'row': '?', 'dump': [f'read_data error: {_e}', traceback.format_exc()[:600]] }], 'classifications': [], 'summary_rows_debug': [], 'columns': {}, 'overrides_applied': {}, 'header_values_debug': [], 'items': []}
                             if not isinstance(data, dict):
-                                data = {'sheet_name': sheet_name, 'subtotal_value': None, 'ppn_value': None, 'grand_total_value': None, 'sections': {}, 'skipped_rows': [{'row': '?', 'dump': [f'data type {type(data)}'] }], 'classifications': [], 'summary_rows_debug': [], 'columns': {}, 'overrides_applied': {}, 'header_values_debug': [], 'items': []}
+                                data = {'sheet_name': sheet_name, 'subtotal_value': None, 'ppn_value': None, 'grand_total_value': None, 'sections': {}, 'skipped_rows': [{'row': '?', 'dump': [f'data type {type(data)} value={repr(data)[:400]}'] }], 'classifications': [], 'summary_rows_debug': [], 'columns': {}, 'overrides_applied': {}, 'header_values_debug': [], 'items': []}
                             if 'excel_sheets_data' not in st.session_state:
                                 st.session_state.excel_sheets_data = {}
                             st.session_state.excel_sheets_data[sheet_name] = {
