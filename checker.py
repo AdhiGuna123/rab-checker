@@ -206,15 +206,20 @@ class RABChecker:
                             'section': section_letter
                         })
             
-            # PPN per-section TIDAK dicek di sini untuk case PPN gabungan (ada PPN global)
-            # Jika ada PPN global gabungan, PPN per-section adalah noise — validasi ada di check_global_ppn (TOTAL×11%)
-            if data.get('ppn_is_combined') and safe_float(data.get('ppn_value')) is not None:
-                pass
+            # 5-CASE mode-aware:
+            # - PPN GABUNGAN: validasi PPN per-section di-skip (sudah di GLOBAL_PPN_ERROR TOTAL×11%)
+            # - PPN 1 BAGIAN: hanya section yang memang punya PPN yang dicek (Jumlah B ×11%, Total B), section lain di-skip
+            # - PPN PER-SECTION: semua section yang punya PPN dicek (Jumlah A×11%, Jumlah B×11%)
+            is_combined = data.get('ppn_is_combined')
+            ppn_sections = [k for k, v in data.get('sections',{}).items() if safe_float(v.get('ppn_value')) is not None] if isinstance(data.get('sections'), dict) else []
+            is_single_ppn_section = len(ppn_sections) == 1 and len(data.get('sections',{})) > 1
+            if is_combined and safe_float(data.get('ppn_value')) is not None:
+                pass  # gabungan -> skip per-section
             elif ppn_excel is not None and subtotal_excel is not None:
-                # Hanya cek PPN per-section untuk case PPN 1 Bagian / per-section murni
-                # Untuk kategori A/B (PPN Global), subtotal per-section bukan dasar PPN — skip
-                if section_data.get('is_category') and data.get('ppn_is_combined'):
+                if section_data.get('is_category') and is_combined:
                     pass
+                elif is_single_ppn_section and section_letter not in ppn_sections:
+                    pass  # PPN hanya di 1 bagian (case 2): jangan cek PPN section yang tidak punya PPN
                 else:
                     expected_ppn = subtotal_excel * 0.11
                     tolerance = 1
@@ -300,14 +305,21 @@ class RABChecker:
             })
 
     def check_global_ppn(self, data: Dict[str, Any]) -> None:
-        """PPN global — pakai TOTAL (Jumlah Global) × 11% sesuai tulisan 1) Jumlah A+B=TOTAL → 2) TOTAL×11%=PPN."""
+        """PPN global — CASE 4/5 gabungan: TOTAL (Jumlah Global) × 11%. Untuk PPN 1 BAGIAN & per-section, jangan double."""
         sections = data.get('sections', {})
         if not sections:
             return
         global_ppn = safe_float(data.get('ppn_value'))
         if global_ppn is None:
             return
-        # Prioritas: jumlah_global_excel (TOTAL) × 11% sesuai tulisan; fallback sum sections
+        is_combined = data.get('ppn_is_combined')
+        has_any_section_ppn = any(safe_float(v.get('ppn_value')) is not None for v in sections.values())
+        # Case 2 (PPN 1 Bagian) & per-section: jangan double pakai GLOBAL_PPN_ERROR
+        if len(sections) > 1 and len([k for k,v in sections.items() if safe_float(v.get('ppn_value')) is not None]) == 1:
+            return  # sudah di check_case2_single_ppn_section & section PPN, bukan global
+        if has_any_section_ppn and not is_combined and len(sections) > 1:
+            # per-section murni — tidak ada PPN global yang perlu dicek di sini
+            return
         total_global = safe_float(data.get('jumlah_global_excel'))
         if total_global is None:
             total_global = safe_float(data.get('subtotal_value'))
@@ -315,8 +327,7 @@ class RABChecker:
             total_global = sum(safe_float(sd.get('subtotal_value')) or sum(safe_float(it.get('total')) or 0 for it in sd.get('items', [])) or 0 for sd in sections.values())
         if not total_global:
             return
-        has_any_section_ppn = any(safe_float(v.get('ppn_value')) is not None for v in sections.values())
-        if len(sections) > 1 and (data.get('ppn_is_combined') or not has_any_section_ppn):
+        if len(sections) > 1 and (is_combined or not has_any_section_ppn):
             expected = total_global * 0.11
             if abs(expected - global_ppn) > 1:
                 self.errors.append({
