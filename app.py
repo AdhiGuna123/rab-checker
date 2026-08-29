@@ -677,11 +677,19 @@ def main():
                     adv_price = st.text_input("Kolom Harga Satuan (huruf)", key="adv_price", placeholder="auto")
                 with c4:
                     adv_total = st.text_input("Kolom Jumlah/Total (huruf)", key="adv_total", placeholder="auto")
-                c5, c6 = st.columns(2)
+                c5, c6, c7 = st.columns(3)
                 with c5:
                     adv_ppn = st.selectbox("Mode PPN", ["Auto (deteksi)", "Per-section (masing-masing)", "Gabungan (1 PPN A+B)", "Hanya 1 section (A atau B)", "Tanpa PPN"], key="adv_ppn")
                 with c6:
                     adv_total_mode = st.selectbox("Mode Total", ["Auto (deteksi)", "Per-section (Total A & Total B)", "Gabungan (1 Grand Total)"], key="adv_total_mode")
+                with c7:
+                    adv_ai = st.selectbox("AI Gratis (opsional)", ["Tanpa AI (default, gratis)", "Gemini Free (butuh key)"], key="adv_ai")
+                adv_gemini_key = ""
+                if adv_ai == "Gemini Free (butuh key)":
+                    adv_gemini_key = st.text_input("Gemini API Key (free tier, kosong=failback lokal)", key="adv_gemini_key", type="password", placeholder="AIza...")
+                    st.caption("Dapatkan gratis: https://aistudio.google.com/app/apikey — gratis tanpa kartu. Kosong = tetap Value Intelligence gratis.")
+                else:
+                    st.session_state['adv_gemini_key'] = ""
                 # Store for START CHECK
                 def _col_letter_to_num(s: str):
                     s = s.strip().upper()
@@ -700,6 +708,7 @@ def main():
                     'ppn_mode': {'Auto (deteksi)':'auto','Per-section (masing-masing)':'per_section','Gabungan (1 PPN A+B)':'combined','Hanya 1 section (A atau B)':'single','Tanpa PPN':'none'}[adv_ppn],
                     'total_mode': {'Auto (deteksi)':'auto','Per-section (Total A & Total B)':'per_section','Gabungan (1 Grand Total)':'combined'}[adv_total_mode],
                 }
+                st.session_state['adv_ai_preview'] = {'provider': 'gemini' if adv_ai.startswith('Gemini') else 'none', 'gemini_key': adv_gemini_key.strip() if adv_gemini_key else ""}
                 st.caption(f"Preview override: header={st.session_state['adv_overrides_preview']['header_row'] or 'auto'} qty={adv_qty or 'auto'} price={adv_price or 'auto'} total={adv_total or 'auto'} | PPN={st.session_state['adv_overrides_preview']['ppn_mode']} TOTAL={st.session_state['adv_overrides_preview']['total_mode']}")
 
             st.markdown("<br>", unsafe_allow_html=True)
@@ -723,11 +732,13 @@ def main():
                             progress.progress((idx + 1) / len(sheets_to_check))
                             status_text.text(f"Memeriksa sheet: {sheet_name}...")
                             
-                            # Baca data (dengan override jika ada) + fallback defensif jika read_data crash/return None
+                            # Baca data (Value Intelligence + Label + AI gratis opsional)
                             overrides = st.session_state.get('adv_overrides_preview', {})
                             overrides = {k: v for k, v in overrides.items() if v is not None}
+                            ai_overrides = st.session_state.get('adv_ai_preview', {})
+                            ai_overrides = {k: v for k, v in ai_overrides.items() if v}
                             try:
-                                data = reader.read_data(sheet_name, overrides=overrides if overrides else None)
+                                data = reader.read_data(sheet_name, overrides=overrides if overrides else None, ai_overrides=ai_overrides if ai_overrides else None)
                             except Exception as _e:
                                 import traceback
                                 data = {'sheet_name': sheet_name, 'subtotal_value': None, 'ppn_value': None, 'grand_total_value': None, 'sections': {}, 'skipped_rows': [{'row': '?', 'dump': [f'read_data error: {_e}', traceback.format_exc()[:600]] }], 'classifications': [], 'summary_rows_debug': [], 'columns': {}, 'overrides_applied': {}, 'header_values_debug': [], 'items': []}

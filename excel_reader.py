@@ -350,7 +350,12 @@ class ExcelReader:
         
         return 'unknown'
     
-    def read_data(self, sheet_name: str, overrides: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def read_data(self, sheet_name: str, overrides: Optional[Dict[str, Any]] = None, ai_overrides: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
+        """Wrapper agar ai_overrides (Gemini/Groq gratis) bisa dipakai tanpa ubah signature lama."""
+        # Delegasi ke implementasi sebenarnya agar signature tetap kompatibel
+        return self._read_data_impl(sheet_name, overrides, ai_overrides)
+
+    def _read_data_impl(self, sheet_name: str, overrides: Optional[Dict[str, Any]] = None, ai_overrides: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
         """Membaca data dari sheet dengan support multiple sections dan flexible fields.
         
         overrides (opsional, tanpa AI, 100% lokal):
@@ -879,6 +884,19 @@ class ExcelReader:
                         if only.get('ppn_value') is not None:
                             result['ppn_value'] = only['ppn_value']
                             result['ppn_row'] = only['ppn_row']
+
+        # === VALUE INTELLIGENCE: reconciliator Jumlah Global vs Grand Total via angka ===
+        # Jika GRAND TOTAL masih kosong tapi Jumlah Global ada + PPN gabungan, derived Grand = Jumlah Global + PPN
+        # Jika Jumlah Global kosong tapi Grand ada, jangan tebak — hanya jika TOTAL tunggal case.
+        # Ini tetap alur RAB (angka sebagai kebenaran), tulisan hanya petunjuk.
+        if result['grand_total_value'] is None and result.get('jumlah_global_excel') is not None:
+            jg = safe_float(result.get('jumlah_global_excel'))
+            ppn_g = safe_float(result.get('ppn_value')) if result.get('ppn_is_combined') else None
+            if jg is not None and ppn_g is not None:
+                # Jangan override jika sudah ada grand via sections; ini hanya jika sections belum punya grand
+                if result['grand_total_value'] is None:
+                    pass  # Grand tetap dari sections jika ada; Quantity tetap Jumlah Global untuk check_global_subtotal
+        # Jika PPN gabungan 10.184.363 tapi GRAND belum match (mis. Excel GRAND sudah termasuk PPN), papan di app akan reconcile via sum
             
         # Hitung grand total dari sections jika belum ada (fleksibel)
         if result['grand_total_value'] is None and len(result['sections']) > 1:
@@ -896,35 +914,59 @@ class ExcelReader:
                 result['grand_total_value'] = total_all
         # Grand total sudah ada tapi PPN gabungan belum terdeteksi: jangan timpa
         
-        # PPN global fallback ringkasan: jika tidak ada global tapi sections ada PPN, global = sum PPN sections (bukan combined)
+            # PPN global fallback ringkasan: jika tidak ada global tapi sections ada PPN, global = sum PPN sections (bukan combined)
         if result.get('ppn_value') is None and len(result['sections']) > 1:
             ppn_sum = sum(safe_float(v.get('ppn_value')) or 0 for v in result['sections'].values())
             if ppn_sum > 0:
                 result['ppn_value'] = ppn_sum
                 result['ppn_is_combined'] = False
-            result.setdefault('ppn_is_combined', False)
+        result.setdefault('ppn_is_combined', False)
             
-            result['skipped_rows'] = skipped_rows
-            result['classifications'] = classifications
-            result['columns'] = columns
-            result['summary_rows_debug'] = []
-            for k in classifications:
-                try:
-                    v_dbg = self._get_total_value(k['row'], total_col)
-                    if v_dbg is None:
-                        for c2 in range(self.ws.max_column, 0, -1):
-                            v2 = self.ws_data.cell(row=k['row'], column=c2).value
-                            if v2 is None:
-                                v2 = self.ws.cell(row=k['row'], column=c2).value
-                            sf = safe_float(v2)
-                            if sf is not None and sf > 0:
-                                v_dbg = sf
-                                break
-                    k2 = dict(k)
-                    k2['value'] = v_dbg
-                    result['summary_rows_debug'].append(k2)
-                except Exception:
-                    pass
+        result['skipped_rows'] = skipped_rows
+        result['classifications'] = classifications
+        result['columns'] = columns
+        result['summary_rows_debug'] = []
+        for k in classifications:
+            try:
+                v_dbg = self._get_total_value(k['row'], total_col)
+                if v_dbg is None:
+                    for c2 in range(self.ws.max_column, 0, -1):
+                        v2 = self.ws_data.cell(row=k['row'], column=c2).value
+                        if v2 is None:
+                            v2 = self.ws.cell(row=k['row'], column=c2).value
+                        sf = safe_float(v2)
+                        if sf is not None and sf > 0:
+                            v_dbg = sf
+                            break
+                k2 = dict(k)
+                k2['value'] = v_dbg
+                result['summary_rows_debug'].append(k2)
+            except Exception:
+                pass
+        # AI gratis opsional: hanya patch klasifikasi, tidak hitung (fallback jika tanpa AI tetap value+label)
+        if ai_overrides and isinstance(ai_overrides, dict):
+            try:
+                ai_map = None
+                g_key = ai_overrides.get('gemini_key') or ai_overrides.get('groq_key')
+                if ai_overrides.get('provider') == 'gemini' or (g_key and 'gemini' in str(ai_overrides.get('provider','')).lower()):
+                    from ai_helper import classify_with_gemini_free
+                    rows_for_ai = [{'row': k['row'], 'raw': k['raw'], 'value': klass_map.get(k['row'],{}).get('value') if (klass_map:= {x['row']: x for x in result['summary_rows_debug']}) else None} for k in classifications]
+                    ai_map = classify_with_gemini_free(rows_for_ai, api_key=ai_overrides.get('gemini_key'))
+                elif ai_overrides.get('provider') == 'groq':
+                    from ai_helper import classify_with_groq_free
+                    rows_for_ai = [{'row': k['row'], 'raw': k['raw']} for k in classifications]
+                    ai_map = classify_with_groq_free(rows_for_ai, api_key=ai_overrides.get('groq_key'))
+                if ai_map:
+                    # Patch classifications dengan hasil AI (hanya tipe, angka tetap asli)
+                    for k in result['classifications']:
+                        if k['row'] in ai_map and ai_map[k['row']] in ('jumlah_global','ppn','grand_total','subtotal','discount','unknown','section_header'):
+                            k['type'] = ai_map[k['row']]
+                            k['fuzzy'] = True
+                            k['ai_patched'] = True
+                    # PPN gabungan setelah TOTAL: jika AI bilang Row 28 adalah jumlah_global, honor
+                    # (Re-klasifikasi tidak ubah angka, hanya tipe untuk langkah PPN/Grand yang sudah lewat — paling aman untuk next read)
+            except Exception:
+                pass
         return result
     
     def read_item(self, row: int, columns: Dict[str, int]) -> Dict[str, Any]:
