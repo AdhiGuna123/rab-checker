@@ -96,9 +96,19 @@ st.markdown("""
 
 .stButton > button{ background: linear-gradient(135deg, #4f46e5, #7c3aed); color:white; border:none; border-radius:14px; padding:.9rem 1.4rem; font-weight:800; letter-spacing:.02em; box-shadow: 0 10px 24px rgba(79,70,229,.30); }
 .stButton > button:hover{ transform: translateY(-1px); box-shadow: 0 14px 28px rgba(79,70,229,.35); }
-.stFileUploader{ border: 2px dashed #c7d2fe; background: #f8fafc; border-radius:16px; }
+/* Uploader — simpel awam, tidak rame */
+.stFileUploader{ border: 2px dashed #c7d2fe; background: #ffffff; border-radius:16px; padding:.2rem; }
+.stFileUploader [data-testid="stFileUploaderDropzone"]{ background: #f8faff; border-radius:12px; border: 2px dashed #a5b4fc; }
+.stFileUploader [data-testid="stFileUploaderDropzone"]:hover{ border-color: #6366f1; background: #eef2ff; }
+.stFileUploader small{ color:#64748b !important; }
 .stExpander{ border:1px solid #e2e8f0; border-radius:16px; background:white;}
-[data-testid="stDataFrame"]{ border-radius:16px; overflow:hidden; border:1px solid #e2e8f0;}
+[data-testid="stDataFrame"]{ border-radius:16px; overflow:hidden; border:1px solid #e2e8f0; background:white;}
+/* Tabel terang — teks gelap (bukan hitam pekat), header biru, stripe lembut, garis grid halus */
+[data-testid="stDataFrame"] div[data-testid="stDataFrameResizable"] { background:white;}
+[data-testid="stDataFrame"] [role="grid"]{ background:white;}
+[data-testid="stDataFrame"] [role="columnheader"]{ background:#eff6ff !important; color:#1e40af !important; font-weight:700 !important; border-bottom: 2px solid #bfdbfe !important;}
+[data-testid="stDataFrame"] [role="gridcell"]{ color:#334155 !important; border-bottom:1px solid #f1f5f9 !important; border-right:1px solid #f8fafc !important;}
+[data-testid="stDataFrame"] [role="row"]:nth-child(even) [role="gridcell"]{ background:#f8fafc !important;}
 hr{ border:none; height:1px; background: linear-gradient(90deg, transparent, #c7d2fe, transparent); margin:1.2rem 0;}
 @media (max-width: 768px){ .how{ grid-template-columns: 1fr; } .hero h1{ font-size:1.6rem;} }
 </style>
@@ -191,9 +201,10 @@ def main():
 
     st.markdown('<div class="card"><h3>📤 Langkah 1 — Upload File Excel</h3><p class="hint">Pilih file RAB/Quotation (.xlsx). Tidak perlu ubah format — sistem toleran typo <i>Jumlah/TOTAL/JML</i>.</p></div>', unsafe_allow_html=True)
     uploaded_file = st.file_uploader(
-        "Tarik file ke sini atau klik Browse",
+        "Tarik file Excel ke sini atau klik Browse  •  .xlsx / .xls",
         type=['xlsx', 'xls'],
-        help="Upload file Excel RAB/Quotation yang ingin dicek"
+        help="RAB/Quotation Excel. Garis putus-putus = area upload. Tabel di bawah akan terang (bukan hitam).",
+        label_visibility="collapsed"
     )
     
     if uploaded_file is not None:
@@ -463,8 +474,19 @@ def display_results():
                     'Total': item.get('total', '-')
                 })
             
+            # Tabel terang, rupiah rapi, header besar awam
+            if item_data:
+                for r in item_data:
+                    # Rupiah format
+                    for k in ('Qty','Unit Price','Total'):
+                        v = r.get(k)
+                        try:
+                            if v not in ('-','', None) and safe_float(v) is not None:
+                                r[k] = format_currency(v)
+                        except:
+                            pass
             df_items = pd.DataFrame(item_data)
-            st.dataframe(df_items, use_container_width=True)
+            st.dataframe(df_items, use_container_width=True, hide_index=True, height=min(420, 44+len(df_items)*34))
 
             # === PANEL DEBUG (tanpa perlu kirim gambar/file) ===
             # Simpan raw values di display debug — copy-paste teks ini ke chat
