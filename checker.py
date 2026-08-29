@@ -83,27 +83,14 @@ class RABChecker:
                 })
     
     def check_formulas(self, data: Dict[str, Any]) -> None:
-        """Cek apakah kolom Total menggunakan formula"""
-        items = data.get('items', [])
-        
-        for item in items:
-            row = item.get('row')
-            has_formula = item.get('has_formula', False)
-            total_value = item.get('total')
-            
-            if total_value is not None and not has_formula:
-                self.warnings.append({
-                    'type': 'FORMULA_MISSING',
-                    'sheet': data.get('sheet_name'),
-                    'row': row,
-                    'item_name': item.get('item_name', 'Unknown'),
-                    'detail': f'Formula hilang pada kolom Total',
-                    'value': total_value,
-                    'status': 'PERLU CEK'
-                })
+        """Cek apakah kolom Total menggunakan formula — dinonaktifkan untuk menghindari false positive"""
+        # Dulu: setiap item tanpa formula dianggap warning, sehingga sheet bersih terlihat 'banyak salah'
+        return
     
     def check_empty_data(self, data: Dict[str, Any]) -> None:
-        """Cek data kosong atau tidak valid"""
+        """Cek data kosong — hanya jika benar-benar tidak ada total (bukan dari qty*price)"""
+        # Dinonaktifkan: total sekarang selalu dihitung dari qty*unit_price, jadi EMPTY_TOTAL/EMPTY_* jadi noise
+        return
         items = data.get('items', [])
         
         for item in items:

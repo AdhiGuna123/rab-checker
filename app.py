@@ -814,8 +814,8 @@ def display_results():
     
     st.markdown("<br>", unsafe_allow_html=True)
     
-    # Preview Items - Group by Sheet
-    if all_items:
+    # Preview Items - Group by Sheet (build from ALL sheets in excel_sheets_data so second sheet always shows even with 0 items)
+    if all_items or st.session_state.get('excel_sheets_data'):
         st.markdown('<div class="section-header">📋 ITEM YANG TERBACA</div>', unsafe_allow_html=True)
         st.caption("Berikut adalah semua item yang berhasil dibaca dari Excel, dikelompokkan per sheet.")
         
@@ -826,6 +826,10 @@ def display_results():
             if sheet not in sheets_data:
                 sheets_data[sheet] = []
             sheets_data[sheet].append(item)
+        # Ensure sheets with 0 items still render (debug + summary visible)
+        for sn in st.session_state.get('excel_sheets_data', {}).keys():
+            if sn not in sheets_data:
+                sheets_data[sn] = []
         
         # Tampilkan per sheet
         for sheet_name, items in sheets_data.items():
