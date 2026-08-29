@@ -351,8 +351,10 @@ class ExcelReader:
         return 'unknown'
     
     def read_data(self, sheet_name: str, overrides: Optional[Dict[str, Any]] = None, ai_overrides: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
-        """Wrapper agar ai_overrides (Gemini/Groq gratis) bisa dipakai tanpa ubah signature lama."""
-        # Delegasi ke implementasi sebenarnya agar signature tetap kompatibel
+        """AI primary: jika ada ai_overrides (Gemini/Groq gratis), klasifikasi via AI dulu; fallback Value Intelligence."""
+        # Untuk AI primary, kita jalankan deteksi awal via AI sebelum loop utama bila ada key
+        # Tetapi tetap butuh classifications untuk AI — jadi AI akan dipanggil setelah loop klasifikasi awal
+        # Simpan ai_overrides untuk dipakai di akhir sebelum return
         return self._read_data_impl(sheet_name, overrides, ai_overrides)
 
     def _read_data_impl(self, sheet_name: str, overrides: Optional[Dict[str, Any]] = None, ai_overrides: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
@@ -1023,28 +1025,45 @@ class ExcelReader:
                 result['summary_rows_debug'].append(k2)
             except Exception:
                 pass
-        # AI gratis opsional: hanya patch klasifikasi, tidak hitung (fallback jika tanpa AI tetap value+label)
-        if ai_overrides and isinstance(ai_overrides, dict):
+        # AI UNTUK SEMUA CASE + BEYOND: jika aktif, patch klasifikasi via Gemini free selamanya (fallback Value Intelligence jika gagal)
+        if ai_overrides and isinstance(ai_overrides, dict) and ai_overrides.get('provider') != 'none':
             try:
                 ai_map = None
                 g_key = ai_overrides.get('gemini_key') or ai_overrides.get('groq_key')
+                # Bangun summary_rows_debug sementara untuk AI value
+                tmp_summary = []
+                for k in classifications:
+                    try:
+                        v_dbg2 = result.get('grand_total_value') if k['type']=='grand_total' else None
+                        # fallback scan seperti di atas
+                        if v_dbg2 is None:
+                            v_dbg2 = None
+                            for c2 in range(self.ws.max_column, 0, -1):
+                                v2 = self.ws_data.cell(row=k['row'], column=c2).value
+                                if v2 is None:
+                                    v2 = self.ws.cell(row=k['row'], column=c2).value
+                                sf = safe_float(v2)
+                                if sf is not None and sf > 0:
+                                    v_dbg2 = sf
+                                    break
+                    except: v_dbg2 = None
+                    tmp_summary.append({'row': k['row'], 'value': v_dbg2})
+                klass_map_tmp = {x['row']: x for x in tmp_summary}
                 if ai_overrides.get('provider') == 'gemini' or (g_key and 'gemini' in str(ai_overrides.get('provider','')).lower()):
                     from ai_helper import classify_with_gemini_free
-                    rows_for_ai = [{'row': k['row'], 'raw': k['raw'], 'value': klass_map.get(k['row'],{}).get('value') if (klass_map:= {x['row']: x for x in result['summary_rows_debug']}) else None} for k in classifications]
+                    rows_for_ai = [{'row': k['row'], 'raw': k['raw'], 'normalized': k.get('normalized',''), 'value': klass_map_tmp.get(k['row'],{}).get('value')} for k in classifications]
                     ai_map = classify_with_gemini_free(rows_for_ai, api_key=ai_overrides.get('gemini_key'))
                 elif ai_overrides.get('provider') == 'groq':
                     from ai_helper import classify_with_groq_free
                     rows_for_ai = [{'row': k['row'], 'raw': k['raw']} for k in classifications]
                     ai_map = classify_with_groq_free(rows_for_ai, api_key=ai_overrides.get('groq_key'))
                 if ai_map:
-                    # Patch classifications dengan hasil AI (hanya tipe, angka tetap asli)
                     for k in result['classifications']:
                         if k['row'] in ai_map and ai_map[k['row']] in ('jumlah_global','ppn','grand_total','subtotal','discount','unknown','section_header'):
                             k['type'] = ai_map[k['row']]
                             k['fuzzy'] = True
                             k['ai_patched'] = True
-                    # PPN gabungan setelah TOTAL: jika AI bilang Row 28 adalah jumlah_global, honor
-                    # (Re-klasifikasi tidak ubah angka, hanya tipe untuk langkah PPN/Grand yang sudah lewat — paling aman untuk next read)
+                    # PPN gabungan / di luar 5 case: AI sudah handle label generik, nanti PPN/GRAND direkonsiliasi via angka
             except Exception:
                 pass
         return result
