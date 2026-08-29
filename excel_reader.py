@@ -818,7 +818,8 @@ class ExcelReader:
                 result['ppn_is_combined'] = False
             elif ppn_mode == 'none':
                 pass  # jangan isi PPN sama sekali
-            else:  # auto — heuristik lama yang flexible
+            else:  # auto — PPN urutan tetap: A, B, lalu TOTAL/GRAND. Jika 1 PPN gabungan setelah TOTAL, jangan masuk section
+                # Langkah 1: explicit label PPN ... A/B -> langsung
                 remaining = []
                 for cand in ppn_candidates:
                     sec_letter = self._detect_section_letter(cand['label'])
@@ -828,6 +829,9 @@ class ExcelReader:
                     else:
                         remaining.append(cand)
                 if remaining:
+                    # Langkah 2: deteksi gabungan dulu SEBELUM distribusikan ke section
+                    # PPN gabungan = nilai ~= 11% * sum semua subtotal section
+                    # Jika cocok, JANGAN masuk ke A/B — langsung global
                     sum_sub_all = sum(safe_float(v.get('subtotal_value')) or 0 for v in result['sections'].values())
                     combined_candidate = None
                     if len(remaining) >= 1 and sum_sub_all > 0:
@@ -841,21 +845,30 @@ class ExcelReader:
                         result['ppn_row'] = combined_candidate['row']
                         result['ppn_is_combined'] = True
                         remaining = [c for c in remaining if c is not combined_candidate]
+                    # Langkah 3: sisa baru distribusikan per-section (urut A->B)
                     section_order_sorted = sorted(result['sections'].keys())
                     for cand in remaining:
                         placed = False
                         pref = cand['current_section']
                         if pref and pref in result['sections'] and result['sections'][pref]['ppn_value'] is None:
-                            result['sections'][pref]['ppn_value'] = cand['value']
-                            result['sections'][pref]['ppn_row'] = cand['row']
-                            placed = True
-                    else:
-                        for sl in section_order_sorted:
-                            if result['sections'][sl]['ppn_value'] is None:
-                                result['sections'][sl]['ppn_value'] = cand['value']
-                                result['sections'][sl]['ppn_row'] = cand['row']
+                            # Hanya isi section jika belum ada tanda PPN gabungan global
+                            if not result.get('ppn_is_combined'):
+                                result['sections'][pref]['ppn_value'] = cand['value']
+                                result['sections'][pref]['ppn_row'] = cand['row']
                                 placed = True
-                                break
+                            else:
+                                # Sudah ada gabungan, lebih aman simpan sebagai global juga
+                                if result.get('ppn_value') is None:
+                                    result['ppn_value'] = cand['value']
+                                    result['ppn_row'] = cand['row']
+                                placed = True
+                        else:
+                            for sl in section_order_sorted:
+                                if result['sections'][sl]['ppn_value'] is None and not result.get('ppn_is_combined'):
+                                    result['sections'][sl]['ppn_value'] = cand['value']
+                                    result['sections'][sl]['ppn_row'] = cand['row']
+                                    placed = True
+                                    break
                         if not placed:
                             if result.get('ppn_value') is None:
                                 result['ppn_value'] = cand['value']
