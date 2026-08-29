@@ -1307,8 +1307,10 @@ def display_results():
                                 """.format(format_currency(excel_ppn_global)), unsafe_allow_html=True)
             
             else:
-                # SINGLE SECTION - Tampilan seperti sebelumnya
-                calculated_ppn = calculated_total_items * 0.11
+                # SINGLE SECTION - fleksibel: GRAND TOTAL sudah termasuk PPN jika ada PPN di Excel
+                # Jangan auto-11% jika tidak ada baris PPN (PPN opsional)
+                has_ppn_single = excel_ppn is not None
+                calculated_ppn = calculated_total_items * 0.11 if has_ppn_single else 0
                 calculated_grand_total = calculated_total_items + calculated_ppn
                 
                 # Subtotal
@@ -1355,17 +1357,17 @@ def display_results():
                         except:
                             pass
                 
-                # PPN
-                col1, col2, col3 = st.columns([2, 1, 2])
-                with col1:
-                    st.markdown("""
-                    <div class="ppn-box">
-                        <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">📥 PPN 11% (DIHITUNG)</div>
-                        <div style="font-size: 1.6rem; font-weight: 800;">{}</div>
-                    </div>
-                    """.format(format_currency(calculated_ppn)), unsafe_allow_html=True)
-                with col2:
-                    if excel_ppn is not None:
+                # PPN single-section — hanya tampil jika Excel memang ada baris PPN; kalau tidak, sembunyikan
+                if has_ppn_single:
+                    col1, col2, col3 = st.columns([2, 1, 2])
+                    with col1:
+                        st.markdown("""
+                        <div class="ppn-box">
+                            <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">📥 PPN 11% (DIHITUNG)</div>
+                            <div style="font-size: 1.6rem; font-weight: 800;">{}</div>
+                        </div>
+                        """.format(format_currency(calculated_ppn)), unsafe_allow_html=True)
+                    with col2:
                         try:
                             excel_val = float(excel_ppn)
                             difference = calculated_ppn - excel_val
@@ -1386,14 +1388,7 @@ def display_results():
                                 """, unsafe_allow_html=True)
                         except:
                             pass
-                    else:
-                        st.markdown("""
-                        <div class="comparison-box" style="text-align: center; padding: 1.5rem;">
-                            <div style="font-size: 1.2rem; color: #9ca3af;">⚠️ Tidak ada data PPN</div>
-                        </div>
-                        """, unsafe_allow_html=True)
-                with col3:
-                    if excel_ppn is not None:
+                    with col3:
                         try:
                             excel_val = float(excel_ppn)
                             st.markdown("""
