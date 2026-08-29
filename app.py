@@ -868,13 +868,16 @@ def display_results():
                 _is_single_ppn = sum(1 for sd in sections.values() if sd.get('ppn_value') is not None) == 1 and len(sections) > 1
                 letters = "+".join(sorted(sections.keys()))
                 if is_combined_global and len(sections) >= 2:
-                    # PPN 1 di akhir (2 atau 3+): TOTAL (A+B[+C]) = sum A+B[+C], bukan Total A 25jt (selisih 76jt)
+                    # PPN 1 di akhir (2 atau 3+): TOTAL — DI EXCEL harus TOTAL (A+B[+C]) dari Excel
+                    # Priority: grand-PPN (kasus case 3sub) tapi jika blank combo, sum sections (case ada total masing) juga benar
                     g = safe_float(sheet_dbg_global.get('grand_total_value'))
                     pg = safe_float(sheet_dbg_global.get('ppn_value'))
-                    if g is not None and pg is not None and g > pg:
+                    s_sum = sum(safe_float(sd.get('subtotal_value')) or 0 for sd in sections.values())
+                    if g is not None and pg is not None and g > pg and abs((g-pg)-s_sum) > 1:
+                        # Jika g-pg != sum, tetap pakai grand-PPN (yang benar untuk 3 sub 6.5jt)
                         total_kategori_excel = g - pg
                     else:
-                        total_kategori_excel = sum(safe_float(sd.get('subtotal_value')) or 0 for sd in sections.values())
+                        total_kategori_excel = s_sum
                     has_total_kategori = True
                     total_label = f"Jumlah {' + '.join(sorted(sections.keys()))}"
                 else:
