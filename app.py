@@ -907,6 +907,12 @@ def display_results():
                         lines.append(f"Row {r['Row']:>3} | {r['Item']:<18} | qty_raw={r['qty_raw']} -> {r['qty']} | up_raw={r['unit_price_raw']} -> {r['unit_price']} | total_raw={r['total_raw']} -> {r['total(hasil calc)']} | qty*price={r['qty*price']} | mismatch={r['mismatch']}")
                     st.code("\n".join(lines), language="text")
 
+                # Show skipped rows if any
+                skipped = sheet_dbg.get('skipped_rows', [])
+                if skipped:
+                    st.warning(f"⚠️ {len(skipped)} baris ter-skip (mungkin terdeteksi section/PPN). Detail:")
+                    st.code("\n".join([f"Row {s['row']}: {s['dump']}" for s in skipped]), language="text")
+
             # Tombol alternatif: override kolom manual
             
             # Ambil nilai dari Excel (dari data per sheet)

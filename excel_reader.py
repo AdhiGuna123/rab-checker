@@ -229,7 +229,7 @@ class ExcelReader:
         if len(cell_upper) <= 2 and cell_upper.isalpha() and len(cell_upper) == 1:
             return 'section_header'
         
-        # PPN/Tax
+                    # PPN/Tax
         if 'PPN' in cell_upper or 'TAX' in cell_upper or 'PAJAK' in cell_upper:
             return 'ppn'
         
@@ -237,8 +237,12 @@ class ExcelReader:
         if 'DISKON' in cell_upper or 'DISCOUNT' in cell_upper or 'POTONGAN' in cell_upper:
             return 'discount'
         
-        # Subtotal/Total section
+        # Subtotal/Total section - but ignore single-letter totals like "Total"
+        # handled by _detect_section_letter; singles handled as section_header
         if 'TOTAL' in cell_upper or 'SUBTOTAL' in cell_upper or 'JUMLAH' in cell_upper:
+            # Avoid false positive on single "m" etc
+            if len(cell_upper) <= 2 and cell_upper.isalpha():
+                return 'unknown'
             return 'subtotal'
         
         return 'unknown'
@@ -275,6 +279,7 @@ class ExcelReader:
         current_section = None
         pending_items = []
         section_order = []  # Track urutan section
+        skipped_rows = []  # For debug
         
         for row in range(header_row + 1, self.ws.max_row + 1):
             is_summary_row = False
@@ -296,7 +301,26 @@ class ExcelReader:
                             break
                     
                     elif row_type == 'section_header':
-                        # Section header (A, B, C)
+                        # Section header (A, B, C) — HANYA jika di kolom 1
+                        # Bug sebelumnya: satuan "m" di kolom unit terdeteksi sebagai section "M"
+                        if col != 1:
+                            continue
+                        # Pastikan bukan baris item yang kebetulan punya satuan "m"/"l"
+                        # Jika baris punya qty numerik, ini bukan section header
+                        _qty_check = None
+                        _up_check = None
+                        if columns.get('qty'):
+                            _v = self.ws_data.cell(row=row, column=columns['qty']).value
+                            if _v is None:
+                                _v = self.ws.cell(row=row, column=columns['qty']).value
+                            _qty_check = safe_float(_v)
+                        if columns.get('unit_price'):
+                            _v2 = self.ws_data.cell(row=row, column=columns['unit_price']).value
+                            if _v2 is None:
+                                _v2 = self.ws.cell(row=row, column=columns['unit_price']).value
+                            _up_check = safe_float(_v2)
+                        if _qty_check is not None or _up_check is not None:
+                            continue
                         section_letter = cell_str.upper()
                         current_section = section_letter
                         
@@ -434,6 +458,7 @@ class ExcelReader:
                     continue
                 
                 has_valid_data = False
+                row_dump = None
                 
                 # STEP 1: always compute total as qty * unit_price as source of truth
                 qty = safe_float(item.get('qty'))
@@ -458,6 +483,10 @@ class ExcelReader:
                 elif qty is not None:
                     # Qty exists but no price — keep item so debug is visible
                     has_valid_data = True
+                else:
+                    # No valid data — log for debug why row skipped
+                    row_dump = [str(self.ws.cell(row=row, column=c).value)[:12] if self.ws.cell(row=row, column=c).value else "" for c in range(1, 8)]
+                    skipped_rows.append({'row': row, 'dump': row_dump})
                 
                 if has_valid_data:
                     result['items'].append(item)
@@ -515,6 +544,8 @@ class ExcelReader:
             if total_all > 0:
                 result['grand_total_value'] = total_all
         
+        result['skipped_rows'] = skipped_rows
+        result['columns'] = columns
         return result
     
     def read_item(self, row: int, columns: Dict[str, int]) -> Dict[str, Any]:
