@@ -263,24 +263,44 @@ class ExcelReader:
         if len(stripped) == 1 and stripped.isalpha() and stripped in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ':
             return 'section_header'
         
-        # PPN/Tax — toleran: PPN / P P N / PAJAK / TAX / PPN 11% / PPN 11 % / PAJAK PPN
-        ppn_norm = norm.replace(' ', '')
-        if 'PPN' in norm or 'PPN' in ppn_norm or 'PAJAK' in norm or norm_jml.replace(' ', '') == 'TAX':
-            # Pastikan bukan substring random: harus mengandung PPN atau PAJAK atau TAX exact
-            if re.search(r'\bPPN\b', norm) or 'PPN' in ppn_norm or re.search(r'\bPAJAK\b', norm) or re.search(r'\bTAX\b', norm):
-                return 'ppn'
+        # PPN/Tax — toleran, tapi JANGAN match footer "Penawaran sudah termasuk PPN"
+        # Footer seperti "2. Penawaran sudah termasuk PPN 11%" bukan baris ringkasan -> skip via pengecekan awal
+        if cell_str.strip().startswith(('1.', '2.', '3.', '4.', '5.', '6.', '7.', '8.', '9.')):
+            # Kemungkinan notes/footer, bukan ringkasan — tapi tetap cek jika baris itu BENAR-BENAR berlabel "PPN" saja
+            # Untuk aman, jangan deteksi PPN jika teks > 30 char dan mengandung "PENAWARAN" / "PEMBAYARA" / "SYARAT"
+            upper_raw = cell_str.upper()
+            if len(cell_str) > 30 and ('PENAWARAN' in upper_raw or 'PEMBAYARA' in upper_raw or 'SYARAT' in upper_raw or 'KETENTUAN' in upper_raw):
+                pass  # skip deteksi PPN untuk footer panjang
+            else:
+                ppn_norm = norm.replace(' ', '')
+                if 'PPN' in norm or 'PPN' in ppn_norm or 'PAJAK' in norm or norm_jml.replace(' ', '') == 'TAX':
+                    if re.search(r'\bPPN\b', norm) or 'PPN' in ppn_norm or re.search(r'\bPAJAK\b', norm) or re.search(r'\bTAX\b', norm):
+                        return 'ppn'
+        else:
+            ppn_norm = norm.replace(' ', '')
+            if 'PPN' in norm or 'PPN' in ppn_norm or 'PAJAK' in norm or norm_jml.replace(' ', '') == 'TAX':
+                if re.search(r'\bPPN\b', norm) or 'PPN' in ppn_norm or re.search(r'\bPAJAK\b', norm) or re.search(r'\bTAX\b', norm):
+                    return 'ppn'
         try:
             from rapidfuzz import fuzz
             for tok in norm.split():
                 if fuzz.ratio(tok, 'PPN') >= 80 or fuzz.ratio(tok, 'PAJAK') >= 80:
+                    # Hindari footer panjang
+                    if len(cell_str) > 30 and 'PENAWARAN' in cell_str.upper():
+                        continue
                     return 'ppn'
         except ImportError:
             pass
         if 'PPN' in cell_str.upper() or 'TAX' in cell_str.upper() or 'PAJAK' in cell_str.upper():
-            return 'ppn'
-        # Jika tidak match via norm tapi match via raw upper (fallback)
+            if len(cell_str) > 35 and 'PENAWARAN' in cell_str.upper():
+                pass
+            else:
+                return 'ppn'
         if 'PPN' in norm or 'PAJAK' in norm:
-            return 'ppn'
+            if len(cell_str) > 35 and 'PENAWARAN' in cell_str.upper():
+                pass
+            else:
+                return 'ppn'
         
         # Discount/Diskon
         if 'DISKON' in norm or 'DISCOUNT' in norm or 'POTONGAN' in norm:
@@ -294,20 +314,23 @@ class ExcelReader:
             pass
         
         # Jumlah Global — JUMLAH/TOTAL sebelum PPN (multi-section).
-        # Harus sebelum subtotal biasa. Support: JUMLAH / TOTAL / Jumlah A+B global / JUMLAH SEBELUM PPN
-        # Baris "TOTAL" tanpa huruf section atau dengan label gabungan tetap dianggap global jika konteks multi-section.
+        # Untuk struktur A...B lalu "TOTAL" sebelum "PPN 11%" dan "GRAND TOTAL" (case user),
+        # "TOTAL" ini adalah Jumlah Global (sebelum PPN), bukan grand_total maupun per-section.
         norm_for_global = norm_jml.strip()
-        # Daftar exact dan prefix untuk global
         if norm_for_global in ('JUMLAH', 'TOTAL', 'SUBTOTAL', 'SUB TOTAL', 'JUMLAH SEBELUM PPN', 'TOTAL SEBELUM PPN', 'JUMLAH TOTAL', 'SUBTOTAL GLOBAL', 'TOTAL JUMLAH', 'JUMLAH GLOBAL'):
             return 'jumlah_global'
         if norm_for_global.startswith(('JUMLAH SEBELUM', 'TOTAL SEBELUM', 'SUBTOTAL SEBELUM')):
             return 'jumlah_global'
-        # Single word TOTAL/JUMLAH tanpa huruf section -> global
-        if len(norm_for_global) <= 20 and not self._detect_section_letter(cell_str):
-            if norm_for_global == 'JUMLAH' or norm_for_global == 'TOTAL' or 'SUBTOTAL' in norm_for_global:
+        # Jika single word TOTAL/JUMLAH tanpa huruf section -> global
+        # Deteksi via norm_jml tanpa huruf section, tapi jangan false positive untuk "TOTAL A"
+        if not self._detect_section_letter(cell_str):
+            if norm_for_global in ('JUMLAH', 'TOTAL', 'SUB TOTAL', 'SUBTOTAL'):
                 return 'jumlah_global'
-            if 'JUMLAH' in norm_for_global and not re.search(r'[A-Z]\b', norm_for_global.replace('JUMLAH','').strip()):
-                return 'jumlah_global'
+            # Toleran: "JUMLAH" diikuti spasi/angka tanpa huruf section -> global
+            if norm_for_global.startswith('JUMLAH') and not re.search(r'JUMLAH[\s\.]*[A-Z]\b', norm_for_global):
+                # Cek bukan typo subtotal per-section
+                if len(norm_for_global) <= 25:
+                    return 'jumlah_global'
 
         # Subtotal/Total section — toleran: TOTAL / JUMLAH / JML / SUBTOTAL / SUB TOTAL
         # Rapidfuzz + JML sudah di-normalisasi
