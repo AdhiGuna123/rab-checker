@@ -962,6 +962,21 @@ class ExcelReader:
                     pass  # Grand tetap dari sections jika ada; Quantity tetap Jumlah Global untuk check_global_subtotal
         # Jika PPN gabungan 10.184.363 tapi GRAND belum match (mis. Excel GRAND sudah termasuk PPN), papan di app akan reconcile via sum
             
+        # Fallback global: jika masih tanpa nilai setelah CASE 1, aseg SUM item (jumlah sebelum PPN)
+        # Kasus tanpa section & tanpa TOTAL label: pastikan tidak tetap Rp 0
+        if result.get('subtotal_value') is None or result.get('subtotal_value') == 0:
+            s_items = sum(safe_float(it.get('total')) or 0 for it in result['items'])
+            if s_items:
+                result['subtotal_value'] = s_items
+                result['jumlah_global_excel'] = s_items
+                result['jumlah_global_row'] = result.get('jumlah_global_row') or result.get('subtotal_row') or result.get('header_row')
+                # Isi ke classifications debug agar tampil value
+                if not any(c.get('type') == 'jumlah_global' for c in classifications):
+                    classifications.append({'row': result.get('header_row') or 0, 'raw': 'TOTAL (auto SUM)', 'normalized': 'TOTAL', 'type': 'jumlah_global', 'fuzzy': False})
+        if result.get('grand_total_value') is None and result.get('is_without_ppn') and result.get('subtotal_value'):
+            result['grand_total_value'] = safe_float(result.get('subtotal_value'))
+            result['grand_total_row'] = result.get('subtotal_row') or result.get('jumlah_global_row')
+
         # Hitung grand total dari sections jika belum ada (fleksibel)
         if result['grand_total_value'] is None and len(result['sections']) > 1:
             total_all = 0
