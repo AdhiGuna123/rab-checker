@@ -738,7 +738,9 @@ def main():
                                 'grand_total_value': data.get('grand_total_value'),
                                 'sections': data.get('sections', {}),
                                 'skipped_rows': data.get('skipped_rows', []),
-                                'columns': data.get('columns', {})
+                                'classifications': data.get('classifications', []),
+                                'columns': data.get('columns', {}),
+                                'overrides_applied': data.get('overrides_applied', {})
                             }
                             
                             # Lakukan pemeriksaan
@@ -958,6 +960,14 @@ def display_results():
                 if skipped:
                     st.warning(f"⚠️ {len(skipped)} baris ter-skip (mungkin terdeteksi section/PPN). Detail:")
                     st.code("\n".join([f"Row {s['row']}: {s['dump']}" for s in skipped]), language="text")
+
+                # Klasifikasi baris ringkasan (toleran typo) — angka tetap sumber kebenaran, tulisan hanya petunjuk
+                klass = sheet_dbg.get('classifications', [])
+                if klass:
+                    st.caption("🧭 Klasifikasi (tulisan → tipe, toleran typo): jika typo, cek ⚠️ tapi tidak bikin error hitungan; hanya angka yang divalidasi.")
+                    st.code("\n".join([f"Row {k['row']}: '{k['raw']}' → {k['normalized']} → {k['type']}{(' ⚠️ typo' if k.get('fuzzy') else '')}" for k in klass]), language="text")
+                else:
+                    st.caption("🧭 Klasifikasi: tidak ada baris ringkasan terdeteksi (Jumlah/Total/PPN).")
 
             # Tombol alternatif: override kolom manual
             

@@ -202,48 +202,112 @@ class ExcelReader:
             return converted if converted is not None else raw_val
         return None
     
+    def _normalize_label(self, text: str) -> str:
+        """Normalisasi label: ringkas spasi, hapus .:()- dan uppercase. Untuk toleran typo."""
+        s = text.upper().strip()
+        # Hapus separator umum yang sering bikin typo spasi
+        s = s.replace('.', ' ').replace(':', ' ').replace('(', ' ').replace(')', ' ').replace('-', ' ').replace('/', ' ')
+        s = re.sub(r'\s+', ' ', s).strip()
+        return s
+
     def _detect_section_letter(self, text: str) -> Optional[str]:
-        """Deteksi huruf section dari text seperti 'Total A', 'Jumlah B'"""
-        text_upper = text.upper().strip()
-        
-        # Pattern: "Total A", "Jumlah B", "Subtotal C", dll
-        match = re.search(r'(?:TOTAL|JUMLAH|SUBTOTAL)\s*([A-Z])\b', text_upper)
-        if match:
-            return match.group(1)
-        
+        """Deteksi huruf section dari text seperti 'Total A', 'Jumlah B' — toleran typo."""
+        norm = self._normalize_label(text)
+        # Normalisasi JML -> JUMLAH
+        norm_jml = re.sub(r'\bJML\b', 'JUMLAH', norm)
+        # Pattern: "Total A", "Jumlah B", "Subtotal C", "Jml. A", "JumlahA"
+        # Support tanpa spasi: JUMLAHA -> JUMLAH A
+        m2 = re.search(r'(?:TOTAL|JUMLAH|SUBTOTAL)[\s\.]*([A-Z])\b', norm_jml)
+        if m2:
+            return m2.group(1)
+        # Tanpa spasi sama sekali: JUMLAHA
+        m3 = re.search(r'(?:TOTAL|JUMLAH|SUBTOTAL)([A-Z])\b', norm_jml.replace(' ', ''))
+        if m3:
+            return m3.group(1)
         # Pattern: "TOTAL (A+B)" - ini grand total
-        if re.search(r'TOTAL\s*\([A-Z]\+[A-Z]\)', text_upper):
+        if re.search(r'TOTAL\s*[\(]?\s*[A-Z]\s*[\+]\s*[A-Z]\s*[\)]?', norm):
             return 'GRAND'
-        
+        # Fuzzy fallback via rapidfuzz untuk label panjang
+        try:
+            from rapidfuzz import fuzz
+            for target in ['TOTAL', 'JUMLAH', 'SUBTOTAL']:
+                # Ambil token pertama sebagai kandidat
+                token = norm_jml.split()[0] if norm_jml.split() else ''
+                if token and fuzz.ratio(token, target) >= 85 and re.search(r'[A-Z]\b', norm_jml):
+                    ml = re.search(r'([A-Z])\b', norm_jml)
+                    if ml:
+                        return ml.group(1)
+        except ImportError:
+            pass
         return None
-    
+
     def _detect_row_type(self, cell_str: str) -> str:
-        """Deteksi jenis baris: section_header, subtotal, ppn, discount, total, grand_total"""
-        cell_upper = cell_str.upper().strip()
+        """Deteksi jenis baris: section_header, subtotal, ppn, discount, total, grand_total — toleran typo."""
+        norm = self._normalize_label(cell_str)
+        norm_jml = re.sub(r'\bJML\b', 'JUMLAH', norm)
         
-        # Grand Total
-        if 'GRAND TOTAL' in cell_upper or re.search(r'TOTAL\s*\([A-Z]\+[A-Z]\)', cell_upper):
+        # Grand Total — toleran: GRAND TOTAL / TOTAL A+B / GRANDTOTAL / TOTAL(A+B)
+        if 'GRAND TOTAL' in norm or 'GRANDTOTAL' in norm.replace(' ', '') or re.search(r'TOTAL\s*[\(]?\s*[A-Z]\s*[\+]\s*[A-Z]', norm):
             return 'grand_total'
+        # Fuzzy GRAND TOTAL
+        try:
+            from rapidfuzz import fuzz
+            if fuzz.partial_ratio(norm, 'GRAND TOTAL') >= 85 and 'TOTAL' in norm:
+                return 'grand_total'
+        except ImportError:
+            pass
         
-        # Section header standalone (A, B, C)
-        if len(cell_upper) <= 2 and cell_upper.isalpha() and len(cell_upper) == 1:
+        # Section header standalone (A, B, C) — hanya kalau benar-benar 1 huruf
+        # Jangan match satuan 'm' yang sudah di-filter di loop (col==1 + cek qty)
+        stripped = norm.strip()
+        if len(stripped) == 1 and stripped.isalpha() and stripped in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ':
             return 'section_header'
         
-                    # PPN/Tax
-        if 'PPN' in cell_upper or 'TAX' in cell_upper or 'PAJAK' in cell_upper:
+        # PPN/Tax — toleran: PPN / P P N / PAJAK / TAX / PPN 11% / PPN 11 % / PAJAK PPN
+        ppn_norm = norm.replace(' ', '')
+        if 'PPN' in norm or 'PPN' in ppn_norm or 'PAJAK' in norm or norm_jml.replace(' ', '') == 'TAX':
+            # Pastikan bukan substring random: harus mengandung PPN atau PAJAK atau TAX exact
+            if re.search(r'\bPPN\b', norm) or 'PPN' in ppn_norm or re.search(r'\bPAJAK\b', norm) or re.search(r'\bTAX\b', norm):
+                return 'ppn'
+        try:
+            from rapidfuzz import fuzz
+            for tok in norm.split():
+                if fuzz.ratio(tok, 'PPN') >= 80 or fuzz.ratio(tok, 'PAJAK') >= 80:
+                    return 'ppn'
+        except ImportError:
+            pass
+        if 'PPN' in cell_str.upper() or 'TAX' in cell_str.upper() or 'PAJAK' in cell_str.upper():
+            return 'ppn'
+        # Jika tidak match via norm tapi match via raw upper (fallback)
+        if 'PPN' in norm or 'PAJAK' in norm:
             return 'ppn'
         
         # Discount/Diskon
-        if 'DISKON' in cell_upper or 'DISCOUNT' in cell_upper or 'POTONGAN' in cell_upper:
+        if 'DISKON' in norm or 'DISCOUNT' in norm or 'POTONGAN' in norm:
             return 'discount'
+        try:
+            from rapidfuzz import fuzz
+            for tok in norm.split():
+                if fuzz.ratio(tok, 'DISKON') >= 85 or fuzz.ratio(tok, 'DISCOUNT') >= 85:
+                    return 'discount'
+        except ImportError:
+            pass
         
-        # Subtotal/Total section - but ignore single-letter totals like "Total"
-        # handled by _detect_section_letter; singles handled as section_header
-        if 'TOTAL' in cell_upper or 'SUBTOTAL' in cell_upper or 'JUMLAH' in cell_upper:
+        # Subtotal/Total section — toleran: TOTAL / JUMLAH / JML / SUBTOTAL / SUB TOTAL
+        # Rapidfuzz + JML sudah di-normalisasi
+        if ('TOTAL' in norm_jml or 'JUMLAH' in norm_jml or 'SUBTOTAL' in norm_jml or 'SUB TOTAL' in norm):
             # Avoid false positive on single "m" etc
-            if len(cell_upper) <= 2 and cell_upper.isalpha():
+            if len(norm.strip()) <= 2 and norm.strip().isalpha():
                 return 'unknown'
             return 'subtotal'
+        # Fuzzy fallback untuk TOTAL/JUMLAH typo 1 huruf
+        try:
+            from rapidfuzz import fuzz
+            first_tok = norm_jml.split()[0] if norm_jml.split() else ''
+            if first_tok and (fuzz.ratio(first_tok, 'TOTAL') >= 85 or fuzz.ratio(first_tok, 'JUMLAH') >= 85 or fuzz.ratio(first_tok, 'SUBTOTAL') >= 85):
+                return 'subtotal'
+        except ImportError:
+            pass
         
         return 'unknown'
     
@@ -297,16 +361,40 @@ class ExcelReader:
         section_order = []  # Track urutan section
         skipped_rows = []  # For debug
         ppn_candidates = []  # Kumpulkan semua baris PPN, klasifikasi setelah loop (lebih akurat)
+        classifications = []  # Untuk DEBUG: log klasifikasi dengan normalisasi + flag typo
         
         for row in range(header_row + 1, self.ws.max_row + 1):
             is_summary_row = False
             
             # Cek semua kolom untuk mencari label
+            row_classified = False
             for col in range(1, min(self.ws.max_column + 1, 15)):
                 cell_value = self.ws.cell(row=row, column=col).value
                 if cell_value:
                     cell_str = str(cell_value).strip()
+                    norm_dbg = self._normalize_label(cell_str)
                     row_type = self._detect_row_type(cell_str)
+                    # Log klasifikasi ringkasan untuk DEBUG (skip item text biasa)
+                    if row_type != 'unknown' and not row_classified:
+                        is_fuzzy = False
+                        try:
+                            from rapidfuzz import fuzz
+                            # Tandai typo jika mengandung JML/TOTAl typo tapi norm mengandunya
+                            if norm_dbg != cell_str.upper().strip():
+                                # Ada normalisasi (.:()- dihilangkan) -> kemungkinan typo minor
+                                pass
+                            # Fuzzy flag: jika first token fuzzy match tapi bukan exact
+                            tok = norm_dbg.split()[0] if norm_dbg.split() else ''
+                            for target in ['TOTAL','JUMLAH','SUBTOTAL','GRAND TOTAL','PPN','DISKON']:
+                                if tok and fuzz.ratio(tok, target.split()[0]) >= 85 and tok != target.split()[0]:
+                                    is_fuzzy = True
+                                    break
+                        except ImportError:
+                            pass
+                        if cell_str.upper().strip() != norm_dbg and re.search(r'[.:()\-/]', cell_str):
+                            is_fuzzy = True
+                        classifications.append({'row': row, 'raw': cell_str[:40], 'normalized': norm_dbg[:40], 'type': row_type, 'fuzzy': is_fuzzy})
+                        row_classified = True
                     
                     if row_type == 'grand_total':
                         # Grand Total
@@ -736,6 +824,7 @@ class ExcelReader:
         result.setdefault('ppn_is_combined', False)
         
         result['skipped_rows'] = skipped_rows
+        result['classifications'] = classifications
         result['columns'] = columns
         return result
     
