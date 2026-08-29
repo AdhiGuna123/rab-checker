@@ -1025,18 +1025,24 @@ class ExcelReader:
                 result['summary_rows_debug'].append(k2)
             except Exception:
                 pass
-        # AI UNTUK SEMUA CASE + BEYOND: jika aktif, patch klasifikasi via Gemini free selamanya (fallback Value Intelligence jika gagal)
-        if ai_overrides and isinstance(ai_overrides, dict) and ai_overrides.get('provider') != 'none':
+        # CASE 5: 3+ sub bagian -> WAJIB pakai AI (jika AI aktif), fallback tetap Value jika tanpa key
+        is_case5 = len(result['sections']) >= 3
+        if ai_overrides and isinstance(ai_overrides, dict) and ai_overrides.get('provider') != 'none' or is_case5:
             try:
-                ai_map = None
-                g_key = ai_overrides.get('gemini_key') or ai_overrides.get('groq_key')
-                # Bangun summary_rows_debug sementara untuk AI value
-                tmp_summary = []
-                for k in classifications:
-                    try:
-                        v_dbg2 = result.get('grand_total_value') if k['type']=='grand_total' else None
-                        # fallback scan seperti di atas
-                        if v_dbg2 is None:
+                # Jika CASE 5 tapi tanpa key, tetap pakai AI jika ada key global, else fallback
+                g_key_case5 = (ai_overrides or {}).get('gemini_key') if isinstance(ai_overrides, dict) else None
+                should_ai = (isinstance(ai_overrides, dict) and ai_overrides.get('provider') != 'none') or (is_case5 and g_key_case5)
+                # Untuk CASE 5, paksa AI meski UI Tanpa AI jika ada key env
+                if is_case5 and not should_ai:
+                    import os as _os
+                    if _os.environ.get("GOOGLE_API_KEY") or _os.environ.get("GEMINI_API_KEY"):
+                        should_ai = True
+                        ai_overrides = {'provider': 'gemini', 'gemini_key': _os.environ.get("GOOGLE_API_KEY") or _os.environ.get("GEMINI_API_KEY")}
+                if should_ai:
+                    ai_map = None
+                    tmp_summary = []
+                    for k in classifications:
+                        try:
                             v_dbg2 = None
                             for c2 in range(self.ws.max_column, 0, -1):
                                 v2 = self.ws_data.cell(row=k['row'], column=c2).value
@@ -1046,24 +1052,26 @@ class ExcelReader:
                                 if sf is not None and sf > 0:
                                     v_dbg2 = sf
                                     break
-                    except: v_dbg2 = None
-                    tmp_summary.append({'row': k['row'], 'value': v_dbg2})
-                klass_map_tmp = {x['row']: x for x in tmp_summary}
-                if ai_overrides.get('provider') == 'gemini' or (g_key and 'gemini' in str(ai_overrides.get('provider','')).lower()):
-                    from ai_helper import classify_with_gemini_free
-                    rows_for_ai = [{'row': k['row'], 'raw': k['raw'], 'normalized': k.get('normalized',''), 'value': klass_map_tmp.get(k['row'],{}).get('value')} for k in classifications]
-                    ai_map = classify_with_gemini_free(rows_for_ai, api_key=ai_overrides.get('gemini_key'))
-                elif ai_overrides.get('provider') == 'groq':
-                    from ai_helper import classify_with_groq_free
-                    rows_for_ai = [{'row': k['row'], 'raw': k['raw']} for k in classifications]
-                    ai_map = classify_with_groq_free(rows_for_ai, api_key=ai_overrides.get('groq_key'))
-                if ai_map:
-                    for k in result['classifications']:
-                        if k['row'] in ai_map and ai_map[k['row']] in ('jumlah_global','ppn','grand_total','subtotal','discount','unknown','section_header'):
-                            k['type'] = ai_map[k['row']]
-                            k['fuzzy'] = True
-                            k['ai_patched'] = True
-                    # PPN gabungan / di luar 5 case: AI sudah handle label generik, nanti PPN/GRAND direkonsiliasi via angka
+                        except: v_dbg2 = None
+                        tmp_summary.append({'row': k['row'], 'value': v_dbg2})
+                    klass_map_tmp = {x['row']: x for x in tmp_summary}
+                    g_key2 = (ai_overrides or {}).get('gemini_key') or (ai_overrides or {}).get('groq_key')
+                    if (ai_overrides or {}).get('provider') == 'gemini' or (g_key2 and 'gemini' in str((ai_overrides or {}).get('provider','')).lower()) or is_case5:
+                        from ai_helper import classify_with_gemini_free
+                        rows_for_ai = [{'row': k['row'], 'raw': k['raw'], 'normalized': k.get('normalized',''), 'value': klass_map_tmp.get(k['row'],{}).get('value')} for k in classifications]
+                        ai_map = classify_with_gemini_free(rows_for_ai, api_key=(ai_overrides or {}).get('gemini_key'))
+                    elif (ai_overrides or {}).get('provider') == 'groq':
+                        from ai_helper import classify_with_groq_free
+                        rows_for_ai = [{'row': k['row'], 'raw': k['raw']} for k in classifications]
+                        ai_map = classify_with_groq_free(rows_for_ai, api_key=(ai_overrides or {}).get('groq_key'))
+                    if ai_map:
+                        for k in result['classifications']:
+                            if k['row'] in ai_map and ai_map[k['row']] in ('jumlah_global','ppn','grand_total','subtotal','discount','unknown','section_header'):
+                                k['type'] = ai_map[k['row']]
+                                k['fuzzy'] = True
+                                k['ai_patched'] = True
+                                if is_case5:
+                                    k['ai_case5'] = True
             except Exception:
                 pass
         return result
