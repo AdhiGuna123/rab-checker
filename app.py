@@ -333,6 +333,25 @@ def main():
                 st.session_state['adv_ai_preview'] = {'provider': 'none', 'gemini_key': ""}
                 st.caption(f"Preview override: header={st.session_state['adv_overrides_preview']['header_row'] or 'auto'} qty={adv_qty or 'auto'} price={adv_price or 'auto'} total={adv_total or 'auto'} | PPN={st.session_state['adv_overrides_preview']['ppn_mode']} TOTAL={st.session_state['adv_overrides_preview']['total_mode']}")
 
+            # Live preview jumlah — terupdate otomatis tanpa START CHECK (langsung dari Excel)
+            try:
+                preview_reader = ExcelReader(tmp_file_path)
+                if preview_reader.load_workbook():
+                    preview_sheet = sheet_names[0] if sheet_names else None
+                    if preview_sheet:
+                        preview_reader.select_sheet(preview_sheet)
+                        hr = preview_reader.find_header_row()
+                        if hr:
+                            cols = preview_reader.find_data_columns(hr)
+                            # Hitung jumlah item preview cepat (scan 200 baris)
+                            _items_preview = 0
+                            for _r in range(hr+1, min(hr+60, preview_reader.ws.max_row+1)):
+                                _v = preview_reader.ws.cell(row=_r, column=cols.get('qty',4)).value
+                                if safe_float(_v) is not None:
+                                    _items_preview += 1
+                            st.markdown(f"<div class='card' style='border:1px dashed #c7d2fe; text-align:center;'><b>📊 Preview:</b> {_items_preview} item terdeteksi di sheet <b>{preview_sheet}</b> • <span style='color:#64748b; font-size:.85rem;'>klik START CHECK untuk cek Jumlah/PPN/Grand</span></div>", unsafe_allow_html=True)
+            except: pass
+
             st.markdown("<br>", unsafe_allow_html=True)
             
             # Tombol mulai check
