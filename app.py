@@ -860,23 +860,22 @@ def display_results():
                             </div>
                             """.format(format_currency(section_total_excel)), unsafe_allow_html=True)
                 
-                # === TOTAL KATEGORI — Case 5 3+ section: TOTAL = sum sections = grand-PPN ===
+                # === TOTAL KATEGORI — 3+ section: TOTAL (A+B+C) = sum sections, bukan Total A ===
                 sheet_dbg_global = excel_sheets_data.get(sheet_name, {}) or sheet_data
                 excel_ppn_global = sheet_dbg_global.get('ppn_value')
                 is_combined_global = sheet_dbg_global.get('ppn_is_combined', False)
                 has_any_section_ppn = any(sd.get('ppn_value') is not None for sd in sections.values())
                 _is_single_ppn = sum(1 for sd in sections.values() if sd.get('ppn_value') is not None) == 1 and len(sections) > 1
                 letters = "+".join(sorted(sections.keys()))
-                # 3+ section selalu TOTAL = grand-PPN (jika ada), fallback sum
-                if len(sections) >= 3 and is_combined_global:
+                if len(sections) >= 3:
+                    # Case 5: TOTAL DI EXCEL harus sum A+B+C / grand-PPN
                     g = safe_float(sheet_dbg_global.get('grand_total_value'))
                     pg = safe_float(sheet_dbg_global.get('ppn_value'))
                     if g is not None and pg is not None and g > pg:
                         total_kategori_excel = g - pg
-                        has_total_kategori = True
                     else:
-                        has_total_kategori = True
                         total_kategori_excel = sum(safe_float(sd.get('subtotal_value')) or 0 for sd in sections.values())
+                    has_total_kategori = True
                     total_label = f"Jumlah {' + '.join(sorted(sections.keys()))}"
                 else:
                     total_label = f"Jumlah {' + '.join(sorted(sections.keys()))}" if len(sections) <= 4 else f"Jumlah {len(sections)} bagian"
