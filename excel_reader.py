@@ -211,24 +211,25 @@ class ExcelReader:
         return s
 
     def _detect_section_letter(self, text: str) -> Optional[str]:
-        """Deteksi huruf section dari text seperti 'Total A', 'Jumlah B' — toleran typo."""
+        """Deteksi huruf section dari text seperti 'Total A', 'Jumlah B' — toleran typo. TOTAL (A+B[+C]) bukan section."""
         norm = self._normalize_label(text)
-        # Normalisasi JML -> JUMLAH
-        norm_jml = re.sub(r'\bJML\b', 'JUMLAH', norm)
-        # Pattern: "Total A", "Jumlah B", "Subtotal C", "Jml. A", "JumlahA"
-        # Support tanpa spasi: JUMLAHA -> JUMLAH A
-        m2 = re.search(r'(?:TOTAL|JUMLAH|SUBTOTAL)[\s\.]*([A-Z])\b', norm_jml)
-        if m2:
-            return m2.group(1)
-        # Tanpa spasi sama sekali: JUMLAHA
-        m3 = re.search(r'(?:TOTAL|JUMLAH|SUBTOTAL)([A-Z])\b', norm_jml.replace(' ', ''))
-        if m3:
-            return m3.group(1)
-        # Jangan deteksi TOTAL (A+B) sebagai GRAND — itu Jumlah Global sebelum PPN; hanya TOTAL (A+B+C) atau GRAND TOTAL yang GRAND
         if 'GRAND TOTAL' in norm or 'GRANDTOTAL' in norm.replace(' ', ''):
             return 'GRAND'
-        if 'TOTAL' in norm and re.search(r'\([A-Z]\s*[\+]\s*[A-Z]\s*[\+]\s*[A-Z]', norm):
-            return 'GRAND'
+        # TOTAL (A+B[+C]) adalah gabungan, bukan single section
+        if '+' in norm and re.search(r'TOTAL\s*\(.*\+', norm):
+            return None
+        norm_jml = re.sub(r'\bJML\b', 'JUMLAH', norm)
+        m2 = re.search(r'(?:TOTAL|JUMLAH|SUBTOTAL)[\s\.]*([A-Z])\b', norm_jml)
+        if m2:
+            # Pastikan bukan gabungan yang lolos
+            if '+' in norm_jml:
+                return None
+            return m2.group(1)
+        m3 = re.search(r'(?:TOTAL|JUMLAH|SUBTOTAL)([A-Z])\b', norm_jml.replace(' ', ''))
+        if m3:
+            if '+' in norm_jml:
+                return None
+            return m3.group(1)
         try:
             from rapidfuzz import fuzz
             for target in ['TOTAL', 'JUMLAH', 'SUBTOTAL']:
@@ -313,10 +314,10 @@ class ExcelReader:
         except ImportError:
             pass
         
-        # Jumlah Global — TOTAL (A+B) di atas PPN -> jumlah_global, GRAND TOTAL setelah PPN -> grand_total di atas
-        if re.search(r'TOTAL\s*\(.*\+.*\)', norm) and 'PPN' not in norm:
-            return 'jumlah_global'
-        if re.search(r'TOTAL\s*\(.*\+.*\)', norm_jml) and 'PPN' not in norm:
+        if re.search(r'TOTAL\s*\(.*\+.*\)', norm):
+            if norm.strip() != 'GRAND TOTAL' and norm.replace(' ','') != 'GRANDTOTAL':
+                return 'jumlah_global'
+        if re.search(r'TOTAL\s*\(.*\+.*\)', norm_jml):
             return 'jumlah_global'
         norm_for_global = norm_jml.strip()
         if 'GRAND TOTAL' in norm or 'GRANDTOTAL' in norm.replace(' ', ''):
@@ -332,13 +333,24 @@ class ExcelReader:
                 if len(norm_for_global) <= 25:
                     return 'jumlah_global'
 
-        # Subtotal/Total section — toleran: TOTAL / JUMLAH / JML / SUBTOTAL / SUB TOTAL
-        # Rapidfuzz + JML sudah di-normalisasi
+        if re.search(r'TOTAL\s*\(.*\+.*\)', norm):
+            return 'unknown'
+        if re.search(r'TOTAL\s*\(.*\+.*\)', norm_jml):
+            return 'unknown'
+        # Subtotal/Total section — toleran: TOTAL / JUMLAH / JML / SUBTOTAL / SUB TOTAL (huruf tunggal A/B/C saja)
         if ('TOTAL' in norm_jml or 'JUMLAH' in norm_jml or 'SUBTOTAL' in norm_jml or 'SUB TOTAL' in norm):
-            # Avoid false positive on single "m" etc
+            # Hanya subtotal jika dengan huruf section TUNGGAL (Total A / Jumlah B), bukan gabungan (TOTAL (A+B))
+            # Gabungan sudah di-handle sebagai jumlah_global di atas
             if len(norm.strip()) <= 2 and norm.strip().isalpha():
                 return 'unknown'
-            return 'subtotal'
+            # Toleran: TOTAL A / Jumlah B saja; gabungan sudah jumlah_global
+            if re.search(r'(?:TOTAL|JUMLAH|SUBTOTAL)[\s\.]*[A-Z]\b', norm_jml) and not re.search(r'\(.*\+', norm_jml):
+                return 'subtotal'
+            if norm_jml in ('TOTAL','JUMLAH','SUBTOTAL') or norm_jml.startswith('TOTAL ') or norm_jml.startswith('JUMLAH ') or 'SUBTOTAL' in norm_jml:
+                # Generic TOTAL/JUMLAH tanpa huruf section -> tetap subtotal (single section)
+                if not re.search(r'\(.*\+', norm_jml):
+                    return 'subtotal'
+            return 'unknown'
         # Fuzzy fallback untuk TOTAL/JUMLAH typo 1 huruf
         try:
             from rapidfuzz import fuzz
@@ -550,12 +562,14 @@ class ExcelReader:
                             break
                     
                     elif row_type == 'subtotal':
-                        # TOTAL (A+B) sudah handled sebagai jumlah_global — jangan duplikat ke subtotal
-                        if re.search(r'TOTAL\s*\(.*\+.*\)', self._normalize_label(cell_str)):
+                        # TOTAL (A+B[+C]) sudah jumlah_global; jangan subtotal
+                        if '+' in cell_str and 'TOTAL' in cell_str.upper():
                             val2 = self._get_total_value(row, total_col)
                             if val2 is not None:
-                                # Sudah disimpan sebagai jumlah_global_excel di atas jika row_type jumlah_global
-                                pass
+                                result['jumlah_global_row'] = row
+                                result['jumlah_global_excel'] = val2
+                                result['total_kategori_value'] = val2
+                                result['total_kategori_row'] = row
                             is_summary_row = True
                             break
                         total_value = self._get_total_value(row, total_col)

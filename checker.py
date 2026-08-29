@@ -244,16 +244,18 @@ class RABChecker:
                     self.errors.append({'type': 'SECTION_TOTAL_ERROR','sheet': data.get('sheet_name'),'row': section_data.get('total_row'),'item_name': f'Total Section {section_letter}','detail': f'Total Section {section_letter} tidak sesuai','calculation': ' + '.join(detail_parts),'expected': expected_total,'actual': total_excel,'difference': expected_total - total_excel,'status': 'PERLU CEK','section': section_letter})
 
     def check_global_subtotal(self, data: Dict[str, Any]) -> None:
-        """TOTAL gabungan: hanya cek jika ada baris TOTAL (A+B[+C]) eksplisit dari Excel."""
+        """TOTAL (A+B) vs jumlah_global — skip jika TOTAL (A+B) adalah GRAND (PPN hanya di 1 bagian)."""
         sections = data.get('sections', {})
         if len(sections) <= 1:
             return
-        # Kategori tanpa Jumlah per-section (is_category) bukan section dijumlah — skip
+        # Jika TOTAL (A+B) adalah grand (PPN hanya di 1 bagian), jangan cek sebagai jumlah_global
+        has_ppn_in_section = any(safe_float(v.get('ppn_value')) is not None for v in sections.values())
+        if has_ppn_in_section and not data.get('ppn_is_combined') and safe_float(data.get('jumlah_global_excel')) is not None and safe_float(data.get('grand_total_value')) == safe_float(data.get('jumlah_global_excel')):
+            return
         if all(v.get('is_category') for v in sections.values()):
             return
         subtotal_global_excel = safe_float(data.get('jumlah_global_excel'))
         subtotal_row = data.get('jumlah_global_row')
-        # Jangan fallback ke subtotal_value global random (yang isinya TOTAL A) — hanya jumlah_global_excel valid
         if subtotal_global_excel is None:
             return
         sum_sub = 0
@@ -264,6 +266,10 @@ class RABChecker:
                 v = calc if calc else 0
             sum_sub += v or 0
         if sum_sub == 0:
+            return
+        # Jika TOTAL (A+B) sudah termasuk PPN (PPN 1 Bagian), sum_sub tanpa PPN vs jumlah_global dengan PPN -> jangan false
+        has_ppn_single = len([k for k,v in sections.items() if safe_float(v.get('ppn_value')) is not None]) == 1
+        if has_ppn_single:
             return
         if abs(sum_sub - subtotal_global_excel) > 1:
             letters = "+".join(sorted(sections.keys()))
