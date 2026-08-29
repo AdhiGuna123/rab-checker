@@ -1011,6 +1011,8 @@ def display_results():
                             <div style="font-size: 1.7rem; font-weight: 800;">{}</div>
                         </div>
                         """.format(format_currency(excel_ppn_global)), unsafe_allow_html=True)
+                    # Sinkron untuk Grand Total
+                    excel_grand_total = sheet_dbg_global.get('grand_total_value')
 
                 # Fallback Normal umum: jika ada PPN di section (PPN 11% 1,344,420 di A) tapi show_global_ppn False, tampilkan Langkah 2
                 _sheet_fallback_ppn = False
