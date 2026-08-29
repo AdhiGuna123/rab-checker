@@ -1,0 +1,104 @@
+╔══════════════════════════════════════════════════════════════════════╗
+║                    PANDUAN LENGKAP DEPLOY                           ║
+║                    RAB MATHEMATICAL CHECKER                         ║
+╚══════════════════════════════════════════════════════════════════════╝
+
+═══════════════════════════════════════════════════════════════════════
+ LANGKAH 1: BUAT AKUN GITHUB
+═══════════════════════════════════════════════════════════════════════
+
+1. Buka browser, kunjungi: https://github.com
+2. Klik tombol "Sign up" (pojok kanan atas)
+3. Isi:
+   - Email address: (email Anda)
+   - Password: (buat password)
+   - Username: (buat username, contoh: johndoe123)
+4. Klik "Continue"
+5. Selesaikan verifikasi
+6. Buka email, klik link verifikasi
+
+═══════════════════════════════════════════════════════════════════════
+ LANGKAH 2: BUAT REPOSITORY
+═══════════════════════════════════════════════════════════════════════
+
+1. Login ke GitHub
+2. Klik ikon (+) di pojok kanan atas
+3. Klik "New repository"
+4. Isi:
+   - Repository name: rab-checker
+   - Description: Aplikasi Pengecek RAB Excel
+   - Pilih: Public
+5. Klik "Create repository"
+
+═══════════════════════════════════════════════════════════════════════
+ LANGKAH 3: UPLOAD FILE
+═══════════════════════════════════════════════════════════════════════
+
+1. Di halaman repository, cari tulisan:
+   "...or push an existing repository from the command line"
+
+2. Copy-paste command berikut ke Command Prompt:
+
+   git init
+   git add app.py excel_reader.py checker.py report.py requirements.txt README.md .gitignore
+   git commit -m "Initial commit"
+   git branch -M main
+   git remote add origin https://github.com/USERNAME/rab-checker.git
+   git push -u origin main
+
+   (Ganti USERNAME dengan username GitHub Anda)
+
+═══════════════════════════════════════════════════════════════════════
+ LANGKAH 4: DEPLOY KE STREAMLIT CLOUD
+═══════════════════════════════════════════════════════════════════════
+
+1. Buka: https://share.streamlit.io
+2. Klik "Sign up" → Login dengan akun GitHub
+3. Klik "New app"
+4. Isi:
+   - Repository: rab-checker
+   - Branch: main
+   - Main file path: app.py
+5. Klik "Deploy"
+6. Tunggu 1-2 menit
+
+═══════════════════════════════════════════════════════════════════════
+ LANGKAH 5: KIRIM LINK KE TEMAN
+═══════════════════════════════════════════════════════════════════════
+
+Setelah deploy selesai, Anda akan dapat link seperti:
+
+   https://rab-checker-xxxxx.streamlit.app
+
+Kirim link ini ke teman Anda!
+Teman tinggal buka link di browser, langsung bisa pakai.
+
+═══════════════════════════════════════════════════════════════════════
+ CATATAN PENTING
+═══════════════════════════════════════════════════════════════════════
+
+✓ Aplikasi berjalan di cloud (bukan di komputer Anda)
+✓ Teman tidak perlu install apapun
+✓ Gratis selamanya
+✓ Bisa diakses dari mana saja (asal ada internet)
+✓ Update otomatis jika Anda edit file di GitHub
+
+═══════════════════════════════════════════════════════════════════════
+ TROUBLESHOOTING
+═══════════════════════════════════════════════════════════════════════
+
+Jika ada error:
+
+1. "Repository not found"
+   → Pastikan nama repository benar
+   → Pastikan sudah upload file ke GitHub
+
+2. "Deploy failed"
+   → Cek requirements.txt sudah benar
+   → Cek app.py tidak ada error
+
+3. "App won't start"
+   → Pastikan semua file terupload
+   → Cek log error di Streamlit Cloud
+
+═══════════════════════════════════════════════════════════════════════

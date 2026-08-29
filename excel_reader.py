@@ -5,14 +5,34 @@ import os
 import re
 
 def safe_float(value):
-    """Convert value to float safely, handling commas and formatting"""
+    """Convert value to float safely, handling commas and formatting (Indonesian)"""
     if value is None:
         return None
     if isinstance(value, (int, float)):
         return float(value)
     if isinstance(value, str):
-        # Remove currency symbols and whitespace
-        cleaned = value.replace('Rp', '').replace('.', '').replace(',', '').strip()
+        cleaned = value.replace('Rp', '').replace('Rp.', '').replace('Rp ', '').strip()
+        # Handle Indonesian format: 1.234.567,89 -> 1234567.89  or 280,000 -> 280000
+        # If contains ',' as decimal separator, normalize
+        if ',' in cleaned and '.' in cleaned:
+            # 1.234,50
+            cleaned = cleaned.replace('.', '').replace(',', '.')
+        elif ',' in cleaned:
+            # Check if comma is thousands separator (3 digits after comma) or decimal
+            parts = cleaned.split(',')
+            if len(parts) == 2 and len(parts[1]) == 3 and parts[1].isdigit() and parts[0].replace('-','').isdigit():
+                # Likely thousands separator: 280,000
+                cleaned = cleaned.replace(',', '')
+            elif len(parts) == 2 and len(parts[1]) <= 2:
+                # Decimal: 1,5
+                cleaned = cleaned.replace(',', '.')
+            else:
+                # Multiple commas or other -> treat as thousands
+                cleaned = cleaned.replace(',', '').replace('.', '')
+        else:
+            # No comma, just remove dots (thousands)
+            cleaned = cleaned.replace('.', '')
+        cleaned = cleaned.strip()
         if cleaned == '' or cleaned == '-':
             return None
         try:
@@ -112,6 +132,35 @@ class ExcelReader:
                 columns['mark_up'] = value
             elif 'ITEM' in key or 'NAME' in key or 'NAMA' in key or 'DESKRIPSI' in key or 'DESCRIPTION' in key or 'KETERANGAN' in key or 'BARANG' in key:
                 columns['item_name'] = value
+        
+        # Fallback: infer columns from numeric patterns if header detection failed
+        if columns['qty'] is None or columns['unit_price'] is None or columns['total'] is None:
+            numeric_cols = []
+            for col in range(1, self.ws.max_column + 1):
+                numeric_count = 0
+                for r in range(header_row + 1, min(header_row + 8, self.ws.max_row + 1)):
+                    v = self.ws_data.cell(row=r, column=col).value
+                    if v is None:
+                        v = self.ws.cell(row=r, column=col).value
+                    if isinstance(v, (int, float)) and v > 0:
+                        numeric_count += 1
+                    elif isinstance(v, str) and v.strip().replace(',','').replace('.','').strip().isdigit():
+                        # string numeric like "280,000"
+                        numeric_count += 1
+                if numeric_count >= 2:
+                    numeric_cols.append(col)
+            numeric_cols = sorted(set(numeric_cols))
+            # Heuristic: qty is smallest/col leftmost among numeric, total is rightmost
+            if columns['qty'] is None and numeric_cols:
+                columns['qty'] = numeric_cols[0]
+            if columns['total'] is None and numeric_cols:
+                columns['total'] = numeric_cols[-1]
+            if columns['unit_price'] is None and len(numeric_cols) >= 2:
+                # pick middle numeric col
+                if len(numeric_cols) >= 3:
+                    columns['unit_price'] = numeric_cols[-2]
+                else:
+                    columns['unit_price'] = numeric_cols[1] if numeric_cols[1] != columns['total'] else numeric_cols[0]
         
         if columns['qty'] is None:
             columns['qty'] = 6
@@ -386,35 +435,29 @@ class ExcelReader:
                 
                 has_valid_data = False
                 
-                # Konversi total ke angka
-                if item.get('total') is not None:
-                    converted = safe_float(item.get('total'))
-                    if converted is not None:
-                        item['total'] = converted
-                        has_valid_data = True
-                
-                # Pastikan total selalu ada: hitung dari qty × unit_price jika perlu
+                # STEP 1: always compute total as qty * unit_price as source of truth
                 qty = safe_float(item.get('qty'))
                 up = safe_float(item.get('unit_price'))
+                excel_total = safe_float(item.get('total'))
                 
-                if item.get('total') is None or (isinstance(item.get('total'), str)):
-                    if qty is not None and up is not None:
-                        item['total'] = qty * up
-                        has_valid_data = True
-                elif qty is not None and up is not None:
-                    expected = qty * up
-                    current_total = safe_float(item.get('total'))
-                    if current_total is None:
-                        item['total'] = expected
-                    # Biarkan total dari Excel, jangan ditimpa
+                calc_total = None
+                if qty is not None and up is not None:
+                    calc_total = qty * up
                 
-                if not has_valid_data:
-                    if qty is not None:
-                        has_valid_data = True
-                    elif item.get('total') is not None:
-                        converted = safe_float(item.get('total'))
-                        if converted is not None:
-                            has_valid_data = True
+                # STEP 2: decide item total = calc_total if available, else excel_total
+                if calc_total is not None:
+                    item['total'] = calc_total
+                    # Keep raw excel total for error detection if different
+                    if excel_total is not None and abs(excel_total - calc_total) > 0.01:
+                        item['excel_total_raw'] = excel_total
+                        item['calc_mismatch'] = True
+                    has_valid_data = True
+                elif excel_total is not None:
+                    item['total'] = excel_total
+                    has_valid_data = True
+                elif qty is not None:
+                    # Qty exists but no price — keep item so debug is visible
+                    has_valid_data = True
                 
                 if has_valid_data:
                     result['items'].append(item)
@@ -511,6 +554,7 @@ class ExcelReader:
             cell_data = self.ws_data.cell(row=row, column=columns['qty'])
             cell_formula = self.ws.cell(row=row, column=columns['qty'])
             raw_val = cell_data.value if cell_data.value is not None else cell_formula.value
+            item['qty_raw'] = raw_val
             item['qty'] = safe_float(raw_val)
         
         if columns.get('harga_awal'):
@@ -527,6 +571,7 @@ class ExcelReader:
             cell_data = self.ws_data.cell(row=row, column=columns['unit_price'])
             cell_formula = self.ws.cell(row=row, column=columns['unit_price'])
             raw_val = cell_data.value if cell_data.value is not None else cell_formula.value
+            item['unit_price_raw'] = raw_val
             if raw_val is not None:
                 converted = safe_float(raw_val)
                 if converted is not None:
@@ -542,6 +587,8 @@ class ExcelReader:
             cell_formula = self.ws.cell(row=row, column=columns['total'])
             
             raw_val = cell_data.value if cell_data.value is not None else cell_formula.value
+            item['total_raw'] = raw_val
+            item['total_formula_exposed'] = cell_formula.value if cell_formula.data_type == 'f' else None
             if raw_val is not None:
                 converted = safe_float(raw_val)
                 if converted is not None:

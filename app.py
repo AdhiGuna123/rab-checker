@@ -558,14 +558,26 @@ p {
 """, unsafe_allow_html=True)
 
 def safe_float(value):
-    """Convert value to float safely, handling commas and formatting"""
+    """Convert value to float safely, handling Indonesian formatting"""
     if value is None:
         return None
     if isinstance(value, (int, float)):
         return float(value)
     if isinstance(value, str):
-        # Remove currency symbols and whitespace
-        cleaned = value.replace('Rp', '').replace('.', '').replace(',', '').strip()
+        cleaned = value.replace('Rp', '').replace('Rp.', '').replace('Rp ', '').strip()
+        if ',' in cleaned and '.' in cleaned:
+            cleaned = cleaned.replace('.', '').replace(',', '.')
+        elif ',' in cleaned:
+            parts = cleaned.split(',')
+            if len(parts) == 2 and len(parts[1]) == 3 and parts[1].isdigit() and parts[0].replace('-','').isdigit():
+                cleaned = cleaned.replace(',', '')
+            elif len(parts) == 2 and len(parts[1]) <= 2:
+                cleaned = cleaned.replace(',', '.')
+            else:
+                cleaned = cleaned.replace(',', '').replace('.', '')
+        else:
+            cleaned = cleaned.replace('.', '')
+        cleaned = cleaned.strip()
         if cleaned == '' or cleaned == '-':
             return None
         try:
@@ -842,6 +854,60 @@ def display_results():
             
             df_items = pd.DataFrame(item_data)
             st.dataframe(df_items, use_container_width=True)
+
+            # === PANEL DEBUG (tanpa perlu kirim gambar/file) ===
+            # Simpan raw values di display debug — copy-paste teks ini ke chat
+            with st.expander("🐛 DEBUG — copy teks ini ke chat jika masih salah", expanded=False):
+                st.caption("Fungsinya supaya saya bisa lihat nilai mentah Excel tanpa perlu foto.")
+                
+                # Kolom mapping yang terdeteksi
+                excel_sheets_data_dbg = st.session_state.get('excel_sheets_data', {})
+                sheet_dbg = excel_sheets_data_dbg.get(sheet_name, {})
+                cols_dbg = {}
+                # Coba baca dari item pertama atau simpan di excel_sheets_data kalau ada
+                # Fallback: tampilkan kolom yang dipakai per item
+                st.write("**Kolom terdeteksi (header → kolom):**")
+                # Ambil dari excel_reader yang terakhir dipakai — simpan di session
+                # Kita tampilkan dari items raw
+                dbg_cols = []
+                for it in items[:1]:
+                    dbg_cols.append(f"qty_raw={it.get('qty_raw','?')} | unit_price_raw={it.get('unit_price_raw','?')} | total_raw={it.get('total_raw','?')}")
+                if dbg_cols:
+                    st.code("\n".join(dbg_cols), language="text")
+
+                # Tabel debug per item (qty_raw, unit_price_raw, total_raw, excel vs calc)
+                debug_rows = []
+                for it in items:
+                    qty_raw = it.get('qty_raw', it.get('qty','-'))
+                    up_raw = it.get('unit_price_raw', it.get('unit_price','-'))
+                    total_raw = it.get('total_raw', it.get('total','-'))
+                    qty = safe_float(it.get('qty'))
+                    up = safe_float(it.get('unit_price'))
+                    total = safe_float(it.get('total'))
+                    calc = qty * up if qty is not None and up is not None else None
+                    debug_rows.append({
+                        'Row': it.get('row',''),
+                        'Item': str(it.get('item_name','-'))[:18],
+                        'qty_raw': str(qty_raw),
+                        'qty': qty,
+                        'unit_price_raw': str(up_raw),
+                        'unit_price': up,
+                        'total_raw': str(total_raw),
+                        'total(hasil calc)': total,
+                        'qty*price': calc,
+                        'mismatch': it.get('calc_mismatch', False)
+                    })
+                st.dataframe(pd.DataFrame(debug_rows), use_container_width=True)
+                st.caption("👉 Select semua (Ctrl+A) di tabel atas → Ctrl+C → paste ke chat. Atau screenshot panel ini (lebih mudah dari foto Excel).")
+
+                if st.button("📋 Copy debug sebagai teks", key=f"debug_copy_{sheet_name}"):
+                    lines = []
+                    lines.append(f"Sheet: {sheet_name} | Items: {len(items)}")
+                    for r in debug_rows:
+                        lines.append(f"Row {r['Row']:>3} | {r['Item']:<18} | qty_raw={r['qty_raw']} -> {r['qty']} | up_raw={r['unit_price_raw']} -> {r['unit_price']} | total_raw={r['total_raw']} -> {r['total(hasil calc)']} | qty*price={r['qty*price']} | mismatch={r['mismatch']}")
+                    st.code("\n".join(lines), language="text")
+
+            # Tombol alternatif: override kolom manual
             
             # Ambil nilai dari Excel (dari data per sheet)
             excel_sheets_data = st.session_state.get('excel_sheets_data', {})

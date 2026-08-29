@@ -39,22 +39,33 @@ class RABChecker:
         }
     
     def check_multiplication(self, data: Dict[str, Any]) -> None:
-        """Cek apakah Qty × Unit Price = Total"""
+        """Cek apakah Qty × Unit Price = Total (pakai nilai Excel asli bila ada)"""
         items = data.get('items', [])
         
         for item in items:
             row = item.get('row')
             qty = safe_float(item.get('qty'))
             unit_price = safe_float(item.get('unit_price'))
-            total_excel = safe_float(item.get('total'))
+            # Prefer raw Excel total if we overwrote total with calc
+            total_excel = safe_float(item.get('excel_total_raw'))
+            if total_excel is None:
+                total_excel = safe_float(item.get('total'))
+                # If total was already overwritten to calc, skip duplicate check
+                if item.get('excel_total_raw') is None and item.get('calc_mismatch'):
+                    total_excel = safe_float(item.get('excel_total_raw'))
             
-            if item.get('has_formula'):
+            if qty is None or unit_price is None:
                 continue
-            
-            if qty is None or unit_price is None or total_excel is None:
-                continue
-            
             expected_total = qty * unit_price
+            # If we have a stored excel raw, compare against it
+            actual_excel = safe_float(item.get('excel_total_raw'))
+            if actual_excel is not None:
+                total_excel = actual_excel
+            elif item.get('has_formula'):
+                continue
+            
+            if total_excel is None:
+                continue
             
             tolerance = 1
             if abs(expected_total - total_excel) > tolerance:
