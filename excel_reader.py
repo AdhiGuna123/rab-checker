@@ -382,7 +382,9 @@ class ExcelReader:
         header_row = overrides.get('header_row') or self.find_header_row()
         if header_row is None:
             return result
+        # Simpan header untuk adukan jika nanti TOTAL tidak kebaca (debug)
         result['header_row'] = header_row
+        result['header_values_debug'] = [str(self.ws.cell(row=header_row, column=c).value) if self.ws.cell(row=header_row, column=c).value is not None else "" for c in range(1, min(16, self.ws.max_column+1))]
         
         columns = self.find_data_columns(header_row)
         # Apply column overrides
@@ -445,18 +447,31 @@ class ExcelReader:
                             break
                     
                     elif row_type == 'jumlah_global':
-                        # Jumlah Global sebelum PPN (multi-section, tanpa huruf section)
+                        # Jumlah Global sebelum PPN — terima meski _get_total_value None
+                        # (fallback: coba baca angka dari semua kolom baris ini jika total_col salah)
                         val = self._get_total_value(row, total_col)
+                        if val is None:
+                            # Fallback global: scan semua kolom cari angka terakhir
+                            for c2 in range(self.ws.max_column, 0, -1):
+                                try:
+                                    v2 = self.ws_data.cell(row=row, column=c2).value
+                                    if v2 is None:
+                                        v2 = self.ws.cell(row=row, column=c2).value
+                                    sf = safe_float(v2)
+                                    if sf is not None and sf > 0:
+                                        val = sf
+                                        break
+                                except:
+                                    pass
                         if val is not None:
-                            # Jangan timpa jika sudah ada subtotal per section; ini global
                             if result['subtotal_value'] is None:
                                 result['subtotal_value'] = val
                                 result['subtotal_row'] = row
-                            # Tandai agar checker tau ini Jumlah Global dari Excel
                             result['jumlah_global_row'] = row
                             result['jumlah_global_excel'] = val
-                            is_summary_row = True
-                            break
+                        # Selalu anggap baris JUMLAH/TOTAL global sebagai summary agar tidak jadi item/notes
+                        is_summary_row = True
+                        break
 
                     elif row_type == 'section_header':
                         # Section header (A, B, C) — HANYA jika di kolom 1
@@ -879,7 +894,25 @@ class ExcelReader:
         result['skipped_rows'] = skipped_rows
         result['classifications'] = classifications
         result['columns'] = columns
-        return result
+        # Simpan raw values untuk rows jumlah_global/grand_total agar DEBUG menampilkan nilainya
+        result['summary_rows_debug'] = []
+        for k in classifications:
+            try:
+                v_dbg = self._get_total_value(k['row'], total_col)
+                if v_dbg is None:
+                    for c2 in range(self.ws.max_column, 0, -1):
+                        v2 = self.ws_data.cell(row=k['row'], column=c2).value
+                        if v2 is None:
+                            v2 = self.ws.cell(row=k['row'], column=c2).value
+                        sf = safe_float(v2)
+                        if sf is not None and sf > 0:
+                            v_dbg = sf
+                            break
+                k2 = dict(k)
+                k2['value'] = v_dbg
+                result['summary_rows_debug'].append(k2)
+            except:
+                pass
     
     def read_item(self, row: int, columns: Dict[str, int]) -> Dict[str, Any]:
         """Membaca satu baris item dengan formula dan nilai"""

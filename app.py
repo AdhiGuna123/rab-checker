@@ -739,8 +739,10 @@ def main():
                                 'sections': data.get('sections', {}),
                                 'skipped_rows': data.get('skipped_rows', []),
                                 'classifications': data.get('classifications', []),
+                                'summary_rows_debug': data.get('summary_rows_debug', []),
                                 'columns': data.get('columns', {}),
-                                'overrides_applied': data.get('overrides_applied', {})
+                                'overrides_applied': data.get('overrides_applied', {}),
+                                'header_values_debug': data.get('header_values_debug', [])
                             }
                             
                             # Lakukan pemeriksaan
@@ -963,9 +965,15 @@ def display_results():
 
                 # Klasifikasi baris ringkasan (toleran typo) — angka tetap sumber kebenaran, tulisan hanya petunjuk
                 klass = sheet_dbg.get('classifications', [])
+                summary_dbg = sheet_dbg.get('summary_rows_debug', [])
+                klass_map = {k['row']: k for k in summary_dbg} if summary_dbg else {}
                 if klass:
                     st.caption("🧭 Klasifikasi (tulisan → tipe, toleran typo): jika typo, cek ⚠️ tapi tidak bikin error hitungan; hanya angka yang divalidasi.")
-                    st.code("\n".join([f"Row {k['row']}: '{k['raw']}' → {k['normalized']} → {k['type']}{(' ⚠️ typo' if k.get('fuzzy') else '')}" for k in klass]), language="text")
+                    def _fmt_k(k):
+                        v = klass_map.get(k['row'], {}).get('value', None)
+                        v_str = f" | value={v:,.0f}" if v is not None else " | value=⚠️ tidak kebaca"
+                        return f"Row {k['row']}: '{k['raw']}' → {k['normalized']} → {k['type']}{(' ⚠️ typo' if k.get('fuzzy') else '')}{v_str}"
+                    st.code("\n".join([_fmt_k(k) for k in klass]), language="text")
                 else:
                     st.caption("🧭 Klasifikasi: tidak ada baris ringkasan terdeteksi (Jumlah/Total/PPN).")
 
