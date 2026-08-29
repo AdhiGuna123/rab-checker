@@ -1050,7 +1050,8 @@ def display_results():
                     </div>
                     """, unsafe_allow_html=True)
                     
-                    # Subtotal Section (Jumlah X)
+                    # Subtotal Section (Jumlah X) — selalu tampil DIHITUNG (sebelum PPN), DI EXCEL tampil jika ada atau flag calculated
+                    is_calc = section_data.get('subtotal_is_calculated', False)
                     col1, col2, col3 = st.columns([2, 1, 2])
                     with col1:
                         st.markdown("""
@@ -1081,6 +1082,13 @@ def display_results():
                                     """, unsafe_allow_html=True)
                             except:
                                 pass
+                        elif is_calc:
+                            st.markdown("""
+                            <div class="comparison-box" style="text-align: center; padding: 1rem; border: 1px dashed rgba(59,130,246,0.5);">
+                                <div style="color: #93c5fd; font-size: 0.85rem;">Tidak ada Jumlah di Excel — pakai hitungan</div>
+                                <div style="color: #60a5fa; font-weight: 700; margin-top: 0.3rem;">{}</div>
+                            </div>
+                            """.format(format_currency(section_calculated)), unsafe_allow_html=True)
                         else:
                             st.markdown("""
                             <div style="background: rgba(107, 114, 128, 0.3); border-radius: 12px; padding: 1rem; text-align: center;">
@@ -1088,13 +1096,12 @@ def display_results():
                             </div>
                             """, unsafe_allow_html=True)
                     with col3:
-                        if section_subtotal_excel is not None:
-                            st.markdown("""
-                            <div class="subtotal-box">
-                                <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">📤 JUMLAH (DI EXCEL)</div>
-                                <div style="font-size: 1.6rem; font-weight: 800;">{}</div>
-                            </div>
-                            """.format(format_currency(section_subtotal_excel)), unsafe_allow_html=True)
+                        st.markdown("""
+                        <div class="subtotal-box">
+                            <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">📤 JUMLAH (DI EXCEL)</div>
+                            <div style="font-size: 1.6rem; font-weight: 800;">{}</div>
+                        </div>
+                        """.format(format_currency(section_subtotal_excel if section_subtotal_excel is not None else section_calculated) if (section_subtotal_excel is not None or is_calc) else "-"), unsafe_allow_html=True)
                     
                     # PPN Section (fleksibel: tampilkan hanya jika section ini punya PPN)
                     # Jika tidak ada ppn section, skip (PPN mungkin global gabungan)

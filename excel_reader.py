@@ -764,7 +764,7 @@ class ExcelReader:
             # User memaksa: jangan promosikan, biarkan per-section apa adanya
             pass
 
-        # Hitung subtotal per section jika belum ada
+        # Hitung subtotal per section jika belum ada — TETAP tampil Jumlah A/B sebelum PPN
         for section_letter, section_data in result['sections'].items():
             if section_data['subtotal_value'] is None:
                 calc_subtotal = 0
@@ -773,6 +773,9 @@ class ExcelReader:
                     if val is not None:
                         calc_subtotal += val
                 section_data['subtotal_value'] = calc_subtotal
+                section_data['subtotal_is_calculated'] = True
+            else:
+                section_data['subtotal_is_calculated'] = False
         
         # Hitung total items global
         if result['subtotal_value'] is None:
