@@ -87,6 +87,9 @@ st.markdown("""
 .badge.neutral{ background:#f1f5f9; color:#475569; border:1px solid #e2e8f0;}
 
 .box{ border-radius:16px; padding:1rem; text-align:center; color:white; box-shadow: 0 10px 24px rgba(15,23,42,.10);}
+.box, .subtotal-box, .ppn-box, .grandtotal-box, .selisih-box, .sesuai-box{ padding: 1.1rem 1.4rem !important; margin: .35rem 0 !important; border-radius: 14px !important; }
+.subtotal-box, .ppn-box, .grandtotal-box{ min-height: 88px; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+.selisih-box, .sesuai-box{ min-height: 88px; display:flex; flex-direction:column; align-items:center; justify-content:center; }
 .box.blue{ background: linear-gradient(135deg, #1e40af, #3b82f6); }
 .box.orange{ background: linear-gradient(135deg, #c2410c, #f97316); }
 .box.green{ background: linear-gradient(135deg, #065f46, #10b981); }
