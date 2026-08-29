@@ -300,20 +300,9 @@ def main():
                 # Mode detail tetap tapi tidak mengganggu cepat — sudah mapping dari Model Case di atas
                 adv_ppn = f"Auto ({adv_ppn_mapped})"
                 adv_total_mode = "Gabungan (1 Grand Total)" if model_case.startswith("4") or model_case.startswith("5") else "Auto (deteksi)"
-                # Detail dihapus — cukup Model Case (st.caption detail dihapus agar tidak rame)
-                adv_ppn = f"Auto ({adv_ppn_mapped})"  # placeholder agar mapping tidak error
+                adv_ppn = f"Auto ({adv_ppn_mapped})"
                 adv_total_mode = "Auto (deteksi)"
-                c5, c6 = st.columns([1, 2])
-                with c5:
-                    st.caption(f"Mode PPN/Total otomatis dari Model Case")
-                with c6:
-                    adv_ai = st.selectbox("AI untuk semua case", ["Tanpa AI (default cepat)", "AI Aktif (Gemini Free)"], key="adv_ai")
-                adv_gemini_key = st.session_state.get('adv_gemini_key','')
-                if adv_ai == "AI Aktif (Gemini Free)":
-                    adv_gemini_key = st.text_input("Gemini API Key (gratis selamanya: aistudio.google.com/app/apikey)", key="adv_gemini_key", type="password", placeholder="AIza...")
-                    st.caption("AI hanya klasifikasi label (TOTAL/PPN/GRAND), hitungan tetap lokal. Kosong = fallback Value Intelligence gratis 100%.")
-                else:
-                    st.session_state['adv_gemini_key'] = ""
+                st.caption(f"Mode PPN/Total dari Model Case: PPN={adv_ppn} • Total={adv_total_mode}")
                 st.caption("Tips: pilih Model Case jika Auto membingungkan PPN/TOTAL satu vs beda. Case lain tidak ikut kena karena mapping langsung ke Mode PPN/Total.")
                 # Store for START CHECK
                 def _col_letter_to_num(s: str):
@@ -341,7 +330,7 @@ def main():
                     'total_mode': total_mode_final,
                     'model_case': model_case
                 }
-                st.session_state['adv_ai_preview'] = {'provider': 'gemini' if adv_ai.startswith('AI Aktif') else 'none', 'gemini_key': adv_gemini_key.strip() if adv_gemini_key else ""}
+                st.session_state['adv_ai_preview'] = {'provider': 'none', 'gemini_key': ""}
                 st.caption(f"Preview override: header={st.session_state['adv_overrides_preview']['header_row'] or 'auto'} qty={adv_qty or 'auto'} price={adv_price or 'auto'} total={adv_total or 'auto'} | PPN={st.session_state['adv_overrides_preview']['ppn_mode']} TOTAL={st.session_state['adv_overrides_preview']['total_mode']}")
 
             st.markdown("<br>", unsafe_allow_html=True)
