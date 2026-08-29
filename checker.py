@@ -224,18 +224,20 @@ class RABChecker:
                     })
     
     def check_global_subtotal(self, data: Dict[str, Any]) -> None:
-        """Cek Jumlah Global sebelum PPN: sum Jumlah per-section vs Jumlah Excel global."""
+        """Cek Jumlah Global sebelum PPN: sum Jumlah per-section vs Jumlah Excel global (baris JUMLAH sebelum PPN)."""
         sections = data.get('sections', {})
         if len(sections) <= 1:
             return
-        subtotal_global_excel = safe_float(data.get('subtotal_value'))
-        # Jangan cek jika hanya auto-calc (semua section subtotal auto); tapi tetap cek jika ada nilai dari Excel
-        # Untuk membedakan, bandingkan sum subtotal calc vs excel global
+        # Prefer Jumlah Global yang eksplisit dari baris JUMLAH tanpa huruf section
+        subtotal_global_excel = safe_float(data.get('jumlah_global_excel'))
+        subtotal_row = data.get('jumlah_global_row') or data.get('subtotal_row')
+        if subtotal_global_excel is None:
+            subtotal_global_excel = safe_float(data.get('subtotal_value'))
+            subtotal_row = data.get('subtotal_row')
         sum_sub = 0
         for sd in sections.values():
             v = safe_float(sd.get('subtotal_value'))
             if v is None:
-                # fallback dari items
                 calc = sum(safe_float(it.get('total')) or 0 for it in sd.get('items', []))
                 v = calc if calc else 0
             sum_sub += v or 0
@@ -245,7 +247,7 @@ class RABChecker:
             self.errors.append({
                 'type': 'GLOBAL_SUBTOTAL_ERROR',
                 'sheet': data.get('sheet_name'),
-                'row': data.get('subtotal_row'),
+                'row': subtotal_row,
                 'item_name': 'Jumlah Global',
                 'detail': 'Jumlah (Total sebelum PPN) tidak sesuai — penjumlahan Jumlah per-section salah',
                 'calculation': f'Jumlah {len(sections)} section',

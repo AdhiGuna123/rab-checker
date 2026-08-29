@@ -293,6 +293,22 @@ class ExcelReader:
         except ImportError:
             pass
         
+        # Jumlah Global — multi-section tanpa huruf: "JUMLAH" / "JUMLAH SEBELUM PPN" / "TOTAL SEBELUM PPN" / "SUBTOTAL"
+        # Harus sebelum subtotal biasa, dan hanya jika tidak ada huruf section
+        has_section_letter = self._detect_section_letter(cell_str) is not None
+        if not has_section_letter and len(norm.strip()) > 2:
+            # Kandidat Jumlah Global: JUMLAH / TOTAL / SUBTOTAL tanpa huruf section
+            if norm_jml in ('JUMLAH', 'TOTAL', 'SUBTOTAL', 'SUB TOTAL', 'JUMLAH SEBELUM PPN', 'TOTAL SEBELUM PPN', 'JUMLAH TOTAL', 'SUBTOTAL GLOBAL'):
+                return 'jumlah_global'
+            # Toleran: baris hanya "JUMLAH" meskipun diikuti angka sudah di-handle sebagai subtotal per detection
+            # Jika panjang <= 10 dan mengandung JUMLAH/TOTAL tanpa huruf, anggap global
+            if len(norm) <= 20 and ('JUMLAH' in norm_jml or norm_jml == 'TOTAL' or 'SUBTOTAL' in norm_jml):
+                if not re.search(r'[A-Z]\b', norm_jml) or norm_jml.strip() in ('JUMLAH', 'TOTAL'):
+                    # Heuristic: kalau sudah ada huruf section di huruf terakhir, biarkan subtotal
+                    # Kalau tidak ada huruf section sama sekali -> jumlah_global
+                    if not re.search(r'(?:JUMLAH|TOTAL|SUBTOTAL)[\s\.]*[A-Z]\b', norm_jml):
+                        return 'jumlah_global'
+
         # Subtotal/Total section — toleran: TOTAL / JUMLAH / JML / SUBTOTAL / SUB TOTAL
         # Rapidfuzz + JML sudah di-normalisasi
         if ('TOTAL' in norm_jml or 'JUMLAH' in norm_jml or 'SUBTOTAL' in norm_jml or 'SUB TOTAL' in norm):
@@ -405,6 +421,20 @@ class ExcelReader:
                             is_summary_row = True
                             break
                     
+                    elif row_type == 'jumlah_global':
+                        # Jumlah Global sebelum PPN (multi-section, tanpa huruf section)
+                        val = self._get_total_value(row, total_col)
+                        if val is not None:
+                            # Jangan timpa jika sudah ada subtotal per section; ini global
+                            if result['subtotal_value'] is None:
+                                result['subtotal_value'] = val
+                                result['subtotal_row'] = row
+                            # Tandai agar checker tau ini Jumlah Global dari Excel
+                            result['jumlah_global_row'] = row
+                            result['jumlah_global_excel'] = val
+                            is_summary_row = True
+                            break
+
                     elif row_type == 'section_header':
                         # Section header (A, B, C) — HANYA jika di kolom 1
                         # Bug sebelumnya: satuan "m" di kolom unit terdeteksi sebagai section "M"
