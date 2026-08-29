@@ -293,34 +293,32 @@ class RABChecker:
             })
 
     def check_global_ppn(self, data: Dict[str, Any]) -> None:
-        """CASE 4/5: PPN Global = TOTAL (A+B[+C]) × 11% — hanya satu kali di akhir, jangan hitung per bagian."""
+        """PPN global — pakai TOTAL (Jumlah Global) × 11% sesuai tulisan 1) Jumlah A+B=TOTAL → 2) TOTAL×11%=PPN."""
         sections = data.get('sections', {})
-        # Case 1 (tanpa PPN) & Case 3 (normal single) jangan pakai jalur ini — sudah di check_sections/grand
         if not sections:
             return
         global_ppn = safe_float(data.get('ppn_value'))
         if global_ppn is None:
             return
+        # Prioritas: jumlah_global_excel (TOTAL) × 11% sesuai tulisan; fallback sum sections
+        total_global = safe_float(data.get('jumlah_global_excel'))
+        if total_global is None:
+            total_global = safe_float(data.get('subtotal_value'))
+        if total_global is None:
+            total_global = sum(safe_float(sd.get('subtotal_value')) or sum(safe_float(it.get('total')) or 0 for it in sd.get('items', [])) or 0 for sd in sections.values())
+        if not total_global:
+            return
         has_any_section_ppn = any(safe_float(v.get('ppn_value')) is not None for v in sections.values())
-        # Case 4/5: jika ada PPN global gabungan atau 2+ section tanpa PPN per-section -> cek 11% * TOTAL gabungan
         if len(sections) > 1 and (data.get('ppn_is_combined') or not has_any_section_ppn):
-            sum_sub = 0
-            for sd in sections.values():
-                v = safe_float(sd.get('subtotal_value'))
-                if v is None:
-                    v = sum(safe_float(it.get('total')) or 0 for it in sd.get('items', []))
-                sum_sub += v or 0
-            if sum_sub == 0:
-                return
-            expected = sum_sub * 0.11
+            expected = total_global * 0.11
             if abs(expected - global_ppn) > 1:
                 self.errors.append({
                     'type': 'GLOBAL_PPN_ERROR',
                     'sheet': data.get('sheet_name'),
                     'row': data.get('ppn_row'),
                     'item_name': 'PPN Global',
-                    'detail': 'PPN tidak sesuai — harus 11% × TOTAL gabungan (bukan per bagian)',
-                    'calculation': f'TOTAL ({sum_sub:,.0f}) × 11%',
+                    'detail': 'PPN tidak sesuai — harus TOTAL × 11% (Jumlah A+B × 11%)',
+                    'calculation': f'TOTAL ({total_global:,.0f}) × 11%',
                     'expected': expected,
                     'actual': global_ppn,
                     'difference': expected - global_ppn,
