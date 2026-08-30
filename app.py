@@ -99,24 +99,28 @@ st.markdown("""
 
 .stButton > button{ background: linear-gradient(135deg, #4f46e5, #7c3aed); color:white; border:none; border-radius:14px; padding:.9rem 1.4rem; font-weight:800; letter-spacing:.02em; box-shadow: 0 10px 24px rgba(79,70,229,.30); }
 .stButton > button:hover{ transform: translateY(-1px); box-shadow: 0 14px 28px rgba(79,70,229,.35); }
-/* Uploader — latar PUTIH terang (bukan hitam) sebelum klik, teks abu gelap */
+/* Uploader — latar PUTIH terang sebelum upload, teks gelap */
 .stFileUploader{ border: 2px dashed #c7d2fe; background: #ffffff !important; border-radius:16px; padding:.2rem; }
 .stFileUploader [data-testid="stFileUploaderDropzone"]{ background: #ffffff !important; border: 2px dashed #a5b4fc !important; border-radius:12px; }
 .stFileUploader [data-testid="stFileUploaderDropzone"]:hover{ border-color: #6366f1 !important; background: #eef2ff !important; }
-.stFileUploader [data-testid="stFileUploaderDropzone"] span,
+/* Dropzone teks instruksi — gelap terbaca */
 .stFileUploader [data-testid="stFileUploaderDropzone"] p,
-.stFileUploader [data-testid="stFileUploaderDropzone"] div,
-.stFileUploader [data-testid="stFileUploaderDropzone"] label{ color:#ffffff !important; }
-.stFileUploader [data-testid="stFileUploaderDropzone"] *{ color:#ffffff !important; }
-.stFileUploader [data-testid="stFileUploaderDropzone"] button{ background:white !important; color:#4338ca !important; border:none !important; border-radius:10px !important; font-weight:800 !important; }
+.stFileUploader [data-testid="stFileUploaderDropzone"] label,
+.stFileUploader [data-testid="stFileUploaderDropzone"] span{ color:#374151 !important; }
+.stFileUploader [data-testid="stFileUploaderDropzone"] button{ background:#4338ca !important; color:white !important; border:none !important; border-radius:10px !important; font-weight:800 !important; }
 .stFileUploader [data-testid="stFileUploaderDropzone"] button p,
-.stFileUploader [data-testid="stFileUploaderDropzone"] button span{ color:#4338ca !important; }
-.stFileUploader small{ color:#111827 !important; }
-[data-testid="stFileUploaderDropzoneInstructions"]{ color:#ffffff !important; }
-[data-testid="stFileUploaderDropzoneInstructions"] small{ color:#111827 !important; }
-[data-testid="stFileDropzoneInstructions"]{ color:#ffffff !important; }
-[data-testid="stFileDropzoneInstructions"] small{ color:#111827 !important; }
-[data-testid="stFileDropzoneInstructions"] div small{ color:#111827 !important; }
+.stFileUploader [data-testid="stFileUploaderDropzone"] button span{ color:white !important; }
+.stFileUploader small{ color:#6b7280 !important; }
+/* Uploaded file chip — visible dark text on light bg */
+[data-testid="stFileUploader"] [data-testid="stBaseUploader-header"],
+[data-testid="stFileUploader"] [data-testid="stFileUploaderFileName"],
+[data-testid="stFileUploader"] [data-testid="stFileUploaderFile"],
+[data-testid="stFileUploader"] [data-testid="stBaseUpoader-file"],
+[data-testid="stFileUploader"] section[data-testid="stFileUploader"] span,
+[data-testid="stFileUploader"] section[data-testid="stFileUploader"] div{ color:#1e293b !important; }
+[data-testid="stFileUploaderDropzoneInstructions"]{ color:#374151 !important; }
+[data-testid="stFileDropzoneInstructions"]{ color:#374151 !important; }
+[data-testid="stFileDropzoneInstructions"] div small{ color:#6b7280 !important; }
 .stExpander{ border:1px solid #e2e8f0; border-radius:16px; background:white;}
 /* Sheet picker — huruf gelap terlihat, terpilih ungu kontras */
 .stRadio > div{ background:white; border:2px solid #c7d2fe; border-radius:14px; padding:.7rem; }
@@ -238,12 +242,11 @@ def main():
     uploaded_file = st.file_uploader(
         "Tarik file Excel ke sini atau klik Browse  •  .xlsx / .xls",
         type=['xlsx', 'xls'],
-        help="RAB/Quotation Excel. Garis putus-putus = area upload. Tabel di bawah akan terang (bukan hitam).",
+        help="RAB/Quotation Excel.",
         label_visibility="collapsed"
     )
     
     if uploaded_file is not None:
-        # Simpan file sementara
         with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp_file:
             tmp_file.write(uploaded_file.getvalue())
             tmp_file_path = tmp_file.name
@@ -252,9 +255,9 @@ def main():
         st.session_state.tmp_file_path = tmp_file_path
         
         st.markdown(f"""
-        <div class="card" style="display:flex; gap:1rem; align-items:center;">
+        <div class="card" style="display:flex; gap:1rem; align-items:center; border-left:4px solid #059669;">
           <div style="font-size:1.6rem;">📄</div>
-          <div style="flex:1;"><b>File terpilih:</b> {uploaded_file.name}<br><span style="color:#64748b; font-size:.85rem;">Ukuran {uploaded_file.size/1024:.1f} KB • Siap dicek</span></div>
+          <div style="flex:1; color:#1e293b;"><b>{uploaded_file.name}</b><br><span style="color:#64748b; font-size:.85rem;">{uploaded_file.size/1024:.1f} KB — Siap dicek</span></div>
           <span class="badge ok">Siap</span>
         </div>
         """, unsafe_allow_html=True)
@@ -262,99 +265,96 @@ def main():
         reader = ExcelReader(tmp_file_path)
         if reader.load_workbook():
             sheet_names = reader.get_sheet_names()
-            st.markdown('<div class="card" style="border:2px solid #c7d2fe;"><h3>📑 Pilih Sheet yang dicek</h3><p class="hint">Pilih <b>Semua</b> untuk cek sekaligus, atau <b>Pilih sheet</b> untuk cek 1 / beberapa sheet.</p></div>', unsafe_allow_html=True)
-            sheet_mode = st.radio("Mode sheet", ["✅ Semua sheet", "📄 Pilih sheet"], horizontal=True, label_visibility="collapsed")
-            if sheet_mode == "📄 Pilih sheet":
-                picks = st.multiselect("Pilih sheet (bisa lebih dari satu)", sheet_names, default=[sheet_names[0]] if sheet_names else [])
-                sheets_to_check = picks if picks else sheet_names
-                st.markdown(f"<div class='badge ok'>Dicek: {', '.join(sheets_to_check) if sheets_to_check else '-'}</div>", unsafe_allow_html=True)
-            else:
-                sheets_to_check = sheet_names
-                st.markdown(f"<div class='badge neutral'>Semua sheet: {', '.join(sheets_to_check)}</div>", unsafe_allow_html=True)
-            
-            st.markdown('<div class="card"><h3>📋 Langkah 2 — Pilih Sheet & Mulai Cek</h3><p class="hint">Default paling cepat: <b>Auto</b>. Upload → Pilih Sheet → <b>START CHECK</b> langsung jadi tanpa pilih. Jika 1 sheet membingungkan, baru pilih <b>Model Case</b> di bawah — sheet lain tetap Auto, tidak ikut kena.</p></div>', unsafe_allow_html=True)
-            with st.expander("⚙️ Pengaturan Lanjutan — Model Case per-sheet (opsional, tetap cepat)", expanded=False):
-                st.caption("Kosongkan = auto-detect. Isi hanya jika hasil auto salah (mis. PPN gabungan vs per-section). Tetap berjalan lokal tanpa langganan.")
+
+            st.markdown("""
+            <div class="card" style="border-left:4px solid #4f46e5;">
+              <h3>⚙️ Pengaturan Pemeriksaan</h3>
+            </div>
+            """, unsafe_allow_html=True)
+
+            col_sheet, col_model = st.columns([3, 5])
+            with col_sheet:
+                st.markdown("**📑 Sheet**")
+                sheet_mode = st.radio("Sheet", ["✅ Semua", "📄 Pilih"], horizontal=True, label_visibility="collapsed")
+                if sheet_mode == "📄 Pilih":
+                    picks = st.multiselect("Pilih sheet", sheet_names, default=[sheet_names[0]] if sheet_names else [], label_visibility="collapsed")
+                    sheets_to_check = picks if picks else sheet_names
+                else:
+                    sheets_to_check = sheet_names
+
+            with col_model:
+                st.markdown("**🎯 Model Case**")
+                st.caption("Pilih jika auto-deteksi salah. Biasanya biarkan Auto saja.")
+                model_case = st.selectbox("Model Case", ["Auto — deteksi otomatis", "1 — Tanpa PPN", "2 — PPN hanya di 1 bagian", "3 — Normal (PPN di akhir)", "4 — PPN 1 di akhir (2 bagian: Total A+Total B)", "5 — PPN 1 di akhir (3+ bagian: dinamis)"], key="adv_model_case", label_visibility="collapsed")
+
+            model_map = {
+                "Auto — deteksi otomatis": ("auto", "auto"),
+                "1 — Tanpa PPN": ("none", "auto"),
+                "2 — PPN hanya di 1 bagian": ("single", "auto"),
+                "3 — Normal (PPN di akhir)": ("auto", "auto"),
+                "4 — PPN 1 di akhir (2 bagian: Total A+Total B)": ("combined", "auto"),
+                "5 — PPN 1 di akhir (3+ bagian: dinamis)": ("combined", "auto"),
+            }
+            adv_ppn_mapped, adv_total_mapped = model_map[model_case]
+
+            with st.expander("🔧 Pengaturan Lanjutan (Kolom & Header)", expanded=False):
                 c1, c2, c3, c4 = st.columns(4)
                 with c1:
-                    adv_header = st.text_input("Baris Header (angka, kosong=auto)", key="adv_header", placeholder="auto")
+                    adv_header = st.text_input("Baris Header", key="adv_header", placeholder="auto")
                 with c2:
-                    st.markdown("**Model Case (pilih agar tidak bingung PPN/TOTAL satu vs beda)**")
-                    model_case = st.selectbox("Model Case", ["Auto — deteksi otomatis", "1 — Tanpa PPN", "2 — PPN hanya di 1 bagian", "3 — Normal (PPN di akhir)", "4 — PPN 1 di akhir (2 bagian: Total A+Total B)", "5 — PPN 1 di akhir (3+ bagian: dinamis)"], key="adv_model_case")
-                    # Mapping Model Case -> ppn_mode + total_mode (agar case lain tidak ikut kena)
-                    model_map = {
-                        "Auto — deteksi otomatis": ("auto", "auto"),
-                        "1 — Tanpa PPN": ("none", "auto"),
-                        "2 — PPN hanya di 1 bagian": ("single", "auto"),
-                        "3 — Normal (PPN di akhir)": ("auto", "auto"),
-                        "4 — PPN 1 di akhir (2 bagian: Total A+Total B)": ("combined", "auto"),
-                        "5 — PPN 1 di akhir (3+ bagian: dinamis)": ("combined", "auto"),
-                    }
-                    adv_ppn_mapped, adv_total_mapped = model_map[model_case]
-                    st.markdown("**Pengaturan Akurasi (kolom, opsional)**")
-                    adv_qty = st.text_input("Kolom Qty (huruf A=1, B=2...)", key="adv_qty", placeholder="auto")
+                    adv_qty = st.text_input("Kolom Qty", key="adv_qty", placeholder="auto")
                 with c3:
-                    adv_price = st.text_input("Kolom Harga Satuan (huruf)", key="adv_price", placeholder="auto")
+                    adv_price = st.text_input("Kolom Harga", key="adv_price", placeholder="auto")
                 with c4:
-                    adv_total = st.text_input("Kolom Jumlah/Total (huruf)", key="adv_total", placeholder="auto")
-                # Mode detail tetap tapi tidak mengganggu cepat — sudah mapping dari Model Case di atas
-                adv_ppn = f"Auto ({adv_ppn_mapped})"
-                adv_total_mode = "Gabungan (1 Grand Total)" if model_case.startswith("4") or model_case.startswith("5") else "Auto (deteksi)"
-                adv_ppn = f"Auto ({adv_ppn_mapped})"
-                adv_total_mode = "Auto (deteksi)"
-                st.caption(f"Mode PPN/Total dari Model Case: PPN={adv_ppn} • Total={adv_total_mode}")
-                st.caption("Tips: pilih Model Case jika Auto membingungkan PPN/TOTAL satu vs beda. Case lain tidak ikut kena karena mapping langsung ke Mode PPN/Total.")
-                # Store for START CHECK
-                def _col_letter_to_num(s: str):
-                    s = s.strip().upper()
-                    if not s: return None
-                    if s.isdigit(): return int(s)
-                    n = 0
-                    for ch in s:
-                        if 'A' <= ch <= 'Z': n = n*26 + (ord(ch)-64)
-                        else: return None
-                    return n if n else None
-                # Mapping Model Case -> override (agar tidak bingung kapan total satu vs beda)
-                if 'model_case' in locals() and model_case != "Auto — deteksi otomatis":
-                    ppn_mode_final = adv_ppn_mapped
-                    total_mode_final = adv_total_mapped
-                else:
-                    ppn_mode_final = {'Auto (deteksi)':'auto','Auto (combined)':'auto','Per-section (masing-masing)':'per_section','Gabungan (1 PPN A+B)':'combined','Hanya 1 section (A atau B)':'single','Tanpa PPN':'none'}.get(adv_ppn, 'auto')
-                    total_mode_final = {'Auto (deteksi)':'auto','Per-section (Total A & Total B)':'per_section','Gabungan (1 Grand Total)':'combined'}.get(adv_total_mode, 'auto')
-                st.session_state['adv_overrides_preview'] = {
-                    'header_row': int(adv_header) if adv_header.strip().isdigit() else None,
-                    'qty_col': _col_letter_to_num(adv_qty),
-                    'unit_price_col': _col_letter_to_num(adv_price),
-                    'total_col': _col_letter_to_num(adv_total),
-                    'ppn_mode': ppn_mode_final,
-                    'total_mode': total_mode_final,
-                    'model_case': model_case
-                }
-                st.session_state['adv_ai_preview'] = {'provider': 'none', 'gemini_key': ""}
-                st.caption(f"Preview override: header={st.session_state['adv_overrides_preview']['header_row'] or 'auto'} qty={adv_qty or 'auto'} price={adv_price or 'auto'} total={adv_total or 'auto'} | PPN={st.session_state['adv_overrides_preview']['ppn_mode']} TOTAL={st.session_state['adv_overrides_preview']['total_mode']}")
+                    adv_total = st.text_input("Kolom Total", key="adv_total", placeholder="auto")
 
-            # Live preview jumlah — terupdate otomatis tanpa START CHECK (langsung dari Excel)
+            adv_ppn = f"Auto ({adv_ppn_mapped})"
+            adv_total_mode = "Auto (deteksi)"
+            def _col_letter_to_num(s: str):
+                s = s.strip().upper()
+                if not s: return None
+                if s.isdigit(): return int(s)
+                n = 0
+                for ch in s:
+                    if 'A' <= ch <= 'Z': n = n*26 + (ord(ch)-64)
+                    else: return None
+                return n if n else None
+            if model_case != "Auto — deteksi otomatis":
+                ppn_mode_final = adv_ppn_mapped
+                total_mode_final = adv_total_mapped
+            else:
+                ppn_mode_final = 'auto'
+                total_mode_final = 'auto'
+            st.session_state['adv_overrides_preview'] = {
+                'header_row': int(adv_header) if adv_header and adv_header.strip().isdigit() else None,
+                'qty_col': _col_letter_to_num(adv_qty) if adv_qty else None,
+                'unit_price_col': _col_letter_to_num(adv_price) if adv_price else None,
+                'total_col': _col_letter_to_num(adv_total) if adv_total else None,
+                'ppn_mode': ppn_mode_final,
+                'total_mode': total_mode_final,
+                'model_case': model_case
+            }
+            st.session_state['adv_ai_preview'] = {'provider': 'none', 'gemini_key': ""}
+
             try:
                 preview_reader = ExcelReader(tmp_file_path)
                 if preview_reader.load_workbook():
-                    preview_sheet = sheet_names[0] if sheet_names else None
+                    preview_sheet = sheets_to_check[0] if sheets_to_check else None
                     if preview_sheet:
                         preview_reader.select_sheet(preview_sheet)
                         hr = preview_reader.find_header_row()
                         if hr:
                             cols = preview_reader.find_data_columns(hr)
-                            # Hitung jumlah item preview cepat (scan 200 baris)
                             _items_preview = 0
                             for _r in range(hr+1, min(hr+60, preview_reader.ws.max_row+1)):
                                 _v = preview_reader.ws.cell(row=_r, column=cols.get('qty',4)).value
                                 if safe_float(_v) is not None:
                                     _items_preview += 1
-                            st.markdown(f"<div class='card' style='border:1px dashed #c7d2fe; text-align:center;'><b>📊 Preview:</b> {_items_preview} item terdeteksi di sheet <b>{preview_sheet}</b> • <span style='color:#64748b; font-size:.85rem;'>klik START CHECK untuk cek Jumlah/PPN/Grand</span></div>", unsafe_allow_html=True)
+                            st.markdown(f"<div style='text-align:center; color:#64748b; font-size:.85rem; margin:.5rem 0;'>📊 <b>{_items_preview} item</b> terdeteksi di sheet <b>{preview_sheet}</b> — klik <b>START CHECK</b> untuk mulai</div>", unsafe_allow_html=True)
             except: pass
 
             st.markdown("<br>", unsafe_allow_html=True)
             
-            # Tombol mulai check
             col1, col2, col3 = st.columns([1, 2, 1])
             with col2:
                 if st.button("🔍 START CHECK", type="primary", use_container_width=True):
