@@ -811,7 +811,7 @@ def display_results():
                                 else:
                                     st.markdown("""
                                     <div class="sesuai-box" style="display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:88px;">
-                                        <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">&#8212;</div>
+                                        <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">&#10004;&#65039;</div>
                                         <div style="font-weight: 700; font-size: 0.9rem;">SESUAI</div>
                                     </div>
                                     """, unsafe_allow_html=True)
@@ -1372,7 +1372,7 @@ def display_results():
                             else:
                                 st.markdown("""
                                 <div class="sesuai-box">
-                                    <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">&#8212;</div>
+                                    <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">&#10004;&#65039;</div>
                                     <div style="font-weight: 700; font-size: 0.9rem;">SESUAI</div>
                                 </div>
                                 """, unsafe_allow_html=True)
