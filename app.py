@@ -645,7 +645,10 @@ def display_results():
                     st.caption("🧭 Klasifikasi (tulisan → tipe, toleran typo): jika typo, cek ⚠️ tapi tidak bikin error hitungan; hanya angka yang divalidasi.")
                     def _fmt_k(k):
                         v = klass_map.get(k['row'], {}).get('value', None)
-                        v_str = f" | value={v:,.0f}" if v is not None else " | value=⚠️ tidak kebaca"
+                        try:
+                            v_str = f" | value={float(v):,.0f}" if v is not None and safe_float(v) is not None else " | value=⚠️ tidak kebaca"
+                        except:
+                            v_str = " | value=⚠️ tidak kebaca"
                         return f"Row {k['row']}: '{k['raw']}' → {k['normalized']} → {k['type']}{(' ⚠️ typo' if k.get('fuzzy') else '')}{v_str}"
                     st.code("\n".join([_fmt_k(k) for k in klass]), language="text")
                 else:
