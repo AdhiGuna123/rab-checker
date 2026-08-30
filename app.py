@@ -698,6 +698,7 @@ def display_results():
             
             # CEK APAKAH ADA MULTIPLE SECTIONS
             has_multiple_sections = len(sections) > 1
+            _is_single_ppn_mode = sum(1 for sd in sections.values() if safe_float(sd.get('ppn_value')) is not None) == 1 and len(sections) > 1
             
             if has_multiple_sections:
                 # TAMPILKAN PER SECTION
@@ -784,9 +785,8 @@ def display_results():
                         </div>
                         """.format(format_currency(section_subtotal_excel if section_subtotal_excel is not None else section_calculated) if (section_subtotal_excel is not None or is_calc) else "-"), unsafe_allow_html=True)
                     
-                    # PPN Section (fleksibel: tampilkan hanya jika section ini punya PPN)
-                    # Jika tidak ada ppn section, skip (PPN mungkin global gabungan)
-                    has_section_ppn = section_ppn_excel is not None
+                    # PPN Section — skip jika PPN 1 bagian (sudah ditampilkan di Langkah 2 global)
+                    has_section_ppn = section_ppn_excel is not None and not _is_single_ppn_mode
                     if has_section_ppn:
                         section_calculated_ppn = section_calculated * 0.11
                         col1, col2, col3 = st.columns([2, 1, 2])
@@ -974,14 +974,34 @@ def display_results():
                 _is_without = sheet_dbg_global.get('is_without_ppn', False) if isinstance(sheet_dbg_global, dict) else False
                 _mode = "TANPA PPN" if _is_without else ("PPN GABUNGAN" if is_combined_global else ("PPN 1 BAGIAN" if sum(1 for sd in sections.values() if sd.get('ppn_value') is not None)==1 and len(sections)>1 else ("NORMAL" if len(sections)<=1 else "MULTI")))
                 st.markdown(f"<div style='text-align:center; margin:.4rem 0;'><span class='badge neutral'>Mode: {_mode}</span></div>", unsafe_allow_html=True)
+                _ppn_sec_count = sum(1 for sd in sections.values() if safe_float(sd.get('ppn_value')) is not None)
+                _ppn_1bagian = _ppn_sec_count == 1 and len(sections) > 1 and not _is_without
                 if not _is_without:
-                    st.markdown("""
-                    <div style="display:flex; align-items:center; justify-content:center; gap:.5rem; margin:1rem 0; flex-wrap:wrap;">
-                      <span class="badge ok">1. Jumlah A+B = TOTAL</span><span style="color:#94a3b8;">→</span>
-                      <span class="badge neutral">2. TOTAL × 11% = PPN</span><span style="color:#94a3b8;">→</span>
-                      <span class="badge ok" style="background:#dcfce7; border-color:#86efac;">3. TOTAL + PPN = GRAND</span>
-                    </div>
-                    """, unsafe_allow_html=True)
+                    if _ppn_1bagian:
+                        _ppn_letter = next((k for k, sd in sections.items() if safe_float(sd.get('ppn_value')) is not None), "?")
+                        st.markdown(f"""
+                        <div style="display:flex; align-items:center; justify-content:center; gap:.5rem; margin:1rem 0; flex-wrap:wrap;">
+                          <span class="badge ok">1. Total A + Total B = TOTAL</span><span style="color:#94a3b8;">→</span>
+                          <span class="badge neutral">2. Jumlah {_ppn_letter} × 11% = PPN</span><span style="color:#94a3b8;">→</span>
+                          <span class="badge ok" style="background:#dcfce7; border-color:#86efac;">3. TOTAL (sudah termasuk PPN)</span>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    elif is_combined_global:
+                        st.markdown("""
+                        <div style="display:flex; align-items:center; justify-content:center; gap:.5rem; margin:1rem 0; flex-wrap:wrap;">
+                          <span class="badge ok">1. Jumlah A+B = TOTAL</span><span style="color:#94a3b8;">→</span>
+                          <span class="badge neutral">2. TOTAL × 11% = PPN</span><span style="color:#94a3b8;">→</span>
+                          <span class="badge ok" style="background:#dcfce7; border-color:#86efac;">3. TOTAL + PPN = GRAND</span>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    else:
+                        st.markdown("""
+                        <div style="display:flex; align-items:center; justify-content:center; gap:.5rem; margin:1rem 0; flex-wrap:wrap;">
+                          <span class="badge ok">1. Jumlah A+B = TOTAL</span><span style="color:#94a3b8;">→</span>
+                          <span class="badge neutral">2. TOTAL × 11% = PPN</span><span style="color:#94a3b8;">→</span>
+                          <span class="badge ok" style="background:#dcfce7; border-color:#86efac;">3. TOTAL + PPN = GRAND</span>
+                        </div>
+                        """, unsafe_allow_html=True)
                 else:
                     st.markdown("""
                     <div style="display:flex; align-items:center; justify-content:center; gap:.5rem; margin:1rem 0; flex-wrap:wrap;">
