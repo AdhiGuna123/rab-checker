@@ -215,13 +215,11 @@ class ExcelReader:
         norm = self._normalize_label(text)
         if 'GRAND TOTAL' in norm or 'GRANDTOTAL' in norm.replace(' ', ''):
             return 'GRAND'
-        # TOTAL (A+B[+C]) adalah gabungan, bukan single section
         if '+' in norm and re.search(r'TOTAL\s*\(.*\+', norm):
             return None
         norm_jml = re.sub(r'\bJML\b', 'JUMLAH', norm)
         m2 = re.search(r'(?:TOTAL|JUMLAH|SUBTOTAL)[\s\.]*([A-Z])\b', norm_jml)
         if m2:
-            # Pastikan bukan gabungan yang lolos
             if '+' in norm_jml:
                 return None
             return m2.group(1)
