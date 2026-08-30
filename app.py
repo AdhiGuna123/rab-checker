@@ -1302,6 +1302,12 @@ def display_results():
                             """.format(format_currency(excel_val)), unsafe_allow_html=True)
                         except:
                             pass
+                else:
+                    st.markdown("""
+                    <div class="card" style="border:2px solid #e5e7eb; background: linear-gradient(180deg, #f9fafb, #ffffff);">
+                      <div style="display:flex; gap:.6rem; align-items:center;"><span style="background:#9ca3af; color:white; border-radius:8px; padding:.35rem .7rem; font-weight:800;">Langkah 2</span><b>Tidak ada PPN</b><span style="margin-left:auto; color:#9ca3af; font-size:.8rem;">File ini tidak mengandung PPN</span></div>
+                    </div>
+                    """, unsafe_allow_html=True)
                 
                 st.markdown("""
                 <div class="card" style="border:2px solid #86efac; background: linear-gradient(180deg, #ecfdf5, #ffffff);">
