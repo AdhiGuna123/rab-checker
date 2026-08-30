@@ -397,7 +397,11 @@ def main():
                                 'summary_rows_debug': data.get('summary_rows_debug', []),
                                 'columns': data.get('columns', {}),
                                 'overrides_applied': data.get('overrides_applied', {}),
-                                'header_values_debug': data.get('header_values_debug', [])
+                                'header_values_debug': data.get('header_values_debug', []),
+                                'ppn_is_combined': data.get('ppn_is_combined', False),
+                                'jumlah_global_excel': data.get('jumlah_global_excel'),
+                                'is_without_ppn': data.get('is_without_ppn', False),
+                                'items': data.get('items', [])
                             }
                             
                             # Lakukan pemeriksaan
