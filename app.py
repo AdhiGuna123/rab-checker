@@ -273,11 +273,14 @@ def main():
         """, unsafe_allow_html=True)
         components.html("""
         <script>
-        setTimeout(function() {
-            window.scrollTo({top: document.body.scrollHeight * 0.35, behavior: 'smooth'});
-        }, 300);
+        function doScroll() {
+            try { window.parent.scrollTo(0, 300); } catch(e) {}
+            try { window.scrollTo(0, 300); } catch(e) {}
+        }
+        setTimeout(doScroll, 600);
+        setTimeout(doScroll, 1200);
         </script>
-        """, height=0)
+        """, height=1)
         
         reader = ExcelReader(tmp_file_path)
         if reader.load_workbook():
@@ -459,11 +462,14 @@ def main():
                         st.success(f"✅ Pemeriksaan selesai! {len(sheets_to_check)} sheet diperiksa.")
                         components.html("""
                         <script>
-                        setTimeout(function() {
-                            window.scrollTo({top: document.body.scrollHeight * 0.3, behavior: 'smooth'});
-                        }, 500);
+                        function doScroll() {
+                            try { window.parent.scrollTo(0, 0); } catch(e) {}
+                            try { window.scrollTo(0, 0); } catch(e) {}
+                        }
+                        setTimeout(doScroll, 600);
+                        setTimeout(doScroll, 1200);
                         </script>
-                        """, height=0)
+                        """, height=1)
         
         # Tampilkan hasil jika ada
         if st.session_state.get('check_results'):
