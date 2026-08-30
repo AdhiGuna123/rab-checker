@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import pandas as pd
 from datetime import datetime
 import os
@@ -250,9 +251,11 @@ def main():
     if uploaded_file is not None:
         _prev_file = st.session_state.get('file_name', '')
         if _prev_file and _prev_file != uploaded_file.name:
-            for _k in ['excel_sheets_data', 'all_items', 'results', 'errors', 'warnings', 'sheet_total_calculated', '_show_all_items']:
+            for _k in ['excel_sheets_data', 'all_items', 'check_results', 'errors', 'warnings', 'sheets_checked', 'sheet_total_calculated']:
                 st.session_state.pop(_k, None)
-            st.session_state.pop('_show_all_items', None)
+            for _sk in list(st.session_state.keys()):
+                if _sk.startswith('_show_all_'):
+                    st.session_state.pop(_sk, None)
 
         with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp_file:
             tmp_file.write(uploaded_file.getvalue())
@@ -268,6 +271,13 @@ def main():
           <span class="badge ok">Siap</span>
         </div>
         """, unsafe_allow_html=True)
+        components.html("""
+        <script>
+        setTimeout(function() {
+            window.scrollTo({top: document.body.scrollHeight * 0.35, behavior: 'smooth'});
+        }, 300);
+        </script>
+        """, height=0)
         
         reader = ExcelReader(tmp_file_path)
         if reader.load_workbook():
@@ -447,6 +457,13 @@ def main():
                         st.session_state.sheets_checked = sheets_to_check
                         
                         st.success(f"✅ Pemeriksaan selesai! {len(sheets_to_check)} sheet diperiksa.")
+                        components.html("""
+                        <script>
+                        setTimeout(function() {
+                            window.scrollTo({top: document.body.scrollHeight * 0.3, behavior: 'smooth'});
+                        }, 500);
+                        </script>
+                        """, height=0)
         
         # Tampilkan hasil jika ada
         if st.session_state.check_results:
