@@ -1174,14 +1174,15 @@ def display_results():
                                 sec_total = sd.get('subtotal_value')
                         if sec_total is not None:
                             calculated_grand_total += float(sec_total)
-                    # Jika ada PPN global gabungan, tambahkan ke grand total (karena per-section tidak ada PPN)
-                    if show_global_ppn:
+                    # Jika PPN gabungan (bukan per-section), tambahkan PPN ke grand total
+                    # Untuk PPN 1 bagian: section total sudah termasuk PPN, jangan tambah lagi
+                    _ppn_sec_cnt_gt = sum(1 for sd in sections.values() if safe_float(sd.get('ppn_value')) is not None)
+                    _is_ppn_1bagian = _ppn_sec_cnt_gt == 1 and len(sections) > 1
+                    if show_global_ppn and not _is_ppn_1bagian:
                         sum_sub_for_gt = sum(safe_float(sd.get('subtotal_value')) or 0 for sd in sections.values())
                         calculated_grand_total = sum_sub_for_gt + (sum_sub_for_gt * 0.11)
-                        # jika ada diskon global (jarang), kurangi
-                        # Note: grand total sudah termasuk PPN global, jadi pakai rumus ini
                     elif has_any_section_ppn:
-                        # grand total sudah sum dari section yang sudah termasuk PPN per-section, tidak perlu tambah lagi
+                        # grand total sudah sum dari section yang sudah termasuk PPN per-section
                         pass
                     
                     col1, col2, col3 = st.columns([2, 1, 2])
