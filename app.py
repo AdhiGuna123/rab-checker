@@ -37,6 +37,7 @@ st.markdown("""
   font-family:'Inter',sans-serif;
   background: linear-gradient(180deg, #eef2ff 0%, #f8fafc 40%, #ffffff 100%);
   color: var(--ink);
+  color-scheme: light;
 }
 .main .block-container{
   background: transparent;
@@ -131,10 +132,26 @@ st.markdown("""
 .stRadio [role="radiogroup"] label:has(input:checked) p{ color:white !important;}
 [data-testid="stMultiSelect"]{ background:white; border-radius:12px;}
 [data-testid="stMultiSelect"] span{ color:#1e293b !important;}
-/* Selectbox — light theme */
-[data-testid="stSelectbox"] div[role="combobox"]{ background:#ffffff !important; border:1.5px solid #c7d2fe !important; border-radius:10px !important; color:#1e293b !important; }
-[data-testid="stSelectbox"] div[role="combobox"] span{ color:#1e293b !important; }
-[data-testid="stSelectbox"] svg{ color:#6366f1 !important; }
+/* Selectbox & Multiselect — paksa light */
+[data-testid="stSelectbox"],
+[data-testid="stMultiSelect"]{
+  background: white !important;
+}
+[data-testid="stSelectbox"] [data-baseweb="select"],
+[data-testid="stMultiSelect"] [data-baseweb="select"]{
+  background: #ffffff !important;
+  border-color: #c7d2fe !important;
+  color: #1e293b !important;
+}
+[data-testid="stSelectbox"] [data-baseweb="select"] *,
+[data-testid="stMultiSelect"] [data-baseweb="select"] *{
+  color: #1e293b !important;
+  background: transparent !important;
+}
+[data-testid="stSelectbox"] [data-baseweb="select"] svg,
+[data-testid="stMultiSelect"] [data-baseweb="select"] svg{
+  color: #6366f1 !important;
+}
 /* Multiselect chips — light */
 [data-testid="stMultiSelect"] [data-baseweb="tag"]{ background:#eef2ff !important; color:#4338ca !important; border:1px solid #c7d2fe !important; }
 [data-testid="stMultiSelect"] [data-baseweb="tag"] span{ color:#4338ca !important; }
@@ -142,6 +159,18 @@ st.markdown("""
 [data-testid="stMultiSelect"] [data-baseweb="input"]::placeholder{ color:#94a3b8 !important; }
 [data-testid="stMultiSelect"] div[role="listbox"]{ background:white !important; }
 [data-testid="stMultiSelect"] div[role="option"]{ color:#1e293b !important; }
+/* Dropdown menu — light */
+div[data-baseweb="menu"]{ background:#ffffff !important; border:1px solid #e2e8f0 !important; box-shadow: 0 8px 24px rgba(0,0,0,.12) !important; }
+div[data-baseweb="menu"] div[role="option"]{ color:#1e293b !important; }
+div[data-baseweb="menu"] div[role="option"]:hover,
+div[data-baseweb="menu"] div[role="option"]:focus,
+div[data-baseweb="menu"] div[role="option"][aria-selected="true"]{ background:#eef2ff !important; color:#4338ca !important; }
+/* Force light on all baseweb internals */
+[data-baseweb="select"]{ background:#ffffff !important; }
+[data-baseweb="select"] *{ color-scheme: light !important; }
+[data-baseweb="input"]{ color-scheme: light !important; }
+[data-baseweb="tag"]{ color-scheme: light !important; }
+[data-baseweb="menu"]{ color-scheme: light !important; }
 /* Tabel — paksa PUTIH di theme gelap Streamlit */
 [data-testid="stDataFrame"], [data-testid="stDataFrame"] > div, [data-testid="stDataFrame"] div{ background:#ffffff !important; }
 [data-testid="stDataFrame"]{ border-radius:16px !important; overflow:hidden !important; border:1.5px solid #cbd5e1 !important; box-shadow: 0 8px 24px rgba(15,23,42,.08) !important; }
