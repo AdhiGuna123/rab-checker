@@ -1,4 +1,4 @@
-import streamlit as st
+﻿import streamlit as st
 import pandas as pd
 from datetime import datetime
 import os
@@ -15,27 +15,26 @@ st.set_page_config(
     layout="wide"
 )
 
-# RAB Checker — Human Readable UI (backend tidak diubah)
+# RAB Checker â€” Human Readable UI (backend tidak diubah)
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Nunito:wght@600;700;800&display=swap');
 
 :root{
-  --bg:#f4f6ff;
+  --bg:#f6f8f5;
   --card:#ffffff;
   --ink:#1e293b;
   --muted:#64748b;
   --line:#e2e8f0;
-  --blue:#2563eb; --blue2:#3b82f6;
+  --sage:#8EA58C; --sage2:#a3b8a1;
+  --emerald:#10b981; --emerald2:#34d399;
   --orange:#f59e0b; --orange2:#fb923c;
-  --green:#059669; --green2:#10b981;
   --red:#dc2626; --red2:#ef4444;
-  --purple:#7c3aed;
   --radius:20px;
 }
 .stApp{
   font-family:'Inter',sans-serif;
-  background: linear-gradient(180deg, #eef2ff 0%, #f8fafc 40%, #ffffff 100%);
+  background: linear-gradient(180deg, #f0f4ef 0%, #f8faf8 40%, #ffffff 100%);
   color: var(--ink);
   color-scheme: light;
 }
@@ -45,11 +44,11 @@ st.markdown("""
   max-width: 1100px;
 }
 .hero{
-  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 45%, #a855f7 100%);
+  background: linear-gradient(135deg, #6b8a68 0%, #8EA58C 40%, #10b981 100%);
   color:white; border-radius: 28px;
   padding: 2.2rem 1.6rem;
   text-align:center;
-  box-shadow: 0 18px 50px rgba(79,70,229,.35);
+  box-shadow: 0 18px 50px rgba(142,165,140,.35);
   margin-bottom: 1.2rem;
 }
 .hero h1{font-family:'Nunito',sans-serif; font-size:2.15rem; font-weight:800; margin:0; letter-spacing:.5px;}
@@ -57,11 +56,11 @@ st.markdown("""
 .hero .chips{margin-top:1rem; display:flex; gap:.5rem; justify-content:center; flex-wrap:wrap;}
 .chip{ background: rgba(255,255,255,.22); border:1px solid rgba(255,255,255,.35); color:white; padding:.35rem .75rem; border-radius:999px; font-size:.8rem; font-weight:600; }
 .stepper{ display:flex; gap:.6rem; justify-content:center; margin-top: .9rem; }
-.step{ display:flex; align-items:center; gap:.5rem; background: white; border:2px solid #e0e7ff; border-radius:999px; padding:.45rem .8rem; font-size:.82rem; font-weight:700; color:#4338ca; }
-.step.active{ background:#4338ca; color:white; border-color:#4338ca; }
+.step{ display:flex; align-items:center; gap:.5rem; background: white; border:2px solid #c7d9c5; border-radius:999px; padding:.45rem .8rem; font-size:.82rem; font-weight:700; color:#5a7a57; }
+.step.active{ background:#8EA58C; color:white; border-color:#8EA58C; }
 .step.done{ background:#ecfdf5; color:#065f46; border-color:#a7f3d0;}
-.step .num{ width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:.75rem; font-weight:800; background:#e0e7ff; color:#4338ca; }
-.step.active .num{ background:white; color:#4338ca; }
+.step .num{ width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:.75rem; font-weight:800; background:#e8ede7; color:#5a7a57; }
+.step.active .num{ background:white; color:#5a7a57; }
 .step.done .num{ background:#10b981; color:white; }
 .card{ background: var(--card); border:1px solid var(--line); border-radius: var(--radius); padding: .9rem 1.1rem; box-shadow: 0 8px 24px rgba(15,23,42,.05); margin: .6rem 0; }
 .card h3{ font-family:'Nunito',sans-serif; font-size:1.05rem; font-weight:800; margin:0 0 .35rem 0; color:#1e293b;}
@@ -75,7 +74,7 @@ st.markdown("""
 .how{ display:grid; grid-template-columns: repeat(3,1fr); gap:.8rem; margin: .6rem 0; }
 .how .how-card{ background:white; border:1px solid #e2e8f0; border-radius:16px; padding:.9rem; display:flex; gap:.75rem; align-items:flex-start; }
 .how .how-card .icon{ width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:1.1rem; }
-.illust{ background: linear-gradient(135deg, #eef2ff, #f0fdfa); border:1px dashed #c7d2fe; border-radius:16px; padding:1rem; display:flex; gap:.9rem; align-items:center; }
+.illust{ background: linear-gradient(135deg, #eef2ff, #f0fdfa); border:1px dashed #c7d9c5; border-radius:16px; padding:1rem; display:flex; gap:.9rem; align-items:center; }
 .illust .pic{ width:64px; height:64px; border-radius:14px; background:white; display:flex; align-items:center; justify-content:center; font-size:2rem; box-shadow: 0 6px 18px rgba(15,23,42,.08);}
 
 .flow{ display:flex; align-items:center; gap:.5rem; flex-wrap:wrap; justify-content:center; margin:.6rem 0; }
@@ -92,28 +91,28 @@ st.markdown("""
 .box, .subtotal-box, .ppn-box, .grandtotal-box, .selisih-box, .sesuai-box{ padding: 1.1rem 1.4rem !important; margin: .35rem 0 !important; border-radius: 14px !important; }
 .subtotal-box, .ppn-box, .grandtotal-box{ min-height: 88px; display:flex; flex-direction:column; align-items:center; justify-content:center; }
 .selisih-box, .sesuai-box{ min-height: 88px; display:flex; flex-direction:column; align-items:center; justify-content:center; }
-.box.blue{ background: linear-gradient(135deg, #1e40af, #3b82f6); }
+.box.blue{ background: linear-gradient(135deg, #1e40af, #10b981); }
 .box.orange{ background: linear-gradient(135deg, #c2410c, #f97316); }
 .box.green{ background: linear-gradient(135deg, #065f46, #10b981); }
 .box.red{ background: linear-gradient(135deg, #991b1b, #ef4444); }
 .box.dark{ background: #1e293b; }
 .center{ text-align:center;}
 
-.stButton > button{ background: linear-gradient(135deg, #4f46e5, #7c3aed); color:white; border:none; border-radius:14px; padding:.9rem 1.4rem; font-weight:800; letter-spacing:.02em; box-shadow: 0 10px 24px rgba(79,70,229,.30); }
-.stButton > button:hover{ transform: translateY(-1px); box-shadow: 0 14px 28px rgba(79,70,229,.35); }
-/* Uploader — latar PUTIH terang sebelum upload, teks gelap */
-.stFileUploader{ border: 2px dashed #c7d2fe; background: #ffffff !important; border-radius:16px; padding:.2rem; }
-.stFileUploader [data-testid="stFileUploaderDropzone"]{ background: #ffffff !important; border: 2px dashed #a5b4fc !important; border-radius:12px; }
-.stFileUploader [data-testid="stFileUploaderDropzone"]:hover{ border-color: #6366f1 !important; background: #eef2ff !important; }
-/* Dropzone teks instruksi — gelap terbaca */
+.stButton > button{ background: linear-gradient(135deg, #6b8a68, #8EA58C); color:white; border:none; border-radius:14px; padding:.9rem 1.4rem; font-weight:800; letter-spacing:.02em; box-shadow: 0 10px 24px rgba(142,165,140,.30); }
+.stButton > button:hover{ transform: translateY(-1px); box-shadow: 0 14px 28px rgba(142,165,140,.35); }
+/* Uploader â€” latar PUTIH terang sebelum upload, teks gelap */
+.stFileUploader{ border: 2px dashed #c7d9c5; background: #ffffff !important; border-radius:16px; padding:.2rem; }
+.stFileUploader [data-testid="stFileUploaderDropzone"]{ background: #ffffff !important; border: 2px dashed #8EA58C !important; border-radius:12px; }
+.stFileUploader [data-testid="stFileUploaderDropzone"]:hover{ border-color: #10b981 !important; background: #f0f4ef !important; }
+/* Dropzone teks instruksi â€” gelap terbaca */
 .stFileUploader [data-testid="stFileUploaderDropzone"] p,
 .stFileUploader [data-testid="stFileUploaderDropzone"] label,
 .stFileUploader [data-testid="stFileUploaderDropzone"] span{ color:#374151 !important; }
-.stFileUploader [data-testid="stFileUploaderDropzone"] button{ background:#4338ca !important; color:white !important; border:none !important; border-radius:10px !important; font-weight:800 !important; }
+.stFileUploader [data-testid="stFileUploaderDropzone"] button{ background:#8EA58C !important; color:white !important; border:none !important; border-radius:10px !important; font-weight:800 !important; }
 .stFileUploader [data-testid="stFileUploaderDropzone"] button p,
 .stFileUploader [data-testid="stFileUploaderDropzone"] button span{ color:white !important; }
 .stFileUploader small{ color:#6b7280 !important; }
-/* Uploaded file chip — visible dark text on light bg */
+/* Uploaded file chip â€” visible dark text on light bg */
 [data-testid="stFileUploader"] [data-testid="stBaseUploader-header"],
 [data-testid="stFileUploader"] [data-testid="stFileUploaderFileName"],
 [data-testid="stFileUploader"] [data-testid="stFileUploaderFile"],
@@ -124,15 +123,15 @@ st.markdown("""
 [data-testid="stFileDropzoneInstructions"]{ color:#374151 !important; }
 [data-testid="stFileDropzoneInstructions"] div small{ color:#6b7280 !important; }
 .stExpander{ border:1px solid #e2e8f0; border-radius:16px; background:white;}
-/* Sheet picker — huruf gelap terlihat, terpilih ungu kontras */
-.stRadio > div{ background:white; border:2px solid #c7d2fe; border-radius:14px; padding:.7rem; }
-.stRadio [role="radiogroup"] label{ background:#ffffff; border:2px solid #cbd5e1; border-radius:12px; padding:.55rem .8rem; font-weight:700; color:#1e293b !important;}
+/* Sheet picker â€” sage theme */
+.stRadio > div{ background:white; border:2px solid #c7d9c5; border-radius:14px; padding:.7rem; }
+.stRadio [role="radiogroup"] label{ background:#ffffff; border:2px solid #d1dcd0; border-radius:12px; padding:.55rem .8rem; font-weight:700; color:#1e293b !important;}
 .stRadio [role="radiogroup"] label p{ color:#1e293b !important; font-weight:700 !important;}
-.stRadio [role="radiogroup"] label:has(input:checked){ background:#4338ca !important; color:white !important; border-color:#4338ca !important;}
+.stRadio [role="radiogroup"] label:has(input:checked){ background:#8EA58C !important; color:white !important; border-color:#8EA58C !important;}
 .stRadio [role="radiogroup"] label:has(input:checked) p{ color:white !important;}
 [data-testid="stMultiSelect"]{ background:white; border-radius:12px;}
 [data-testid="stMultiSelect"] span{ color:#1e293b !important;}
-/* Selectbox & Multiselect — paksa light */
+/* Selectbox & Multiselect â€” paksa light */
 [data-testid="stSelectbox"],
 [data-testid="stMultiSelect"]{
   background: white !important;
@@ -140,7 +139,7 @@ st.markdown("""
 [data-testid="stSelectbox"] [data-baseweb="select"],
 [data-testid="stMultiSelect"] [data-baseweb="select"]{
   background: #ffffff !important;
-  border-color: #c7d2fe !important;
+  border-color: #c7d9c5 !important;
   color: #1e293b !important;
 }
 [data-testid="stSelectbox"] [data-baseweb="select"] *,
@@ -150,34 +149,34 @@ st.markdown("""
 }
 [data-testid="stSelectbox"] [data-baseweb="select"] svg,
 [data-testid="stMultiSelect"] [data-baseweb="select"] svg{
-  color: #6366f1 !important;
+  color: #8EA58C !important;
 }
-/* Multiselect chips — light */
-[data-testid="stMultiSelect"] [data-baseweb="tag"]{ background:#eef2ff !important; color:#4338ca !important; border:1px solid #c7d2fe !important; }
-[data-testid="stMultiSelect"] [data-baseweb="tag"] span{ color:#4338ca !important; }
+/* Multiselect chips â€” light */
+[data-testid="stMultiSelect"] [data-baseweb="tag"]{ background:#f0f4ef !important; color:#5a7a57 !important; border:1px solid #c7d9c5 !important; }
+[data-testid="stMultiSelect"] [data-baseweb="tag"] span{ color:#5a7a57 !important; }
 [data-testid="stMultiSelect"] [data-baseweb="input"]{ color:#1e293b !important; }
 [data-testid="stMultiSelect"] [data-baseweb="input"]::placeholder{ color:#94a3b8 !important; }
 [data-testid="stMultiSelect"] div[role="listbox"]{ background:white !important; }
 [data-testid="stMultiSelect"] div[role="option"]{ color:#1e293b !important; }
-/* Dropdown menu — light */
+/* Dropdown menu â€” light */
 div[data-baseweb="menu"]{ background:#ffffff !important; border:1px solid #e2e8f0 !important; box-shadow: 0 8px 24px rgba(0,0,0,.12) !important; }
 div[data-baseweb="menu"] div[role="option"]{ color:#1e293b !important; }
 div[data-baseweb="menu"] div[role="option"]:hover,
 div[data-baseweb="menu"] div[role="option"]:focus,
-div[data-baseweb="menu"] div[role="option"][aria-selected="true"]{ background:#eef2ff !important; color:#4338ca !important; }
+div[data-baseweb="menu"] div[role="option"][aria-selected="true"]{ background:#eef2ff !important; color:#5a7a57 !important; }
 /* Force light on all baseweb internals */
 [data-baseweb="select"]{ background:#ffffff !important; }
 [data-baseweb="select"] *{ color-scheme: light !important; }
 [data-baseweb="input"]{ color-scheme: light !important; }
 [data-baseweb="tag"]{ color-scheme: light !important; }
 [data-baseweb="menu"]{ color-scheme: light !important; }
-/* Tabel — paksa PUTIH di theme gelap Streamlit */
+/* Tabel â€” paksa PUTIH di theme gelap Streamlit */
 [data-testid="stDataFrame"], [data-testid="stDataFrame"] > div, [data-testid="stDataFrame"] div{ background:#ffffff !important; }
 [data-testid="stDataFrame"]{ border-radius:16px !important; overflow:hidden !important; border:1.5px solid #cbd5e1 !important; box-shadow: 0 8px 24px rgba(15,23,42,.08) !important; }
 [data-testid="stDataFrame"] div[data-testid="stDataFrameResizable"]{ background:#ffffff !important;}
 [data-testid="stDataFrame"] [role="grid"]{ background:#ffffff !important; text-align:center !important;}
-[data-testid="stDataFrame"] [role="columnheader"]{ background:#e0e7ff !important; color:#3730a3 !important; font-weight:800 !important; font-size:.82rem !important; border-bottom: 2px solid #a5b4fc !important; border-right:1px solid #e0e7ff !important; text-align:center !important; justify-content:center !important;}
-[data-testid="stDataFrame"] [role="columnheader"] div{ justify-content:center !important; text-align:center !important; color:#3730a3 !important;}
+[data-testid="stDataFrame"] [role="columnheader"]{ background:#e8ede7 !important; color:#3d5a3a !important; font-weight:800 !important; font-size:.82rem !important; border-bottom: 2px solid #8EA58C !important; border-right:1px solid #e8ede7 !important; text-align:center !important; justify-content:center !important;}
+[data-testid="stDataFrame"] [role="columnheader"] div{ justify-content:center !important; text-align:center !important; color:#3d5a3a !important;}
 [data-testid="stDataFrame"] [role="gridcell"]{ color:#1e293b !important; font-weight:500 !important; border-bottom:1px solid #eef2ff !important; border-right:1px solid #f1f5f9 !important; background:#ffffff !important; text-align:center !important; justify-content:center !important;}
 [data-testid="stDataFrame"] [role="gridcell"] div, [data-testid="stDataFrame"] [role="gridcell"] span{ color:#1e293b !important; text-align:center !important; justify-content:center !important;}
 [data-testid="stDataFrame"] [role="row"]:nth-child(even) [role="gridcell"]{ background:#f8fafc !important;}
@@ -186,10 +185,10 @@ div[data-baseweb="menu"] div[role="option"][aria-selected="true"]{ background:#e
 [data-testid="stDataFrame"] canvas{ background:#ffffff !important;}
 /* Fallback: jika dataframe masih hitam (glide-data-grid), paksa table putih */
 [data-testid="stTable"]{ background:white !important; }
-[data-testid="stTable"] th{ background:#eef2ff !important; color:#3730a3 !important; text-align:center !important; border:1px solid #cbd5e1 !important;}
+[data-testid="stTable"] th{ background:#eef2ff !important; color:#3d5a3a !important; text-align:center !important; border:1px solid #cbd5e1 !important;}
 [data-testid="stTable"] td{ background:white !important; color:#1e293b !important; text-align:center !important; border:1px solid #e2e8f0 !important;}
 [data-testid="stTable"] tr:nth-child(even) td{ background:#f8fafc !important;}
-hr{ border:none; height:1px; background: linear-gradient(90deg, transparent, #c7d2fe, transparent); margin:1.2rem 0;}
+hr{ border:none; height:1px; background: linear-gradient(90deg, transparent, #c7d9c5, transparent); margin:1.2rem 0;}
 @media (max-width: 768px){ .how{ grid-template-columns: 1fr; } .hero h1{ font-size:1.6rem;} }
 </style>
 """, unsafe_allow_html=True)
@@ -238,12 +237,12 @@ def format_currency(value):
 def main():
     st.markdown("""
     <div class="hero">
-      <h1>🔍 RAB Checker — Cek Hitungan Otomatis</h1>
-      <p>Upload Excel RAB → kami hitung ulang <b>Qty × Harga</b>, <b>Jumlah</b>, <b>PPN 11%</b> & <b>Grand Total</b>. Salah hitung langsung terlihat.</p>
-      <div class="chips"><span class="chip">✅ Tanpa langganan AI</span><span class="chip">🧠 Toleran typo (JML / JumlahA)</span><span class="chip">📊 Kategori & Section fleksibel</span></div>
+      <h1>ðŸ” RAB Checker â€” Cek Hitungan Otomatis</h1>
+      <p>Upload Excel RAB â†’ kami hitung ulang <b>Qty Ã— Harga</b>, <b>Jumlah</b>, <b>PPN 11%</b> & <b>Grand Total</b>. Salah hitung langsung terlihat.</p>
+      <div class="chips"><span class="chip">âœ… Tanpa langganan AI</span><span class="chip">ðŸ§  Toleran typo (JML / JumlahA)</span><span class="chip">ðŸ“Š Kategori & Section fleksibel</span></div>
       <div class="illust" style="margin-top:1rem; text-align:left;">
-        <div class="pic">📊</div>
-        <div><b style="color:#1e293b;">Gimana bacanya?</b><br><span style="color:#475569; font-size:.9rem;">Biru = <b>Jumlah</b> (sebelum PPN) &nbsp;•&nbsp; Oranye = <b>PPN 11%</b> &nbsp;•&nbsp; Hijau = <b>Grand Total</b> &nbsp;•&nbsp; Merah = <b>Selisih</b></span></div>
+        <div class="pic">ðŸ“Š</div>
+        <div><b style="color:#1e293b;">Gimana bacanya?</b><br><span style="color:#475569; font-size:.9rem;">Biru = <b>Jumlah</b> (sebelum PPN) &nbsp;â€¢&nbsp; Oranye = <b>PPN 11%</b> &nbsp;â€¢&nbsp; Hijau = <b>Grand Total</b> &nbsp;â€¢&nbsp; Merah = <b>Selisih</b></span></div>
       </div>
     </div>
     """, unsafe_allow_html=True)
@@ -273,15 +272,15 @@ def main():
     """, unsafe_allow_html=True)
     st.markdown("""
     <div class="how">
-      <div class="how-card"><div class="icon" style="background:#e0e7ff;">📤</div><div><b>1. Upload</b><br><span style="color:#64748b; font-size:.85rem;">Pilih file .xlsx RAB</span></div></div>
-      <div class="how-card"><div class="icon" style="background:#ffedd5;">⚙️</div><div><b>2. Cek</b><br><span style="color:#64748b; font-size:.85rem;">Sistem hitung ulang otomatis</span></div></div>
-      <div class="how-card"><div class="icon" style="background:#dcfce7;">✅</div><div><b>3. Hasil</b><br><span style="color:#64748b; font-size:.85rem;">Selisih langsung terlihat</span></div></div>
+      <div class="how-card"><div class="icon" style="background:#e8ede7;">ðŸ“¤</div><div><b>1. Upload</b><br><span style="color:#64748b; font-size:.85rem;">Pilih file .xlsx RAB</span></div></div>
+      <div class="how-card"><div class="icon" style="background:#ffedd5;">âš™ï¸</div><div><b>2. Cek</b><br><span style="color:#64748b; font-size:.85rem;">Sistem hitung ulang otomatis</span></div></div>
+      <div class="how-card"><div class="icon" style="background:#dcfce7;">âœ…</div><div><b>3. Hasil</b><br><span style="color:#64748b; font-size:.85rem;">Selisih langsung terlihat</span></div></div>
     </div>
     """, unsafe_allow_html=True)
 
-    st.markdown('<div class="card"><h3>📤 Langkah 1 — Upload File Excel</h3><p class="hint">Pilih file RAB/Quotation (.xlsx). Tidak perlu ubah format — sistem toleran typo <i>Jumlah/TOTAL/JML</i>.</p></div>', unsafe_allow_html=True)
+    st.markdown('<div class="card"><h3>ðŸ“¤ Langkah 1 â€” Upload File Excel</h3><p class="hint">Pilih file RAB/Quotation (.xlsx). Tidak perlu ubah format â€” sistem toleran typo <i>Jumlah/TOTAL/JML</i>.</p></div>', unsafe_allow_html=True)
     uploaded_file = st.file_uploader(
-        "Tarik file Excel ke sini atau klik Browse  •  .xlsx / .xls",
+        "Tarik file Excel ke sini atau klik Browse  â€¢  .xlsx / .xls",
         type=['xlsx', 'xls'],
         help="RAB/Quotation Excel.",
         label_visibility="collapsed"
@@ -305,8 +304,8 @@ def main():
         
         st.markdown(f"""
         <div class="card" style="display:flex; gap:1rem; align-items:center; border-left:4px solid #059669;">
-          <div style="font-size:1.6rem;">📄</div>
-          <div style="flex:1; color:#1e293b;"><b>{uploaded_file.name}</b><br><span style="color:#64748b; font-size:.85rem;">{uploaded_file.size/1024:.1f} KB — Siap dicek</span></div>
+          <div style="font-size:1.6rem;">ðŸ“„</div>
+          <div style="flex:1; color:#1e293b;"><b>{uploaded_file.name}</b><br><span style="color:#64748b; font-size:.85rem;">{uploaded_file.size/1024:.1f} KB â€” Siap dicek</span></div>
           <span class="badge ok">Siap</span>
         </div>
         """, unsafe_allow_html=True)
@@ -317,37 +316,37 @@ def main():
             sheet_names = reader.get_sheet_names()
 
             st.markdown("""
-            <div class="card" style="border-left:4px solid #4f46e5;">
-              <h3>⚙️ Pengaturan Pemeriksaan</h3>
+            <div class="card" style="border-left:4px solid #6b8a68;">
+              <h3>âš™ï¸ Pengaturan Pemeriksaan</h3>
             </div>
             """, unsafe_allow_html=True)
 
             col_sheet, col_model = st.columns([3, 5])
             with col_sheet:
-                st.markdown("**📑 Sheet**")
-                sheet_mode = st.radio("Sheet", ["✅ Semua", "📄 Pilih"], horizontal=True, label_visibility="collapsed")
-                if sheet_mode == "📄 Pilih":
+                st.markdown("**ðŸ“‘ Sheet**")
+                sheet_mode = st.radio("Sheet", ["âœ… Semua", "ðŸ“„ Pilih"], horizontal=True, label_visibility="collapsed")
+                if sheet_mode == "ðŸ“„ Pilih":
                     picks = st.multiselect("Pilih sheet", sheet_names, default=[sheet_names[0]] if sheet_names else [], label_visibility="collapsed")
                     sheets_to_check = picks if picks else sheet_names
                 else:
                     sheets_to_check = sheet_names
 
             with col_model:
-                st.markdown("**🎯 Model Case**")
+                st.markdown("**ðŸŽ¯ Model Case**")
                 st.caption("Pilih jika auto-deteksi salah. Biasanya biarkan Auto saja.")
-                model_case = st.selectbox("Model Case", ["Auto — deteksi otomatis", "1 — Tanpa PPN", "2 — PPN hanya di 1 bagian", "3 — Normal (PPN di akhir)", "4 — PPN 1 di akhir (2 bagian: Total A+Total B)", "5 — PPN 1 di akhir (3+ bagian: dinamis)"], key="adv_model_case", label_visibility="collapsed")
+                model_case = st.selectbox("Model Case", ["Auto â€” deteksi otomatis", "1 â€” Tanpa PPN", "2 â€” PPN hanya di 1 bagian", "3 â€” Normal (PPN di akhir)", "4 â€” PPN 1 di akhir (2 bagian: Total A+Total B)", "5 â€” PPN 1 di akhir (3+ bagian: dinamis)"], key="adv_model_case", label_visibility="collapsed")
 
             model_map = {
-                "Auto — deteksi otomatis": ("auto", "auto"),
-                "1 — Tanpa PPN": ("none", "auto"),
-                "2 — PPN hanya di 1 bagian": ("single", "auto"),
-                "3 — Normal (PPN di akhir)": ("auto", "auto"),
-                "4 — PPN 1 di akhir (2 bagian: Total A+Total B)": ("combined", "auto"),
-                "5 — PPN 1 di akhir (3+ bagian: dinamis)": ("combined", "auto"),
+                "Auto â€” deteksi otomatis": ("auto", "auto"),
+                "1 â€” Tanpa PPN": ("none", "auto"),
+                "2 â€” PPN hanya di 1 bagian": ("single", "auto"),
+                "3 â€” Normal (PPN di akhir)": ("auto", "auto"),
+                "4 â€” PPN 1 di akhir (2 bagian: Total A+Total B)": ("combined", "auto"),
+                "5 â€” PPN 1 di akhir (3+ bagian: dinamis)": ("combined", "auto"),
             }
             adv_ppn_mapped, adv_total_mapped = model_map[model_case]
 
-            with st.expander("🔧 Pengaturan Lanjutan (Kolom & Header)", expanded=False):
+            with st.expander("ðŸ”§ Pengaturan Lanjutan (Kolom & Header)", expanded=False):
                 c1, c2, c3, c4 = st.columns(4)
                 with c1:
                     adv_header = st.text_input("Baris Header", key="adv_header", placeholder="auto")
@@ -369,7 +368,7 @@ def main():
                     if 'A' <= ch <= 'Z': n = n*26 + (ord(ch)-64)
                     else: return None
                 return n if n else None
-            if model_case != "Auto — deteksi otomatis":
+            if model_case != "Auto â€” deteksi otomatis":
                 ppn_mode_final = adv_ppn_mapped
                 total_mode_final = adv_total_mapped
             else:
@@ -400,13 +399,13 @@ def main():
                                 _v = preview_reader.ws.cell(row=_r, column=cols.get('qty',4)).value
                                 if safe_float(_v) is not None:
                                     _items_preview += 1
-                            st.markdown(f"<div style='text-align:center; color:#64748b; font-size:.85rem; margin:.3rem 0;'>📊 <b>{_items_preview} item</b> terdeteksi di sheet <b>{preview_sheet}</b> — klik <b>START CHECK</b> untuk mulai</div>", unsafe_allow_html=True)
+                            st.markdown(f"<div style='text-align:center; color:#64748b; font-size:.85rem; margin:.3rem 0;'>ðŸ“Š <b>{_items_preview} item</b> terdeteksi di sheet <b>{preview_sheet}</b> â€” klik <b>START CHECK</b> untuk mulai</div>", unsafe_allow_html=True)
             except: pass
             
             col1, col2, col3 = st.columns([1, 2, 1])
             with col2:
-                if st.button("🔍 START CHECK", type="primary", use_container_width=True):
-                    with st.spinner("⏳ Sedang memeriksa file..."):
+                if st.button("ðŸ” START CHECK", type="primary", use_container_width=True):
+                    with st.spinner("â³ Sedang memeriksa file..."):
                         all_errors = []
                         all_warnings = []
                         total_items = 0
@@ -487,7 +486,7 @@ def main():
                         st.session_state.warnings = all_warnings
                         st.session_state.sheets_checked = sheets_to_check
                         
-                        st.success(f"✅ Pemeriksaan selesai! {len(sheets_to_check)} sheet diperiksa.")
+                        st.success(f"âœ… Pemeriksaan selesai! {len(sheets_to_check)} sheet diperiksa.")
         
         # Tampilkan hasil jika ada
         if st.session_state.get('check_results'):
@@ -501,7 +500,7 @@ def main():
             pass
 
 def display_results():
-    """Tampilkan hasil pemeriksaan — ramah awam: angka besar, warna jelas, bahasa sederhana."""
+    """Tampilkan hasil pemeriksaan â€” ramah awam: angka besar, warna jelas, bahasa sederhana."""
     results = st.session_state.get('check_results') or {}
     errors = st.session_state.get('errors') or []
     warnings = st.session_state.get('warnings') or []
@@ -511,30 +510,30 @@ def display_results():
     if not results:
         return
     
-    st.markdown('<div class="card" style="text-align:center; max-width:760px; margin:1rem auto; border: 2px solid #c7d2fe;"><h3 style="margin:0; text-align:center;">📊 Langkah 3 — Hasil Pemeriksaan</h3><p class="hint" style="margin:.25rem 0 0 0; text-align:center;">Biru = Jumlah (sebelum PPN) • Oranye = PPN 11% • Hijau = Grand Total • Merah = Selisih</p></div>', unsafe_allow_html=True)
+    st.markdown('<div class="card" style="text-align:center; max-width:760px; margin:1rem auto; border: 2px solid #c7d9c5;"><h3 style="margin:0; text-align:center;">ðŸ“Š Langkah 3 â€” Hasil Pemeriksaan</h3><p class="hint" style="margin:.25rem 0 0 0; text-align:center;">Biru = Jumlah (sebelum PPN) â€¢ Oranye = PPN 11% â€¢ Hijau = Grand Total â€¢ Merah = Selisih</p></div>', unsafe_allow_html=True)
     
     # Tampilkan sheet yang diperiksa
     if sheets_checked and len(sheets_checked) > 1:
-        st.info(f"📋 Sheet yang diperiksa: {', '.join(sheets_checked)}")
+        st.info(f"ðŸ“‹ Sheet yang diperiksa: {', '.join(sheets_checked)}")
     
     _total_errors = results.get('total_errors', 0)
     _total_items = results.get('total_items', 0)
     
-    # Status — center
+    # Status â€” center
     if _total_errors == 0:
         st.markdown("""
         <div style="background: linear-gradient(135deg, #ecfdf5, #d1fae5); border:1px solid #6ee7b7; border-radius:12px; text-align:center; padding:.6rem 1rem; margin:.5rem 0; display:flex; align-items:center; justify-content:center; gap:.6rem;">
-          <span style="font-size:1.1rem;">✅</span>
+          <span style="font-size:1.1rem;">âœ…</span>
           <span style="font-weight:700; font-size:.9rem; color:#065f46;">Semua hitungan COCOK</span>
-          <span style="color:#047857; font-size:.78rem;">— Qty × Harga, Jumlah, PPN & Grand Total sudah benar</span>
+          <span style="color:#047857; font-size:.78rem;">â€” Qty Ã— Harga, Jumlah, PPN & Grand Total sudah benar</span>
         </div>
         """, unsafe_allow_html=True)
     else:
         st.markdown(f"""
         <div style="background: linear-gradient(135deg, #fef2f2, #fee2e2); border:1px solid #fca5a5; border-radius:12px; text-align:center; padding:.6rem 1rem; margin:.5rem 0; display:flex; align-items:center; justify-content:center; gap:.6rem;">
-          <span style="font-size:1.1rem;">⚠️</span>
+          <span style="font-size:1.1rem;">âš ï¸</span>
           <span style="font-weight:700; font-size:.9rem; color:#991b1b;">Ditemukan {_total_errors} yang perlu dicek</span>
-          <span style="color:#b91c1c; font-size:.78rem;">— Lihat kotak <b>SELISIH</b> merah di bawah</span>
+          <span style="color:#b91c1c; font-size:.78rem;">â€” Lihat kotak <b>SELISIH</b> merah di bawah</span>
         </div>
         """, unsafe_allow_html=True)
     
@@ -542,18 +541,18 @@ def display_results():
     
     # KPI awam
     k1,k2,k3,k4 = st.columns(4)
-    with k1: st.markdown(f"<div class='kpi'><div class='label'>📁 Sheet Dicek</div><div class='value'>{len(sheets_checked) if sheets_checked else 1}</div></div>", unsafe_allow_html=True)
-    with k2: st.markdown(f"<div class='kpi'><div class='label'>🧾 Jumlah Item</div><div class='value'>{_total_items}</div></div>", unsafe_allow_html=True)
-    with k3: st.markdown(f"<div class='kpi {'bad' if _total_errors else 'ok'}'><div class='label'>🔍 Perlu Dicek</div><div class='value' style=\"color:{'#dc2226' if _total_errors else '#059669'};\">{_total_errors}</div></div>", unsafe_allow_html=True)
+    with k1: st.markdown(f"<div class='kpi'><div class='label'>ðŸ“ Sheet Dicek</div><div class='value'>{len(sheets_checked) if sheets_checked else 1}</div></div>", unsafe_allow_html=True)
+    with k2: st.markdown(f"<div class='kpi'><div class='label'>ðŸ§¾ Jumlah Item</div><div class='value'>{_total_items}</div></div>", unsafe_allow_html=True)
+    with k3: st.markdown(f"<div class='kpi {'bad' if _total_errors else 'ok'}'><div class='label'>ðŸ” Perlu Dicek</div><div class='value' style=\"color:{'#dc2226' if _total_errors else '#059669'};\">{_total_errors}</div></div>", unsafe_allow_html=True)
     with k4:
         ok = _total_errors==0
-        st.markdown(f"<div class='kpi { 'ok' if ok else 'bad'}'><div class='label'>📋 Status</div><div class='value' style=\"color:{'#059669' if ok else '#dc2226'};\">{'✅ COCOK' if ok else '🔴 CEK LAGI'}</div></div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='kpi { 'ok' if ok else 'bad'}'><div class='label'>ðŸ“‹ Status</div><div class='value' style=\"color:{'#059669' if ok else '#dc2226'};\">{'âœ… COCOK' if ok else 'ðŸ”´ CEK LAGI'}</div></div>", unsafe_allow_html=True)
     
     st.markdown("<div style='height:.3rem;'></div>", unsafe_allow_html=True)
     
-    # Preview Items — ramah awam
+    # Preview Items â€” ramah awam
     if all_items or st.session_state.get('excel_sheets_data'):
-        st.markdown('<div class="card"><h3>🧾 Daftar Item (Qty × Harga = Jumlah)</h3><p class="hint">Ini yang dibaca dari Excel. <b>Total</b> dihitung ulang <b>Qty × Harga Satuan</b>.</p></div>', unsafe_allow_html=True)
+        st.markdown('<div class="card"><h3>ðŸ§¾ Daftar Item (Qty Ã— Harga = Jumlah)</h3><p class="hint">Ini yang dibaca dari Excel. <b>Total</b> dihitung ulang <b>Qty Ã— Harga Satuan</b>.</p></div>', unsafe_allow_html=True)
         
         # Group items by sheet
         sheets_data = {}
@@ -569,7 +568,7 @@ def display_results():
         
         # Tampilkan per sheet
         for sheet_name, items in sheets_data.items():
-            st.markdown(f"<div class='card' style='border-left: 6px solid #6366f1;'><b>📄 Sheet:</b> {sheet_name} &nbsp;<span class='badge neutral'>{len(items)} item</span></div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='card' style='border-left: 6px solid #8EA58C;'><b>ðŸ“„ Sheet:</b> {sheet_name} &nbsp;<span class='badge neutral'>{len(items)} item</span></div>", unsafe_allow_html=True)
             
             # Buat DataFrame
             item_data = []
@@ -621,21 +620,21 @@ def display_results():
             else:
                 df_display = df_items
             try:
-                st.table(df_display.style.set_properties(**{'text-align': 'center'}).set_table_styles([{'selector': 'th', 'props': [('text-align','center'),('background','#eef2ff'),('color','#3730a3')]}, {'selector': 'td', 'props': [('text-align','center')]}]))
+                st.table(df_display.style.set_properties(**{'text-align': 'center'}).set_table_styles([{'selector': 'th', 'props': [('text-align','center'),('background','#eef2ff'),('color','#3d5a3a')]}, {'selector': 'td', 'props': [('text-align','center')]}]))
             except Exception:
                 st.dataframe(df_display, use_container_width=True, hide_index=True, height=min(520, 44+len(df_display)*36))
             if _total_rows > 10 and not _show_all:
-                if st.button(f"📋 Tampilkan semua {_total_rows} baris", key=f"show_all_{sheet_name}"):
+                if st.button(f"ðŸ“‹ Tampilkan semua {_total_rows} baris", key=f"show_all_{sheet_name}"):
                     st.session_state[_show_key] = True
                     st.rerun()
             elif _total_rows > 10 and _show_all:
-                if st.button(f"⬆️ Sembunyikan, tampilkan 10 baris saja", key=f"hide_{sheet_name}"):
+                if st.button(f"â¬†ï¸ Sembunyikan, tampilkan 10 baris saja", key=f"hide_{sheet_name}"):
                     st.session_state[_show_key] = False
                     st.rerun()
 
             # === PANEL DEBUG (tanpa perlu kirim gambar/file) ===
-            # Simpan raw values di display debug — copy-paste teks ini ke chat
-            with st.expander("🐛 DEBUG — copy teks ini ke chat jika masih salah", expanded=False):
+            # Simpan raw values di display debug â€” copy-paste teks ini ke chat
+            with st.expander("ðŸ› DEBUG â€” copy teks ini ke chat jika masih salah", expanded=False):
                 st.caption("Fungsinya supaya saya bisa lihat nilai mentah Excel tanpa perlu foto.")
                 
                 # Kolom mapping yang terdeteksi
@@ -644,8 +643,8 @@ def display_results():
                 cols_dbg = {}
                 # Coba baca dari item pertama atau simpan di excel_sheets_data kalau ada
                 # Fallback: tampilkan kolom yang dipakai per item
-                st.write("**Kolom terdeteksi (header → kolom):**")
-                # Ambil dari excel_reader yang terakhir dipakai — simpan di session
+                st.write("**Kolom terdeteksi (header â†’ kolom):**")
+                # Ambil dari excel_reader yang terakhir dipakai â€” simpan di session
                 # Kita tampilkan dari items raw
                 dbg_cols = []
                 for it in items[:1]:
@@ -676,9 +675,9 @@ def display_results():
                         'mismatch': it.get('calc_mismatch', False)
                     })
                 st.dataframe(pd.DataFrame(debug_rows), use_container_width=True)
-                st.caption("👉 Select semua (Ctrl+A) di tabel atas → Ctrl+C → paste ke chat. Atau screenshot panel ini (lebih mudah dari foto Excel).")
+                st.caption("ðŸ‘‰ Select semua (Ctrl+A) di tabel atas â†’ Ctrl+C â†’ paste ke chat. Atau screenshot panel ini (lebih mudah dari foto Excel).")
 
-                if st.button("📋 Copy debug sebagai teks", key=f"debug_copy_{sheet_name}"):
+                if st.button("ðŸ“‹ Copy debug sebagai teks", key=f"debug_copy_{sheet_name}"):
                     lines = []
                     lines.append(f"Sheet: {sheet_name} | Items: {len(items)}")
                     for r in debug_rows:
@@ -688,25 +687,25 @@ def display_results():
                 # Show skipped rows if any
                 skipped = sheet_dbg.get('skipped_rows', [])
                 if skipped:
-                    st.warning(f"⚠️ {len(skipped)} baris ter-skip (mungkin terdeteksi section/PPN). Detail:")
+                    st.warning(f"âš ï¸ {len(skipped)} baris ter-skip (mungkin terdeteksi section/PPN). Detail:")
                     st.code("\n".join([f"Row {s['row']}: {s['dump']}" for s in skipped]), language="text")
 
-                # Klasifikasi baris ringkasan (toleran typo) — angka tetap sumber kebenaran, tulisan hanya petunjuk
+                # Klasifikasi baris ringkasan (toleran typo) â€” angka tetap sumber kebenaran, tulisan hanya petunjuk
                 klass = sheet_dbg.get('classifications', [])
                 summary_dbg = sheet_dbg.get('summary_rows_debug', [])
                 klass_map = {k['row']: k for k in summary_dbg} if summary_dbg else {}
                 if klass:
-                    st.caption("🧭 Klasifikasi (tulisan → tipe, toleran typo): jika typo, cek ⚠️ tapi tidak bikin error hitungan; hanya angka yang divalidasi.")
+                    st.caption("ðŸ§­ Klasifikasi (tulisan â†’ tipe, toleran typo): jika typo, cek âš ï¸ tapi tidak bikin error hitungan; hanya angka yang divalidasi.")
                     def _fmt_k(k):
                         v = klass_map.get(k['row'], {}).get('value', None)
                         try:
-                            v_str = f" | value={float(v):,.0f}" if v is not None and safe_float(v) is not None else " | value=⚠️ tidak kebaca"
+                            v_str = f" | value={float(v):,.0f}" if v is not None and safe_float(v) is not None else " | value=âš ï¸ tidak kebaca"
                         except:
-                            v_str = " | value=⚠️ tidak kebaca"
-                        return f"Row {k['row']}: '{k['raw']}' → {k['normalized']} → {k['type']}{(' ⚠️ typo' if k.get('fuzzy') else '')}{v_str}"
+                            v_str = " | value=âš ï¸ tidak kebaca"
+                        return f"Row {k['row']}: '{k['raw']}' â†’ {k['normalized']} â†’ {k['type']}{(' âš ï¸ typo' if k.get('fuzzy') else '')}{v_str}"
                     st.code("\n".join([_fmt_k(k) for k in klass]), language="text")
                 else:
-                    st.caption("🧭 Klasifikasi: tidak ada baris ringkasan terdeteksi (Jumlah/Total/PPN).")
+                    st.caption("ðŸ§­ Klasifikasi: tidak ada baris ringkasan terdeteksi (Jumlah/Total/PPN).")
 
             # Tombol alternatif: override kolom manual
             
@@ -724,19 +723,19 @@ def display_results():
             # Alur hitungan awam
             st.markdown("""
             <div class="flow">
-              <div class="node"><b>Jumlah</b><br><span style="color:#64748b; font-size:.8rem;">Qty × Harga</span></div>
-              <div class="arrow">→</div>
+              <div class="node"><b>Jumlah</b><br><span style="color:#64748b; font-size:.8rem;">Qty Ã— Harga</span></div>
+              <div class="arrow">â†’</div>
               <div class="node"><b>TOTAL</b><br><span style="color:#64748b; font-size:.8rem;">Jumlah A+B</span></div>
-              <div class="arrow">→</div>
-              <div class="node"><b>PPN 11%</b><br><span style="color:#64748b; font-size:.8rem;">TOTAL × 11%</span></div>
-              <div class="arrow">→</div>
+              <div class="arrow">â†’</div>
+              <div class="node"><b>PPN 11%</b><br><span style="color:#64748b; font-size:.8rem;">TOTAL Ã— 11%</span></div>
+              <div class="arrow">â†’</div>
               <div class="node" style="border-color:#86efac; background:#ecfdf5;"><b>GRAND TOTAL</b><br><span style="color:#065f46; font-size:.8rem;">TOTAL + PPN</span></div>
             </div>
             """, unsafe_allow_html=True)
-            st.markdown("<div style='text-align:center;'><span class='badge neutral'>RINGKASAN — DIHITUNG vs DI EXCEL</span></div>", unsafe_allow_html=True)
-            # Header Ringkasan — center
+            st.markdown("<div style='text-align:center;'><span class='badge neutral'>RINGKASAN â€” DIHITUNG vs DI EXCEL</span></div>", unsafe_allow_html=True)
+            # Header Ringkasan â€” center
             st.markdown("""
-            <div style="background: linear-gradient(90deg, #2563eb 0%, #7c3aed 50%, #059669 100%); 
+            <div style="background: linear-gradient(90deg, #10b981 0%, #6b8a68 50%, #059669 100%); 
                         color: white; 
                         padding: 1rem; 
                         border-radius: 16px; 
@@ -744,8 +743,8 @@ def display_results():
                         margin: 1rem auto;
                         max-width: 760px;
                         box-shadow: 0 10px 30px rgba(37,99,235,.25);">
-                <h3 style="margin: 0; color: white; font-weight: 800; font-size:1.05rem; text-align:center;">📊 RINGKASAN — Bandingkan DIHITUNG vs DI EXCEL</h3>
-                <div style="font-size:.82rem; opacity:.95; margin-top:.2rem; text-align:center;">Kiri = hitungan sistem &nbsp;•&nbsp; Tengah = cocok/selisih &nbsp;•&nbsp; Kanan = angka di Excel</div>
+                <h3 style="margin: 0; color: white; font-weight: 800; font-size:1.05rem; text-align:center;">ðŸ“Š RINGKASAN â€” Bandingkan DIHITUNG vs DI EXCEL</h3>
+                <div style="font-size:.82rem; opacity:.95; margin-top:.2rem; text-align:center;">Kiri = hitungan sistem &nbsp;â€¢&nbsp; Tengah = cocok/selisih &nbsp;â€¢&nbsp; Kanan = angka di Excel</div>
             </div>
             """, unsafe_allow_html=True)
             
@@ -770,7 +769,7 @@ def display_results():
                         if total_val is not None:
                             section_calculated += total_val
                     
-                    # Header Section — kategori vs section dijumlah terpisah
+                    # Header Section â€” kategori vs section dijumlah terpisah
                     is_cat = section_data.get('is_category', False)
                     label_suffix = " (Kategori)" if is_cat else ""
                     hdr_color = "linear-gradient(135deg, #475569 0%, #64748b 100%)" if is_cat else "linear-gradient(135deg, #059669 0%, #10b981 100%)"
@@ -781,17 +780,17 @@ def display_results():
                                 border-radius: 12px; 
                                 text-align: center;
                                 margin: 1rem 0;">
-                        <h4 style="margin: 0; color: white;">📁 {"KATEGORI" if is_cat else "SECTION"} {section_letter}{label_suffix}</h4>
+                        <h4 style="margin: 0; color: white;">ðŸ“ {"KATEGORI" if is_cat else "SECTION"} {section_letter}{label_suffix}</h4>
                     </div>
                     """, unsafe_allow_html=True)
                     
-                    # Subtotal Section (Jumlah X) — selalu tampil DIHITUNG (sebelum PPN), DI EXCEL tampil jika ada atau flag calculated
+                    # Subtotal Section (Jumlah X) â€” selalu tampil DIHITUNG (sebelum PPN), DI EXCEL tampil jika ada atau flag calculated
                     is_calc = section_data.get('subtotal_is_calculated', False)
                     col1, col2, col3 = st.columns([2, 1, 2])
                     with col1:
                         st.markdown("""
                         <div class="subtotal-box">
-                            <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">📥 JUMLAH (DIHITUNG)</div>
+                            <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">ðŸ“¥ JUMLAH (DIHITUNG)</div>
                             <div style="font-size: 1.6rem; font-weight: 800;">{}</div>
                         </div>
                         """.format(format_currency(section_calculated)), unsafe_allow_html=True)
@@ -803,7 +802,7 @@ def display_results():
                                 if abs(difference) > 1:
                                     st.markdown("""
                                     <div class="selisih-box" style="display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:88px;">
-                                        <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">❌</div>
+                                        <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">âŒ</div>
                                         <div style="font-weight: 700; font-size: 0.9rem;">SELISIH</div>
                                         <div style="font-weight: 800; font-size: 1.2rem; margin-top: 0.3rem;">{}</div>
                                     </div>
@@ -811,7 +810,7 @@ def display_results():
                                 else:
                                     st.markdown("""
                                     <div class="sesuai-box" style="display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:88px;">
-                                        <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">✅</div>
+                                        <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">âœ…</div>
                                         <div style="font-weight: 700; font-size: 0.9rem;">SESUAI</div>
                                     </div>
                                     """, unsafe_allow_html=True)
@@ -820,7 +819,7 @@ def display_results():
                         elif is_calc:
                             st.markdown("""
                             <div class="comparison-box" style="text-align: center; padding: 1rem; border: 1px dashed rgba(59,130,246,0.5); display:flex; flex-direction:column; align-items:center; justify-content:center;">
-                                <div style="color: #93c5fd; font-size: 0.85rem;">Tidak ada Jumlah di Excel — pakai hitungan</div>
+                                <div style="color: #93c5fd; font-size: 0.85rem;">Tidak ada Jumlah di Excel â€” pakai hitungan</div>
                                 <div style="color: #60a5fa; font-weight: 700; margin-top: 0.3rem;">{}</div>
                             </div>
                             """.format(format_currency(section_calculated)), unsafe_allow_html=True)
@@ -833,12 +832,12 @@ def display_results():
                     with col3:
                         st.markdown("""
                         <div class="subtotal-box">
-                            <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">📤 JUMLAH (DI EXCEL)</div>
+                            <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">ðŸ“¤ JUMLAH (DI EXCEL)</div>
                             <div style="font-size: 1.6rem; font-weight: 800;">{}</div>
                         </div>
                         """.format(format_currency(section_subtotal_excel if section_subtotal_excel is not None else section_calculated) if (section_subtotal_excel is not None or is_calc) else "-"), unsafe_allow_html=True)
                     
-                    # PPN Section — skip jika PPN 1 bagian (sudah ditampilkan di Langkah 2 global)
+                    # PPN Section â€” skip jika PPN 1 bagian (sudah ditampilkan di Langkah 2 global)
                     has_section_ppn = section_ppn_excel is not None and not _is_single_ppn_mode
                     if has_section_ppn:
                         section_calculated_ppn = section_calculated * 0.11
@@ -846,7 +845,7 @@ def display_results():
                         with col1:
                             st.markdown("""
                             <div class="ppn-box">
-                                <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">📥 PPN 11% (DIHITUNG)</div>
+                                <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">ðŸ“¥ PPN 11% (DIHITUNG)</div>
                                 <div style="font-size: 1.6rem; font-weight: 800;">{}</div>
                             </div>
                             """.format(format_currency(section_calculated_ppn)), unsafe_allow_html=True)
@@ -857,7 +856,7 @@ def display_results():
                                 if abs(difference) > 1:
                                     st.markdown("""
                                     <div class="selisih-box">
-                                        <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">❌</div>
+                                        <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">âŒ</div>
                                         <div style="font-weight: 700; font-size: 0.9rem;">SELISIH</div>
                                         <div style="font-weight: 800; font-size: 1.2rem; margin-top: 0.3rem;">{}</div>
                                     </div>
@@ -865,7 +864,7 @@ def display_results():
                                 else:
                                     st.markdown("""
                                     <div class="sesuai-box">
-                                        <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">✅</div>
+                                        <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">âœ…</div>
                                         <div style="font-weight: 700; font-size: 0.9rem;">SESUAI</div>
                                     </div>
                                     """, unsafe_allow_html=True)
@@ -874,7 +873,7 @@ def display_results():
                         with col3:
                             st.markdown("""
                             <div class="ppn-box">
-                                <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">📤 PPN (DI EXCEL)</div>
+                                <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">ðŸ“¤ PPN (DI EXCEL)</div>
                                 <div style="font-size: 1.6rem; font-weight: 800;">{}</div>
                             </div>
                             """.format(format_currency(section_ppn_excel)), unsafe_allow_html=True)
@@ -888,7 +887,7 @@ def display_results():
                                         border-radius: 16px; padding: 1.5rem; text-align: center;
                                         box-shadow: 0 10px 30px rgba(239, 68, 68, 0.3);
                                         border: 1px solid rgba(255, 255, 255, 0.2); color: white;">
-                                <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">📥 DISKON (DI EXCEL)</div>
+                                <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">ðŸ“¥ DISKON (DI EXCEL)</div>
                                 <div style="font-size: 1.6rem; font-weight: 800;">{}</div>
                             </div>
                             """.format(format_currency(section_discount_excel)), unsafe_allow_html=True)
@@ -904,7 +903,7 @@ def display_results():
                                         border-radius: 16px; padding: 1.5rem; text-align: center;
                                         box-shadow: 0 10px 30px rgba(239, 68, 68, 0.3);
                                         border: 1px solid rgba(255, 255, 255, 0.2); color: white;">
-                                <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">📤 DISKON (DI EXCEL)</div>
+                                <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">ðŸ“¤ DISKON (DI EXCEL)</div>
                                 <div style="font-size: 1.6rem; font-weight: 800;">{}</div>
                             </div>
                             """.format(format_currency(section_discount_excel)), unsafe_allow_html=True)
@@ -921,7 +920,7 @@ def display_results():
                         with col1:
                             st.markdown("""
                             <div class="grandtotal-box">
-                                <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">📥 TOTAL SECTION (DIHITUNG)</div>
+                                <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">ðŸ“¥ TOTAL SECTION (DIHITUNG)</div>
                                 <div style="font-size: 1.6rem; font-weight: 800;">{}</div>
                             </div>
                             """.format(format_currency(section_calculated_total)), unsafe_allow_html=True)
@@ -932,7 +931,7 @@ def display_results():
                                 if abs(difference) > 1:
                                     st.markdown("""
                                     <div class="selisih-box">
-                                        <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">❌</div>
+                                        <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">âŒ</div>
                                         <div style="font-weight: 700; font-size: 0.9rem;">SELISIH</div>
                                         <div style="font-weight: 800; font-size: 1.2rem; margin-top: 0.3rem;">{}</div>
                                     </div>
@@ -940,7 +939,7 @@ def display_results():
                                 else:
                                     st.markdown("""
                                     <div class="sesuai-box">
-                                        <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">✅</div>
+                                        <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">âœ…</div>
                                         <div style="font-weight: 700; font-size: 0.9rem;">SESUAI</div>
                                     </div>
                                     """, unsafe_allow_html=True)
@@ -949,12 +948,12 @@ def display_results():
                         with col3:
                             st.markdown("""
                             <div class="grandtotal-box">
-                                <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">📤 TOTAL SECTION (DI EXCEL)</div>
+                                <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">ðŸ“¤ TOTAL SECTION (DI EXCEL)</div>
                                 <div style="font-size: 1.6rem; font-weight: 800;">{}</div>
                             </div>
                             """.format(format_currency(section_total_excel)), unsafe_allow_html=True)
                 
-                # === TOTAL KATEGORI — 3+ section: TOTAL (A+B+C) = sum sections, bukan Total A ===
+                # === TOTAL KATEGORI â€” 3+ section: TOTAL (A+B+C) = sum sections, bukan Total A ===
                 sheet_dbg_global = excel_sheets_data.get(sheet_name, {}) or sheet_data
                 excel_ppn_global = sheet_dbg_global.get('ppn_value')
                 is_combined_global = sheet_dbg_global.get('ppn_is_combined', False)
@@ -962,7 +961,7 @@ def display_results():
                 _is_single_ppn = sum(1 for sd in sections.values() if sd.get('ppn_value') is not None) == 1 and len(sections) > 1
                 letters = "+".join(sorted(sections.keys()))
                 if is_combined_global and len(sections) >= 2:
-                    # PPN 1 di akhir (2 atau 3+): TOTAL — DI EXCEL harus TOTAL (A+B[+C]) dari Excel
+                    # PPN 1 di akhir (2 atau 3+): TOTAL â€” DI EXCEL harus TOTAL (A+B[+C]) dari Excel
                     # Priority: grand-PPN (kasus case 3sub) tapi jika blank combo, sum sections (case ada total masing) juga benar
                     g = safe_float(sheet_dbg_global.get('grand_total_value'))
                     pg = safe_float(sheet_dbg_global.get('ppn_value'))
@@ -990,7 +989,7 @@ def display_results():
                         letters_plus = "+".join(sorted(sections.keys()))
                         st.markdown("""
                         <div class="subtotal-box">
-                            <div style="font-size: 0.95rem; font-weight:700; opacity: 0.95; margin-bottom: 0.4rem;">TOTAL — DIHITUNG</div>
+                            <div style="font-size: 0.95rem; font-weight:700; opacity: 0.95; margin-bottom: 0.4rem;">TOTAL â€” DIHITUNG</div>
                             <div style="font-size: 0.8rem; opacity:.85; margin-bottom:.3rem;">{}</div>
                             <div style="font-size: 1.7rem; font-weight: 800;">{}</div>
                         </div>
@@ -1002,14 +1001,14 @@ def display_results():
                             if abs(diff_t) > 1:
                                 st.markdown("""
                                 <div class="selisih-box">
-                                    <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">❌ SELISIH</div>
+                                    <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">âŒ SELISIH</div>
                                     <div style="font-weight: 800; font-size: 1.1rem; margin-top: 0.3rem;">{}</div>
                                 </div>
                                 """.format(format_currency(diff_t)), unsafe_allow_html=True)
                             else:
                                 st.markdown("""
                                 <div class="sesuai-box">
-                                    <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">✅ COCOK</div>
+                                    <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">âœ… COCOK</div>
                                     <div style="font-weight: 700; font-size: .85rem; opacity:.9;">TOTAL benar</div>
                                 </div>
                                 """, unsafe_allow_html=True)
@@ -1018,7 +1017,7 @@ def display_results():
                     with col3:
                         st.markdown("""
                         <div class="subtotal-box">
-                            <div style="font-size: 0.95rem; font-weight:700; opacity: 0.95; margin-bottom: 0.4rem;">TOTAL — DI EXCEL (sebelum PPN)</div>
+                            <div style="font-size: 0.95rem; font-weight:700; opacity: 0.95; margin-bottom: 0.4rem;">TOTAL â€” DI EXCEL (sebelum PPN)</div>
                             <div style="font-size: 1.7rem; font-weight: 800;">{}</div>
                         </div>
                         """.format(format_currency(total_kategori_excel)), unsafe_allow_html=True)
@@ -1034,31 +1033,31 @@ def display_results():
                         _ppn_letter = next((k for k, sd in sections.items() if safe_float(sd.get('ppn_value')) is not None), "?")
                         st.markdown(f"""
                         <div style="display:flex; align-items:center; justify-content:center; gap:.5rem; margin:1rem 0; flex-wrap:wrap;">
-                          <span class="badge ok">1. Total A + Total B = TOTAL</span><span style="color:#94a3b8;">→</span>
-                          <span class="badge neutral">2. Jumlah {_ppn_letter} × 11% = PPN</span><span style="color:#94a3b8;">→</span>
+                          <span class="badge ok">1. Total A + Total B = TOTAL</span><span style="color:#94a3b8;">â†’</span>
+                          <span class="badge neutral">2. Jumlah {_ppn_letter} Ã— 11% = PPN</span><span style="color:#94a3b8;">â†’</span>
                           <span class="badge ok" style="background:#dcfce7; border-color:#86efac;">3. TOTAL (sudah termasuk PPN)</span>
                         </div>
                         """, unsafe_allow_html=True)
                     elif is_combined_global:
                         st.markdown("""
                         <div style="display:flex; align-items:center; justify-content:center; gap:.5rem; margin:1rem 0; flex-wrap:wrap;">
-                          <span class="badge ok">1. Jumlah A+B = TOTAL</span><span style="color:#94a3b8;">→</span>
-                          <span class="badge neutral">2. TOTAL × 11% = PPN</span><span style="color:#94a3b8;">→</span>
+                          <span class="badge ok">1. Jumlah A+B = TOTAL</span><span style="color:#94a3b8;">â†’</span>
+                          <span class="badge neutral">2. TOTAL Ã— 11% = PPN</span><span style="color:#94a3b8;">â†’</span>
                           <span class="badge ok" style="background:#dcfce7; border-color:#86efac;">3. TOTAL + PPN = GRAND</span>
                         </div>
                         """, unsafe_allow_html=True)
                     else:
                         st.markdown("""
                         <div style="display:flex; align-items:center; justify-content:center; gap:.5rem; margin:1rem 0; flex-wrap:wrap;">
-                          <span class="badge ok">1. Jumlah A+B = TOTAL</span><span style="color:#94a3b8;">→</span>
-                          <span class="badge neutral">2. TOTAL × 11% = PPN</span><span style="color:#94a3b8;">→</span>
+                          <span class="badge ok">1. Jumlah A+B = TOTAL</span><span style="color:#94a3b8;">â†’</span>
+                          <span class="badge neutral">2. TOTAL Ã— 11% = PPN</span><span style="color:#94a3b8;">â†’</span>
                           <span class="badge ok" style="background:#dcfce7; border-color:#86efac;">3. TOTAL + PPN = GRAND</span>
                         </div>
                         """, unsafe_allow_html=True)
                 else:
                     st.markdown("""
                     <div style="display:flex; align-items:center; justify-content:center; gap:.5rem; margin:1rem 0; flex-wrap:wrap;">
-                      <span class="badge ok">1. Σ Item = TOTAL</span><span style="color:#94a3b8;">→</span>
+                      <span class="badge ok">1. Î£ Item = TOTAL</span><span style="color:#94a3b8;">â†’</span>
                       <span class="badge ok" style="background:#dcfce7; border-color:#86efac;">GRAND = TOTAL (tanpa PPN)</span>
                     </div>
                     """, unsafe_allow_html=True)
@@ -1066,7 +1065,7 @@ def display_results():
                 is_single = len(sections) == 1
                 has_ppn_section = has_any_section_ppn
                 # Langkah 1 TOTAL Kategori mungkin belum ke-render tapi kita tetap butuh TOTAL untuk PPN
-                # Jika ada TOTAL — DI EXCEL (sebelum PPN) yang tadi kelewat, hitung ulang di sini untuk PPN
+                # Jika ada TOTAL â€” DI EXCEL (sebelum PPN) yang tadi kelewat, hitung ulang di sini untuk PPN
                 _total_for_ppn = safe_float(sheet_dbg_global.get('jumlah_global_excel'))
                 if _total_for_ppn is None: _total_for_ppn = sum(safe_float(sd.get('subtotal_value')) or 0 for sd in sections.values())
                 show_global_ppn = not _is_without and (excel_ppn_global is not None and (is_combined_global or not has_ppn_section) or (is_single and has_ppn_section) or (not is_single and has_ppn_section and not is_combined_global) or (_total_for_ppn and _total_for_ppn > 0))
@@ -1097,13 +1096,13 @@ def display_results():
                     _ppn_from_section = ""
                     if _ppn_section_count == 1 and len(sections) > 1:
                         _ppn_sec_letter = next((k for k, sd in sections.items() if safe_float(sd.get('ppn_value')) is not None), "?")
-                        _ppn_from_section = f" — dari Jumlah {_ppn_sec_letter}"
+                        _ppn_from_section = f" â€” dari Jumlah {_ppn_sec_letter}"
                     st.markdown(f"""
                     <div class="card" style="border:2px solid #fed7aa; background: linear-gradient(180deg, #fffbeb, #ffffff);">
                       <div style="display:flex; align-items:center; gap:.6rem; margin-bottom:.6rem;">
                         <span style="background:#f97316; color:white; border-radius:8px; padding:.3rem .6rem; font-weight:800;">Langkah 2</span>
                         <b style="font-size:1.05rem;">PPN 11%{_ppn_from_section}</b>
-                        <span style="margin-left:auto; color:#9ca3af; font-size:.8rem;">Rumus: Jumlah × 11%</span>
+                        <span style="margin-left:auto; color:#9ca3af; font-size:.8rem;">Rumus: Jumlah Ã— 11%</span>
                       </div>
                     </div>
                     """, unsafe_allow_html=True)
@@ -1112,7 +1111,7 @@ def display_results():
                         st.markdown("""
                         <div class="ppn-box">
                             <div style="font-size: 0.95rem; font-weight:700; opacity: 0.95; margin-bottom: 0.4rem;">PPN (DIHITUNG)</div>
-                            <div style="font-size: 0.8rem; opacity:.85; margin-bottom:.3rem;">TOTAL × 11%</div>
+                            <div style="font-size: 0.8rem; opacity:.85; margin-bottom:.3rem;">TOTAL Ã— 11%</div>
                             <div style="font-size: 1.7rem; font-weight: 800;">{}</div>
                         </div>
                         """.format(format_currency(calc_ppn_global)), unsafe_allow_html=True)
@@ -1123,14 +1122,14 @@ def display_results():
                             if abs(diff2) > 1:
                                 st.markdown("""
                                 <div class="selisih-box">
-                                    <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">❌ SELISIH</div>
+                                    <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">âŒ SELISIH</div>
                                     <div style="font-weight: 800; font-size: 1.1rem; margin-top: 0.3rem;">{}</div>
                                 </div>
                                 """.format(format_currency(diff2)), unsafe_allow_html=True)
                             else:
                                 st.markdown("""
                                 <div class="sesuai-box">
-                                    <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">✅ COCOK</div>
+                                    <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">âœ… COCOK</div>
                                     <div style="font-weight: 700; font-size: .85rem; opacity:.9;">PPN benar</div>
                                 </div>
                                 """, unsafe_allow_html=True)
@@ -1162,8 +1161,8 @@ def display_results():
                         <div class="card" style="border:2px solid #fed7aa; background: linear-gradient(180deg, #fffbeb, #ffffff);">
                           <div style="display:flex; align-items:center; gap:.6rem; margin-bottom:.6rem;">
                             <span style="background:#f97316; color:white; border-radius:8px; padding:.3rem .6rem; font-weight:800;">Langkah 2</span>
-                            <b style="font-size:1.05rem;">PPN 11% — dari Jumlah</b>
-                            <span style="margin-left:auto; color:#9ca3af; font-size:.8rem;">Rumus: Jumlah × 11%</span>
+                            <b style="font-size:1.05rem;">PPN 11% â€” dari Jumlah</b>
+                            <span style="margin-left:auto; color:#9ca3af; font-size:.8rem;">Rumus: Jumlah Ã— 11%</span>
                           </div>
                         </div>
                         """, unsafe_allow_html=True)
@@ -1172,7 +1171,7 @@ def display_results():
                             st.markdown(f"""
                             <div class="ppn-box">
                                 <div style="font-size: 0.95rem; font-weight:700; opacity: 0.95; margin-bottom: 0.4rem;">PPN (DIHITUNG)</div>
-                                <div style="font-size: 0.8rem; opacity:.85; margin-bottom:.3rem;">Jumlah × 11%</div>
+                                <div style="font-size: 0.8rem; opacity:.85; margin-bottom:.3rem;">Jumlah Ã— 11%</div>
                                 <div style="font-size: 1.7rem; font-weight: 800;">{format_currency(calc_ppn_global)}</div>
                             </div>
                             """, unsafe_allow_html=True)
@@ -1183,14 +1182,14 @@ def display_results():
                                 if abs(d) > 1:
                                     st.markdown(f"""
                                     <div class="selisih-box">
-                                        <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">❌ SELISIH</div>
+                                        <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">âŒ SELISIH</div>
                                         <div style="font-weight: 800; font-size: 1.1rem; margin-top: 0.3rem;">{format_currency(d)}</div>
                                     </div>
                                     """, unsafe_allow_html=True)
                                 else:
                                     st.markdown("""
                                     <div class="sesuai-box">
-                                        <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">✅ COCOK</div>
+                                        <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">âœ… COCOK</div>
                                         <div style="font-weight: 700; font-size: .85rem; opacity:.9;">PPN benar</div>
                                     </div>
                                     """, unsafe_allow_html=True)
@@ -1207,7 +1206,7 @@ def display_results():
                 if excel_grand_total is not None:
                     st.markdown("""
                     <div class="card" style="border:2px solid #86efac; background: linear-gradient(180deg, #ecfdf5, #ffffff);">
-                      <div style="display:flex; gap:.6rem; align-items:center;"><span style="background:#059669; color:white; border-radius:8px; padding:.35rem .7rem; font-weight:800;">Langkah 3</span><b>Grand Total — sudah termasuk PPN</b><span style="margin-left:auto; color:#9ca3af; font-size:.8rem;">Rumus: TOTAL + PPN</span></div>
+                      <div style="display:flex; gap:.6rem; align-items:center;"><span style="background:#059669; color:white; border-radius:8px; padding:.35rem .7rem; font-weight:800;">Langkah 3</span><b>Grand Total â€” sudah termasuk PPN</b><span style="margin-left:auto; color:#9ca3af; font-size:.8rem;">Rumus: TOTAL + PPN</span></div>
                     </div>
                     """, unsafe_allow_html=True)
                     
@@ -1242,7 +1241,7 @@ def display_results():
                     with col1:
                         st.markdown("""
                         <div class="grandtotal-box">
-                            <div style="font-size: 0.95rem; font-weight:700; opacity: 0.95; margin-bottom: 0.4rem;">Grand Total — DIHITUNG</div>
+                            <div style="font-size: 0.95rem; font-weight:700; opacity: 0.95; margin-bottom: 0.4rem;">Grand Total â€” DIHITUNG</div>
                             <div style="font-size: 1.7rem; font-weight: 800;">{}</div>
                             <div style="font-size:.75rem; opacity:.85; margin-top:.2rem;">TOTAL + PPN</div>
                         </div>
@@ -1254,14 +1253,14 @@ def display_results():
                             if abs(difference) > 1:
                                 st.markdown("""
                                 <div class="selisih-box">
-                                    <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">❌ SELISIH</div>
+                                    <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">âŒ SELISIH</div>
                                     <div style="font-weight: 800; font-size: 1.1rem; margin-top: 0.3rem;">{}</div>
                                 </div>
                                 """.format(format_currency(difference)), unsafe_allow_html=True)
                             else:
                                 st.markdown("""
                                 <div class="sesuai-box">
-                                    <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">✅ COCOK</div>
+                                    <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">âœ… COCOK</div>
                                     <div style="font-weight: 700; font-size: .85rem; opacity:.9;">Grand benar</div>
                                 </div>
                                 """, unsafe_allow_html=True)
@@ -1270,7 +1269,7 @@ def display_results():
                     with col3:
                         st.markdown("""
                         <div class="grandtotal-box">
-                            <div style="font-size: 0.95rem; font-weight:700; opacity: 0.95; margin-bottom: 0.4rem;">Grand Total — DI EXCEL</div>
+                            <div style="font-size: 0.95rem; font-weight:700; opacity: 0.95; margin-bottom: 0.4rem;">Grand Total â€” DI EXCEL</div>
                             <div style="font-size: 1.7rem; font-weight: 800;">{}</div>
                         </div>
                         """.format(format_currency(excel_grand_total)), unsafe_allow_html=True)
@@ -1293,9 +1292,9 @@ def display_results():
                 st.markdown("""
                 <div class="card" style="border:2px solid #bfdbfe;">
                   <div style="display:flex; gap:.6rem; align-items:center; flex-wrap:wrap;">
-                    <span style="background:#2563eb; color:white; border-radius:8px; padding:.35rem .7rem; font-weight:800;">Langkah 1</span>
-                    <b>Jumlah (sebelum PPN)</b> <span style="color:#64748b; font-size:.85rem;">— penjumlahan semua item</span>
-                    <span style="margin-left:auto; background:#f1f5f9; border-radius:999px; padding:.25rem .6rem; font-size:.78rem; color:#475569;"><b>Rumus:</b> Σ Qty × Harga</span>
+                    <span style="background:#10b981; color:white; border-radius:8px; padding:.35rem .7rem; font-weight:800;">Langkah 1</span>
+                    <b>Jumlah (sebelum PPN)</b> <span style="color:#64748b; font-size:.85rem;">â€” penjumlahan semua item</span>
+                    <span style="margin-left:auto; background:#f1f5f9; border-radius:999px; padding:.25rem .6rem; font-size:.78rem; color:#475569;"><b>Rumus:</b> Î£ Qty Ã— Harga</span>
                   </div>
                 </div>
                 """, unsafe_allow_html=True)
@@ -1316,14 +1315,14 @@ def display_results():
                             if abs(difference) > 1:
                                 st.markdown("""
                                 <div class="selisih-box">
-                                    <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">❌ SELISIH</div>
+                                    <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">âŒ SELISIH</div>
                                     <div style="font-weight: 800; font-size: 1.1rem; margin-top: 0.3rem;">{}</div>
                                 </div>
                                 """.format(format_currency(difference)), unsafe_allow_html=True)
                             else:
                                 st.markdown("""
                                 <div class="sesuai-box">
-                                    <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">✅ COCOK</div>
+                                    <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">âœ… COCOK</div>
                                     <div style="font-weight: 700; font-size: .85rem; opacity:.9;">Jumlah benar</div>
                                 </div>
                                 """, unsafe_allow_html=True)
@@ -1342,18 +1341,18 @@ def display_results():
                         except:
                             pass
                 
-                # PPN single — kartu Langkah 2
+                # PPN single â€” kartu Langkah 2
                 if has_ppn_single:
                     st.markdown("""
                     <div class="card" style="border:2px solid #fed7aa; background: linear-gradient(180deg, #fffbeb, #ffffff);">
-                      <div style="display:flex; gap:.6rem; align-items:center;"><span style="background:#f97316; color:white; border-radius:8px; padding:.35rem .7rem; font-weight:800;">Langkah 2</span><b>PPN 11%</b><span style="margin-left:auto; color:#9ca3af; font-size:.8rem;">Rumus: Jumlah × 11%</span></div>
+                      <div style="display:flex; gap:.6rem; align-items:center;"><span style="background:#f97316; color:white; border-radius:8px; padding:.35rem .7rem; font-weight:800;">Langkah 2</span><b>PPN 11%</b><span style="margin-left:auto; color:#9ca3af; font-size:.8rem;">Rumus: Jumlah Ã— 11%</span></div>
                     </div>
                     """, unsafe_allow_html=True)
                     col1, col2, col3 = st.columns([2, 1, 2])
                     with col1:
                         st.markdown("""
                         <div class="ppn-box">
-                            <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">📥 PPN 11% (DIHITUNG)</div>
+                            <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">ðŸ“¥ PPN 11% (DIHITUNG)</div>
                             <div style="font-size: 1.6rem; font-weight: 800;">{}</div>
                         </div>
                         """.format(format_currency(calculated_ppn)), unsafe_allow_html=True)
@@ -1364,7 +1363,7 @@ def display_results():
                             if abs(difference) > 1:
                                 st.markdown("""
                                 <div class="selisih-box">
-                                    <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">❌</div>
+                                    <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">âŒ</div>
                                     <div style="font-weight: 700; font-size: 0.9rem;">SELISIH</div>
                                     <div style="font-weight: 800; font-size: 1.2rem; margin-top: 0.3rem;">{}</div>
                                 </div>
@@ -1372,7 +1371,7 @@ def display_results():
                             else:
                                 st.markdown("""
                                 <div class="sesuai-box">
-                                    <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">✅</div>
+                                    <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">âœ…</div>
                                     <div style="font-weight: 700; font-size: 0.9rem;">SESUAI</div>
                                 </div>
                                 """, unsafe_allow_html=True)
@@ -1383,7 +1382,7 @@ def display_results():
                             excel_val = float(_effective_ppn)
                             st.markdown("""
                             <div class="ppn-box">
-                                <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">📤 PPN (DI EXCEL)</div>
+                                <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">ðŸ“¤ PPN (DI EXCEL)</div>
                                 <div style="font-size: 1.6rem; font-weight: 800;">{}</div>
                             </div>
                             """.format(format_currency(excel_val)), unsafe_allow_html=True)
@@ -1398,7 +1397,7 @@ def display_results():
                 
                 st.markdown("""
                 <div class="card" style="border:2px solid #86efac; background: linear-gradient(180deg, #ecfdf5, #ffffff);">
-                  <div style="display:flex; gap:.6rem; align-items:center;"><span style="background:#059669; color:white; border-radius:8px; padding:.35rem .7rem; font-weight:800;">Langkah 3</span><b>Grand Total — sudah termasuk PPN</b><span style="margin-left:auto; color:#9ca3af; font-size:.8rem;">Rumus: Jumlah + PPN</span></div>
+                  <div style="display:flex; gap:.6rem; align-items:center;"><span style="background:#059669; color:white; border-radius:8px; padding:.35rem .7rem; font-weight:800;">Langkah 3</span><b>Grand Total â€” sudah termasuk PPN</b><span style="margin-left:auto; color:#9ca3af; font-size:.8rem;">Rumus: Jumlah + PPN</span></div>
                 </div>
                 """, unsafe_allow_html=True)
                 # Grand Total
@@ -1406,7 +1405,7 @@ def display_results():
                 with col1:
                     st.markdown("""
                     <div class="grandtotal-box">
-                        <div style="font-size: 0.95rem; font-weight:700; opacity: 0.95; margin-bottom: 0.4rem;">Grand Total — DIHITUNG</div>
+                        <div style="font-size: 0.95rem; font-weight:700; opacity: 0.95; margin-bottom: 0.4rem;">Grand Total â€” DIHITUNG</div>
                         <div style="font-size: 1.7rem; font-weight: 800;">{}</div>
                         <div style="font-size:.75rem; opacity:.85; margin-top:.2rem;">Jumlah + PPN</div>
                     </div>
@@ -1419,14 +1418,14 @@ def display_results():
                             if abs(difference) > 1:
                                 st.markdown("""
                                 <div class="selisih-box">
-                                    <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">❌ SELISIH</div>
+                                    <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">âŒ SELISIH</div>
                                     <div style="font-weight: 800; font-size: 1.1rem; margin-top: 0.3rem;">{}</div>
                                 </div>
                                 """.format(format_currency(difference)), unsafe_allow_html=True)
                             else:
                                 st.markdown("""
                                 <div class="sesuai-box">
-                                    <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">✅ COCOK</div>
+                                    <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">âœ… COCOK</div>
                                     <div style="font-weight: 700; font-size: .85rem; opacity:.9;">Grand benar</div>
                                 </div>
                                 """, unsafe_allow_html=True)
@@ -1435,7 +1434,7 @@ def display_results():
                     else:
                         st.markdown("""
                         <div class="comparison-box" style="text-align: center; padding: 1.5rem;">
-                            <div style="font-size: 1.2rem; color: #9ca3af;">⚠️ Tidak ada data Grand Total</div>
+                            <div style="font-size: 1.2rem; color: #9ca3af;">âš ï¸ Tidak ada data Grand Total</div>
                         </div>
                         """, unsafe_allow_html=True)
                 with col3:
@@ -1444,7 +1443,7 @@ def display_results():
                             excel_val = float(excel_grand_total)
                             st.markdown("""
                             <div class="grandtotal-box">
-                                <div style="font-size: 0.95rem; font-weight:700; opacity: 0.95; margin-bottom: 0.4rem;">Grand Total — DI EXCEL</div>
+                                <div style="font-size: 0.95rem; font-weight:700; opacity: 0.95; margin-bottom: 0.4rem;">Grand Total â€” DI EXCEL</div>
                                 <div style="font-size: 1.7rem; font-weight: 800;">{}</div>
                             </div>
                             """.format(format_currency(excel_val)), unsafe_allow_html=True)
@@ -1457,16 +1456,16 @@ def display_results():
 
     st.markdown("<div style='height:.3rem;'></div>", unsafe_allow_html=True)
     
-    # Detail Errors — RAB AUDIT REPORT style (lokasi, Excel, Seharusnya, Selisih)
+    # Detail Errors â€” RAB AUDIT REPORT style (lokasi, Excel, Seharusnya, Selisih)
     if errors:
-        st.markdown('<div class="section-header">📋 RAB AUDIT REPORT — DETAIL TEMUAN</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-header">ðŸ“‹ RAB AUDIT REPORT â€” DETAIL TEMUAN</div>', unsafe_allow_html=True)
         
         for i, error in enumerate(errors, 1):
             item_name = error.get('item_name', 'Unknown')
             row = error.get('row', '?')
             error_type = error.get('type', '')
             
-            with st.expander(f"❌ Error {i}: {item_name} - Baris {row}", expanded=True):
+            with st.expander(f"âŒ Error {i}: {item_name} - Baris {row}", expanded=True):
                 # Create a nice layout using columns
                 loc_col, status_col = st.columns([3, 1])
                 
@@ -1513,7 +1512,7 @@ def display_results():
                 # Tampilkan detail item jika ada (untuk SUBTOTAL_ERROR)
                 if error_type == 'SUBTOTAL_ERROR' and error.get('items_summary'):
                     st.markdown("---")
-                    st.markdown("**📋 Detail Item yang Terbaca:**")
+                    st.markdown("**ðŸ“‹ Detail Item yang Terbaca:**")
                     st.code(error.get('items_summary', ''), language=None)
     
     # Detail Warnings
@@ -1524,7 +1523,7 @@ def display_results():
             item_name = warning.get('item_name', 'Unknown')
             row = warning.get('row', '?')
             
-            with st.expander(f"⚠️ Warning {i}: {item_name} - Baris {row}"):
+            with st.expander(f"âš ï¸ Warning {i}: {item_name} - Baris {row}"):
                 st.markdown(f"""
                 <div class="warning-card">
                     <div style="margin-bottom: 10px;">
@@ -1552,7 +1551,7 @@ def display_results():
     
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        if st.button("📥 Export Report (RAB_CHECK_REPORT.xlsx)", type="primary", use_container_width=True):
+        if st.button("ðŸ“¥ Export Report (RAB_CHECK_REPORT.xlsx)", type="primary", use_container_width=True):
             reporter = ReportGenerator()
             
             # Generate report
@@ -1590,7 +1589,7 @@ def display_results():
             
             # Download button
             st.download_button(
-                label="⬇️ Download Report",
+                label="â¬‡ï¸ Download Report",
                 data=buffer,
                 file_name="RAB_CHECK_REPORT.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -1599,3 +1598,4 @@ def display_results():
 
 if __name__ == "__main__":
     main()
+
