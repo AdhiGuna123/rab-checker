@@ -469,18 +469,18 @@ def display_results():
     # Status — center
     if results['total_errors'] == 0:
         st.markdown("""
-        <div class="card" style="background: linear-gradient(135deg, #ecfdf5, #d1fae5); border:2px solid #6ee7b7; text-align:center; padding:1.4rem; max-width:760px; margin:1rem auto;">
-          <div style="font-size:2rem; text-align:center;">✅</div>
-          <div style="font-weight:800; font-size:1.2rem; color:#065f46; text-align:center;">Semua hitungan COCOK</div>
-          <div style="color:#047857; font-size:.9rem; text-align:center;">Qty × Harga, Jumlah, PPN & Grand Total sudah benar</div>
+        <div style="background: linear-gradient(135deg, #ecfdf5, #d1fae5); border:1px solid #6ee7b7; border-radius:12px; text-align:center; padding:.6rem 1rem; margin:.5rem 0; display:flex; align-items:center; justify-content:center; gap:.6rem;">
+          <span style="font-size:1.1rem;">✅</span>
+          <span style="font-weight:700; font-size:.9rem; color:#065f46;">Semua hitungan COCOK</span>
+          <span style="color:#047857; font-size:.78rem;">— Qty × Harga, Jumlah, PPN & Grand Total sudah benar</span>
         </div>
         """, unsafe_allow_html=True)
     else:
         st.markdown(f"""
-        <div class="card" style="background: linear-gradient(135deg, #fef2f2, #fee2e2); border:2px solid #fca5a5; text-align:center; padding:1.4rem; max-width:760px; margin:1rem auto;">
-          <div style="font-size:2rem; text-align:center;">⚠️</div>
-          <div style="font-weight:800; font-size:1.2rem; color:#991b1b; text-align:center;">Ditemukan {results["total_errors"]} yang perlu dicek</div>
-          <div style="color:#b91c1c; font-size:.9rem; text-align:center;">Lihat kotak <b>SELISIH</b> merah di bawah — nilai yang benar ada di kolom <b>DIHITUNG</b></div>
+        <div style="background: linear-gradient(135deg, #fef2f2, #fee2e2); border:1px solid #fca5a5; border-radius:12px; text-align:center; padding:.6rem 1rem; margin:.5rem 0; display:flex; align-items:center; justify-content:center; gap:.6rem;">
+          <span style="font-size:1.1rem;">⚠️</span>
+          <span style="font-weight:700; font-size:.9rem; color:#991b1b;">Ditemukan {results["total_errors"]} yang perlu dicek</span>
+          <span style="color:#b91c1c; font-size:.78rem;">— Lihat kotak <b>SELISIH</b> merah di bawah</span>
         </div>
         """, unsafe_allow_html=True)
     
