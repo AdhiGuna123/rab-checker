@@ -559,11 +559,25 @@ def display_results():
                     except:
                         pass
             df_items = pd.DataFrame(item_data)
-            # Pakai st.table (putih native, bukan glide-data-grid hitam) + center
+            _show_key = f"_show_all_{sheet_name}"
+            _total_rows = len(df_items)
+            _show_all = st.session_state.get(_show_key, False)
+            if _total_rows > 10 and not _show_all:
+                df_display = df_items.head(10)
+            else:
+                df_display = df_items
             try:
-                st.table(df_items.style.set_properties(**{'text-align': 'center'}).set_table_styles([{'selector': 'th', 'props': [('text-align','center'),('background','#eef2ff'),('color','#3730a3')]}, {'selector': 'td', 'props': [('text-align','center')]}]))
+                st.table(df_display.style.set_properties(**{'text-align': 'center'}).set_table_styles([{'selector': 'th', 'props': [('text-align','center'),('background','#eef2ff'),('color','#3730a3')]}, {'selector': 'td', 'props': [('text-align','center')]}]))
             except Exception:
-                st.dataframe(df_items, use_container_width=True, hide_index=True, height=min(520, 44+len(df_items)*36))
+                st.dataframe(df_display, use_container_width=True, hide_index=True, height=min(520, 44+len(df_display)*36))
+            if _total_rows > 10 and not _show_all:
+                if st.button(f"📋 Tampilkan semua {_total_rows} baris", key=f"show_all_{sheet_name}"):
+                    st.session_state[_show_key] = True
+                    st.rerun()
+            elif _total_rows > 10 and _show_all:
+                if st.button(f"⬆️ Sembunyikan, tampilkan 10 baris saja", key=f"hide_{sheet_name}"):
+                    st.session_state[_show_key] = False
+                    st.rerun()
 
             # === PANEL DEBUG (tanpa perlu kirim gambar/file) ===
             # Simpan raw values di display debug — copy-paste teks ini ke chat
