@@ -466,7 +466,7 @@ def main():
                         """, height=0)
         
         # Tampilkan hasil jika ada
-        if st.session_state.check_results:
+        if st.session_state.get('check_results'):
             display_results()
     
     # Cleanup
