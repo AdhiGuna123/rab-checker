@@ -62,7 +62,7 @@ st.markdown("""
 .step .num{ width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:.75rem; font-weight:800; background:#e0e7ff; color:#4338ca; }
 .step.active .num{ background:white; color:#4338ca; }
 .step.done .num{ background:#10b981; color:white; }
-.card{ background: var(--card); border:1px solid var(--line); border-radius: var(--radius); padding: 1.1rem 1.2rem; box-shadow: 0 10px 30px rgba(15,23,42,.06); margin: 1rem 0; }
+.card{ background: var(--card); border:1px solid var(--line); border-radius: var(--radius); padding: .9rem 1.1rem; box-shadow: 0 8px 24px rgba(15,23,42,.05); margin: .6rem 0; }
 .card h3{ font-family:'Nunito',sans-serif; font-size:1.05rem; font-weight:800; margin:0 0 .35rem 0; color:#1e293b;}
 .card .hint{ color: var(--muted); font-size:.86rem; margin:0; line-height:1.5;}
  .kpi{ background:white; border:1px solid #e2e8f0; border-radius:14px; padding:.7rem .5rem; text-align:center; box-shadow: 0 4px 14px rgba(15,23,42,.04); transition: transform .15s; }
@@ -131,6 +131,17 @@ st.markdown("""
 .stRadio [role="radiogroup"] label:has(input:checked) p{ color:white !important;}
 [data-testid="stMultiSelect"]{ background:white; border-radius:12px;}
 [data-testid="stMultiSelect"] span{ color:#1e293b !important;}
+/* Selectbox — light theme */
+[data-testid="stSelectbox"] div[role="combobox"]{ background:#ffffff !important; border:1.5px solid #c7d2fe !important; border-radius:10px !important; color:#1e293b !important; }
+[data-testid="stSelectbox"] div[role="combobox"] span{ color:#1e293b !important; }
+[data-testid="stSelectbox"] svg{ color:#6366f1 !important; }
+/* Multiselect chips — light */
+[data-testid="stMultiSelect"] [data-baseweb="tag"]{ background:#eef2ff !important; color:#4338ca !important; border:1px solid #c7d2fe !important; }
+[data-testid="stMultiSelect"] [data-baseweb="tag"] span{ color:#4338ca !important; }
+[data-testid="stMultiSelect"] [data-baseweb="input"]{ color:#1e293b !important; }
+[data-testid="stMultiSelect"] [data-baseweb="input"]::placeholder{ color:#94a3b8 !important; }
+[data-testid="stMultiSelect"] div[role="listbox"]{ background:white !important; }
+[data-testid="stMultiSelect"] div[role="option"]{ color:#1e293b !important; }
 /* Tabel — paksa PUTIH di theme gelap Streamlit */
 [data-testid="stDataFrame"], [data-testid="stDataFrame"] > div, [data-testid="stDataFrame"] div{ background:#ffffff !important; }
 [data-testid="stDataFrame"]{ border-radius:16px !important; overflow:hidden !important; border:1.5px solid #cbd5e1 !important; box-shadow: 0 8px 24px rgba(15,23,42,.08) !important; }
@@ -360,10 +371,8 @@ def main():
                                 _v = preview_reader.ws.cell(row=_r, column=cols.get('qty',4)).value
                                 if safe_float(_v) is not None:
                                     _items_preview += 1
-                            st.markdown(f"<div style='text-align:center; color:#64748b; font-size:.85rem; margin:.5rem 0;'>📊 <b>{_items_preview} item</b> terdeteksi di sheet <b>{preview_sheet}</b> — klik <b>START CHECK</b> untuk mulai</div>", unsafe_allow_html=True)
+                            st.markdown(f"<div style='text-align:center; color:#64748b; font-size:.85rem; margin:.3rem 0;'>📊 <b>{_items_preview} item</b> terdeteksi di sheet <b>{preview_sheet}</b> — klik <b>START CHECK</b> untuk mulai</div>", unsafe_allow_html=True)
             except: pass
-
-            st.markdown("<br>", unsafe_allow_html=True)
             
             col1, col2, col3 = st.columns([1, 2, 1])
             with col2:
@@ -500,7 +509,7 @@ def display_results():
         </div>
         """, unsafe_allow_html=True)
     
-    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("<div style='height:.3rem;'></div>", unsafe_allow_html=True)
     
     # KPI awam
     k1,k2,k3,k4 = st.columns(4)
@@ -511,7 +520,7 @@ def display_results():
         ok = _total_errors==0
         st.markdown(f"<div class='kpi { 'ok' if ok else 'bad'}'><div class='label'>📋 Status</div><div class='value' style=\"color:{'#059669' if ok else '#dc2226'};\">{'✅ COCOK' if ok else '🔴 CEK LAGI'}</div></div>", unsafe_allow_html=True)
     
-    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("<div style='height:.3rem;'></div>", unsafe_allow_html=True)
     
     # Preview Items — ramah awam
     if all_items or st.session_state.get('excel_sheets_data'):
@@ -1417,7 +1426,7 @@ def display_results():
     
     pass  # Download RAB AUDIT REPORT removed per user request
 
-    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("<div style='height:.3rem;'></div>", unsafe_allow_html=True)
     
     # Detail Errors — RAB AUDIT REPORT style (lokasi, Excel, Seharusnya, Selisih)
     if errors:
