@@ -560,9 +560,18 @@ class ExcelReader:
                             break
                     
                     elif row_type == 'subtotal':
-                        # TOTAL (A+B[+C]) sudah jumlah_global; jangan subtotal
-                        if '+' in cell_str and 'TOTAL' in cell_str.upper():
+                        # TOTAL (A+B[+C]) sejenis subtotal karena + salah regex — paksa jumlah_global
+                        if '+' in cell_str.upper() and 'TOTAL' in cell_str.upper():
                             val2 = self._get_total_value(row, total_col)
+                            if val2 is None:
+                                for c2 in [8, 6, 9, 10]:
+                                    try:
+                                        v2 = self.ws_data.cell(row=row, column=c2).value
+                                        if v2 is None: v2 = self.ws.cell(row=row, column=c2).value
+                                        sf = safe_float(v2)
+                                        if sf is not None and sf > 0:
+                                            val2 = sf; break
+                                    except: pass
                             if val2 is not None:
                                 result['jumlah_global_row'] = row
                                 result['jumlah_global_excel'] = val2
