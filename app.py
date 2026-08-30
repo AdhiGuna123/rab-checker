@@ -65,9 +65,10 @@ st.markdown("""
 .card{ background: var(--card); border:1px solid var(--line); border-radius: var(--radius); padding: 1.1rem 1.2rem; box-shadow: 0 10px 30px rgba(15,23,42,.06); margin: 1rem 0; }
 .card h3{ font-family:'Nunito',sans-serif; font-size:1.05rem; font-weight:800; margin:0 0 .35rem 0; color:#1e293b;}
 .card .hint{ color: var(--muted); font-size:.86rem; margin:0; line-height:1.5;}
- .kpi{ background:white; border:1px solid #e2e8f0; border-radius:16px; padding:.9rem; text-align:center; box-shadow: 0 6px 20px rgba(15,23,42,.05);}
- .kpi .label{ font-size:.72rem; letter-spacing:.04em; color:#64748b; font-weight:700; text-transform:uppercase;}
- .kpi .value{ font-size:1.25rem; font-weight:800; margin-top:.25rem;}
+ .kpi{ background:white; border:1px solid #e2e8f0; border-radius:14px; padding:.7rem .5rem; text-align:center; box-shadow: 0 4px 14px rgba(15,23,42,.04); transition: transform .15s; }
+ .kpi:hover{ transform: translateY(-2px); box-shadow: 0 8px 20px rgba(15,23,42,.08); }
+ .kpi .label{ font-size:.68rem; letter-spacing:.05em; color:#64748b; font-weight:700; text-transform:uppercase; margin-bottom:.2rem; }
+ .kpi .value{ font-size:1.15rem; font-weight:800; margin-top:.15rem; color:#1e293b; }
  .kpi.ok{ border-color:#a7f3d0; background: linear-gradient(180deg, #ecfdf5, #ffffff); }
  .kpi.bad{ border-color:#fecaca; background: linear-gradient(180deg, #fef2f2, #ffffff); }
 .how{ display:grid; grid-template-columns: repeat(3,1fr); gap:.8rem; margin: .6rem 0; }
@@ -488,12 +489,12 @@ def display_results():
     
     # KPI awam
     k1,k2,k3,k4 = st.columns(4)
-    with k1: st.markdown(f"<div class='kpi'><div class='label'>Sheet dicek</div><div class='value'>{len(sheets_checked) if sheets_checked else 1}</div></div>", unsafe_allow_html=True)
-    with k2: st.markdown(f"<div class='kpi'><div class='label'>Jumlah item</div><div class='value'>{results['total_items']}</div></div>", unsafe_allow_html=True)
-    with k3: st.markdown(f"<div class='kpi {'bad' if results['total_errors'] else 'ok'}'><div class='label'>Perlu cek</div><div class='value' style=\"color:{'#dc2626' if results['total_errors'] else '#059669'};\">{results['total_errors']}</div></div>", unsafe_allow_html=True)
+    with k1: st.markdown(f"<div class='kpi'><div class='label'>📁 Sheet Dicek</div><div class='value'>{len(sheets_checked) if sheets_checked else 1}</div></div>", unsafe_allow_html=True)
+    with k2: st.markdown(f"<div class='kpi'><div class='label'>🧾 Jumlah Item</div><div class='value'>{results['total_items']}</div></div>", unsafe_allow_html=True)
+    with k3: st.markdown(f"<div class='kpi {'bad' if results['total_errors'] else 'ok'}'><div class='label'>🔍 Perlu Dicek</div><div class='value' style=\"color:{'#dc2226' if results['total_errors'] else '#059669'};\">{results['total_errors']}</div></div>", unsafe_allow_html=True)
     with k4:
         ok = results['total_errors']==0
-        st.markdown(f"<div class='kpi { 'ok' if ok else 'bad'}'><div class='label'>Status</div><div class='value' style=\"color:{'#059669' if ok else '#dc2626'};\">{'✅ COCOK' if ok else '🔴 CEK LAGI'}</div></div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='kpi { 'ok' if ok else 'bad'}'><div class='label'>📋 Status</div><div class='value' style=\"color:{'#059669' if ok else '#dc2226'};\">{'✅ COCOK' if ok else '🔴 CEK LAGI'}</div></div>", unsafe_allow_html=True)
     
     st.markdown("<br>", unsafe_allow_html=True)
     
