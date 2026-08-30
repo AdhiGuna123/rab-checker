@@ -248,6 +248,12 @@ def main():
     )
     
     if uploaded_file is not None:
+        _prev_file = st.session_state.get('file_name', '')
+        if _prev_file and _prev_file != uploaded_file.name:
+            for _k in ['excel_sheets_data', 'all_items', 'results', 'errors', 'warnings', 'sheet_total_calculated', '_show_all_items']:
+                st.session_state.pop(_k, None)
+            st.session_state.pop('_show_all_items', None)
+
         with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp_file:
             tmp_file.write(uploaded_file.getvalue())
             tmp_file_path = tmp_file.name
