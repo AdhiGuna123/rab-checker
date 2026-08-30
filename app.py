@@ -1335,13 +1335,7 @@ def display_results():
             
             st.markdown("---")
     
-    # Download RAB AUDIT REPORT (Excel) — tidak mengubah file asli, hanya laporan
-    try:
-        rg = ReportGenerator()
-        rpt_bytes = rg.build_bytes(file_name=st.session_state.get('file_name','RAB.xlsx'), check_results=results, errors=errors, warnings=warnings, sheets_data=st.session_state.get('excel_sheets_data',{}))
-        st.download_button("📥 Download RAB AUDIT REPORT (.xlsx)", data=rpt_bytes, file_name=f"{(st.session_state.get('file_name','RAB').rsplit('.',1)[0])}_RAB_AUDIT_REPORT.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
-    except Exception as _e:
-        st.caption(f"Gagal buat laporan: {_e}")
+    pass  # Download RAB AUDIT REPORT removed per user request
 
     st.markdown("<br>", unsafe_allow_html=True)
     
