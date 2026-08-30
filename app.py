@@ -1173,7 +1173,15 @@ def display_results():
                     st.markdown("<div style='height:.6rem;'></div>", unsafe_allow_html=True)
             
             else:
-                has_ppn_single = excel_ppn is not None
+                _sec_ppn = None
+                if len(sections) == 1:
+                    for _sd in sections.values():
+                        _sp = safe_float(_sd.get('ppn_value'))
+                        if _sp is not None and _sp != 0:
+                            _sec_ppn = _sp
+                            break
+                has_ppn_single = excel_ppn is not None or _sec_ppn is not None
+                _effective_ppn = excel_ppn if excel_ppn is not None else _sec_ppn
                 calculated_ppn = calculated_total_items * 0.11 if has_ppn_single else 0
                 calculated_grand_total = calculated_total_items + calculated_ppn
 
@@ -1247,7 +1255,7 @@ def display_results():
                         """.format(format_currency(calculated_ppn)), unsafe_allow_html=True)
                     with col2:
                         try:
-                            excel_val = float(excel_ppn)
+                            excel_val = float(_effective_ppn)
                             difference = calculated_ppn - excel_val
                             if abs(difference) > 1:
                                 st.markdown("""
@@ -1268,7 +1276,7 @@ def display_results():
                             pass
                     with col3:
                         try:
-                            excel_val = float(excel_ppn)
+                            excel_val = float(_effective_ppn)
                             st.markdown("""
                             <div class="ppn-box">
                                 <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">📤 PPN (DI EXCEL)</div>
