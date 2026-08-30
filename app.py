@@ -997,6 +997,7 @@ def display_results():
                 _total_for_ppn = safe_float(sheet_dbg_global.get('jumlah_global_excel'))
                 if _total_for_ppn is None: _total_for_ppn = sum(safe_float(sd.get('subtotal_value')) or 0 for sd in sections.values())
                 show_global_ppn = not _is_without and (excel_ppn_global is not None and (is_combined_global or not has_ppn_section) or (is_single and has_ppn_section) or (not is_single and has_ppn_section and not is_combined_global) or (_total_for_ppn and _total_for_ppn > 0))
+                _ppn_section_count = 0
                 if show_global_ppn:
                     if is_single and has_ppn_section:
                         sd0 = list(sections.values())[0]
@@ -1004,21 +1005,32 @@ def display_results():
                         excel_ppn_global = safe_float(sd0.get('ppn_value')) or excel_ppn_global
                         is_combined_global = False
                     elif has_ppn_section and not is_combined_global:
-                        # MULTI tapi PPN per-section (NORMAL single-section ganda): pakai TOTAL global vs PPN section pertama
-                        sum_sub_for_ppn = safe_float(sheet_dbg_global.get('jumlah_global_excel')) or sum(safe_float(sd.get('subtotal_value')) or 0 for sd in sections.values())
-                        # Jika gap global, fallback ke PPN section pertama
-                        if excel_ppn_global is None:
-                            first_ppn = next((safe_float(sd.get('ppn_value')) for sd in sections.values() if sd.get('ppn_value') is not None), None)
-                            excel_ppn_global = first_ppn
+                        # Hitung berapa section yang punya PPN
+                        _ppn_section_count = sum(1 for sd in sections.values() if safe_float(sd.get('ppn_value')) is not None)
+                        if _ppn_section_count == 1 and len(sections) > 1:
+                            # PPN hanya di 1 section: gunakan subtotal section itu saja
+                            _ppn_sec = next(sd for sd in sections.values() if safe_float(sd.get('ppn_value')) is not None)
+                            sum_sub_for_ppn = safe_float(_ppn_sec.get('subtotal_value')) or 0
+                            if excel_ppn_global is None:
+                                excel_ppn_global = safe_float(_ppn_sec.get('ppn_value'))
+                        else:
+                            sum_sub_for_ppn = safe_float(sheet_dbg_global.get('jumlah_global_excel')) or sum(safe_float(sd.get('subtotal_value')) or 0 for sd in sections.values())
+                            if excel_ppn_global is None:
+                                first_ppn = next((safe_float(sd.get('ppn_value')) for sd in sections.values() if sd.get('ppn_value') is not None), None)
+                                excel_ppn_global = first_ppn
                     else:
                         sum_sub_for_ppn = safe_float(sheet_dbg_global.get('jumlah_global_excel')) or sum(safe_float(sd.get('subtotal_value')) or 0 for sd in sections.values())
                     calc_ppn_global = sum_sub_for_ppn * 0.11 if sum_sub_for_ppn else 0
-                    st.markdown("""
+                    _ppn_from_section = ""
+                    if _ppn_section_count == 1 and len(sections) > 1:
+                        _ppn_sec_letter = next((k for k, sd in sections.items() if safe_float(sd.get('ppn_value')) is not None), "?")
+                        _ppn_from_section = f" — dari Jumlah {_ppn_sec_letter}"
+                    st.markdown(f"""
                     <div class="card" style="border:2px solid #fed7aa; background: linear-gradient(180deg, #fffbeb, #ffffff);">
                       <div style="display:flex; align-items:center; gap:.6rem; margin-bottom:.6rem;">
                         <span style="background:#f97316; color:white; border-radius:8px; padding:.3rem .6rem; font-weight:800;">Langkah 2</span>
-                        <b style="font-size:1.05rem;">PPN 11% — dari TOTAL kategori</b>
-                        <span style="margin-left:auto; color:#9ca3af; font-size:.8rem;">Rumus: TOTAL × 11%</span>
+                        <b style="font-size:1.05rem;">PPN 11%{_ppn_from_section}</b>
+                        <span style="margin-left:auto; color:#9ca3af; font-size:.8rem;">Rumus: Jumlah × 11%</span>
                       </div>
                     </div>
                     """, unsafe_allow_html=True)
