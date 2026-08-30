@@ -968,10 +968,13 @@ def display_results():
                     </div>
                     """, unsafe_allow_html=True)
 
-                # Langkah 2 — selalu tampil jika ada PPN (global gabungan ATAU per-section)
                 is_single = len(sections) == 1
                 has_ppn_section = has_any_section_ppn
-                show_global_ppn = not _is_without and (excel_ppn_global is not None and (is_combined_global or not has_ppn_section) or (is_single and has_ppn_section) or (not is_single and has_ppn_section and not is_combined_global))
+                # Langkah 1 TOTAL Kategori mungkin belum ke-render tapi kita tetap butuh TOTAL untuk PPN
+                # Jika ada TOTAL — DI EXCEL (sebelum PPN) yang tadi kelewat, hitung ulang di sini untuk PPN
+                _total_for_ppn = safe_float(sheet_dbg_global.get('jumlah_global_excel'))
+                if _total_for_ppn is None: _total_for_ppn = sum(safe_float(sd.get('subtotal_value')) or 0 for sd in sections.values())
+                show_global_ppn = not _is_without and (excel_ppn_global is not None and (is_combined_global or not has_ppn_section) or (is_single and has_ppn_section) or (not is_single and has_ppn_section and not is_combined_global) or (_total_for_ppn and _total_for_ppn > 0))
                 if show_global_ppn:
                     if is_single and has_ppn_section:
                         sd0 = list(sections.values())[0]

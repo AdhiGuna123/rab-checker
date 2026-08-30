@@ -312,10 +312,11 @@ class ExcelReader:
         except ImportError:
             pass
         
-        if re.search(r'TOTAL\s*\(.*\+.*\)', norm):
+        # TOTAL (A+B[+C]) — normalisasi hapus (), jadi TOTAL A+B — deteksi via PLUS
+        if 'TOTAL' in norm and '+' in norm:
             if norm.strip() != 'GRAND TOTAL' and norm.replace(' ','') != 'GRANDTOTAL':
                 return 'jumlah_global'
-        if re.search(r'TOTAL\s*\(.*\+.*\)', norm_jml):
+        if 'TOTAL' in norm_jml and '+' in norm_jml:
             return 'jumlah_global'
         norm_for_global = norm_jml.strip()
         if 'GRAND TOTAL' in norm or 'GRANDTOTAL' in norm.replace(' ', ''):
@@ -331,9 +332,9 @@ class ExcelReader:
                 if len(norm_for_global) <= 25:
                     return 'jumlah_global'
 
-        if re.search(r'TOTAL\s*\(.*\+.*\)', norm):
+        if 'TOTAL' in norm and '+' in norm:
             return 'unknown'
-        if re.search(r'TOTAL\s*\(.*\+.*\)', norm_jml):
+        if 'TOTAL' in norm_jml and '+' in norm_jml:
             return 'unknown'
         # Subtotal/Total section — toleran: TOTAL / JUMLAH / JML / SUBTOTAL / SUB TOTAL (huruf tunggal A/B/C saja)
         if ('TOTAL' in norm_jml or 'JUMLAH' in norm_jml or 'SUBTOTAL' in norm_jml or 'SUB TOTAL' in norm):
