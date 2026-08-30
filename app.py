@@ -461,9 +461,9 @@ def main():
 
 def display_results():
     """Tampilkan hasil pemeriksaan — ramah awam: angka besar, warna jelas, bahasa sederhana."""
-    results = st.session_state.check_results
-    errors = st.session_state.errors
-    warnings = st.session_state.warnings
+    results = st.session_state.get('check_results', {})
+    errors = st.session_state.get('errors', [])
+    warnings = st.session_state.get('warnings', [])
     sheets_checked = st.session_state.get('sheets_checked', [])
     all_items = st.session_state.get('all_items', [])
     
