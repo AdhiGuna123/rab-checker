@@ -1,5 +1,4 @@
 import streamlit as st
-import streamlit.components.v1 as components
 import pandas as pd
 from datetime import datetime
 import os
@@ -271,16 +270,7 @@ def main():
           <span class="badge ok">Siap</span>
         </div>
         """, unsafe_allow_html=True)
-        components.html("""
-        <script>
-        function doScroll() {
-            try { window.parent.scrollTo(0, 300); } catch(e) {}
-            try { window.scrollTo(0, 300); } catch(e) {}
-        }
-        setTimeout(doScroll, 600);
-        setTimeout(doScroll, 1200);
-        </script>
-        """, height=1)
+        st.markdown("<div id='start_check'></div>", unsafe_allow_html=True)
         
         reader = ExcelReader(tmp_file_path)
         if reader.load_workbook():
@@ -460,16 +450,6 @@ def main():
                         st.session_state.sheets_checked = sheets_to_check
                         
                         st.success(f"✅ Pemeriksaan selesai! {len(sheets_to_check)} sheet diperiksa.")
-                        components.html("""
-                        <script>
-                        function doScroll() {
-                            try { window.parent.scrollTo(0, 0); } catch(e) {}
-                            try { window.scrollTo(0, 0); } catch(e) {}
-                        }
-                        setTimeout(doScroll, 600);
-                        setTimeout(doScroll, 1200);
-                        </script>
-                        """, height=1)
         
         # Tampilkan hasil jika ada
         if st.session_state.get('check_results'):
