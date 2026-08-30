@@ -464,11 +464,14 @@ def main():
 
 def display_results():
     """Tampilkan hasil pemeriksaan — ramah awam: angka besar, warna jelas, bahasa sederhana."""
-    results = st.session_state.get('check_results', {})
-    errors = st.session_state.get('errors', [])
-    warnings = st.session_state.get('warnings', [])
-    sheets_checked = st.session_state.get('sheets_checked', [])
-    all_items = st.session_state.get('all_items', [])
+    results = st.session_state.get('check_results') or {}
+    errors = st.session_state.get('errors') or []
+    warnings = st.session_state.get('warnings') or []
+    sheets_checked = st.session_state.get('sheets_checked') or []
+    all_items = st.session_state.get('all_items') or []
+    
+    if not results:
+        return
     
     st.markdown('<div class="card" style="text-align:center; max-width:760px; margin:1rem auto; border: 2px solid #c7d2fe;"><h3 style="margin:0; text-align:center;">📊 Langkah 3 — Hasil Pemeriksaan</h3><p class="hint" style="margin:.25rem 0 0 0; text-align:center;">Biru = Jumlah (sebelum PPN) • Oranye = PPN 11% • Hijau = Grand Total • Merah = Selisih</p></div>', unsafe_allow_html=True)
     
@@ -476,8 +479,11 @@ def display_results():
     if sheets_checked and len(sheets_checked) > 1:
         st.info(f"📋 Sheet yang diperiksa: {', '.join(sheets_checked)}")
     
+    _total_errors = results.get('total_errors', 0)
+    _total_items = results.get('total_items', 0)
+    
     # Status — center
-    if results['total_errors'] == 0:
+    if _total_errors == 0:
         st.markdown("""
         <div style="background: linear-gradient(135deg, #ecfdf5, #d1fae5); border:1px solid #6ee7b7; border-radius:12px; text-align:center; padding:.6rem 1rem; margin:.5rem 0; display:flex; align-items:center; justify-content:center; gap:.6rem;">
           <span style="font-size:1.1rem;">✅</span>
@@ -489,7 +495,7 @@ def display_results():
         st.markdown(f"""
         <div style="background: linear-gradient(135deg, #fef2f2, #fee2e2); border:1px solid #fca5a5; border-radius:12px; text-align:center; padding:.6rem 1rem; margin:.5rem 0; display:flex; align-items:center; justify-content:center; gap:.6rem;">
           <span style="font-size:1.1rem;">⚠️</span>
-          <span style="font-weight:700; font-size:.9rem; color:#991b1b;">Ditemukan {results["total_errors"]} yang perlu dicek</span>
+          <span style="font-weight:700; font-size:.9rem; color:#991b1b;">Ditemukan {_total_errors} yang perlu dicek</span>
           <span style="color:#b91c1c; font-size:.78rem;">— Lihat kotak <b>SELISIH</b> merah di bawah</span>
         </div>
         """, unsafe_allow_html=True)
@@ -499,10 +505,10 @@ def display_results():
     # KPI awam
     k1,k2,k3,k4 = st.columns(4)
     with k1: st.markdown(f"<div class='kpi'><div class='label'>📁 Sheet Dicek</div><div class='value'>{len(sheets_checked) if sheets_checked else 1}</div></div>", unsafe_allow_html=True)
-    with k2: st.markdown(f"<div class='kpi'><div class='label'>🧾 Jumlah Item</div><div class='value'>{results['total_items']}</div></div>", unsafe_allow_html=True)
-    with k3: st.markdown(f"<div class='kpi {'bad' if results['total_errors'] else 'ok'}'><div class='label'>🔍 Perlu Dicek</div><div class='value' style=\"color:{'#dc2226' if results['total_errors'] else '#059669'};\">{results['total_errors']}</div></div>", unsafe_allow_html=True)
+    with k2: st.markdown(f"<div class='kpi'><div class='label'>🧾 Jumlah Item</div><div class='value'>{_total_items}</div></div>", unsafe_allow_html=True)
+    with k3: st.markdown(f"<div class='kpi {'bad' if _total_errors else 'ok'}'><div class='label'>🔍 Perlu Dicek</div><div class='value' style=\"color:{'#dc2226' if _total_errors else '#059669'};\">{_total_errors}</div></div>", unsafe_allow_html=True)
     with k4:
-        ok = results['total_errors']==0
+        ok = _total_errors==0
         st.markdown(f"<div class='kpi { 'ok' if ok else 'bad'}'><div class='label'>📋 Status</div><div class='value' style=\"color:{'#059669' if ok else '#dc2226'};\">{'✅ COCOK' if ok else '🔴 CEK LAGI'}</div></div>", unsafe_allow_html=True)
     
     st.markdown("<br>", unsafe_allow_html=True)
