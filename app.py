@@ -201,17 +201,34 @@ hr{ border:none; height:1px; background: linear-gradient(90deg, transparent, #c7
   0%{ opacity:1; }
   100%{ opacity:0; pointer-events:none; }
 }
-@keyframes petalOpen1{ 0%{ transform: rotate(0deg) translateY(10px); opacity:0; } 100%{ transform: rotate(-25deg) translateY(0); opacity:1; } }
-@keyframes petalOpen2{ 0%{ transform: rotate(0deg) translateY(10px); opacity:0; } 100%{ transform: rotate(25deg) translateY(0); opacity:1; } }
-@keyframes petalOpen3{ 0%{ transform: rotate(0deg) translateY(10px); opacity:0; } 100%{ transform: rotate(-50deg) translateY(0); opacity:1; } }
-@keyframes petalOpen4{ 0%{ transform: rotate(0deg) translateY(10px); opacity:0; } 100%{ transform: rotate(50deg) translateY(0); opacity:1; } }
-@keyframes lotusText{ 0%{ opacity:0; transform:translateY(15px); } 100%{ opacity:1; transform:translateY(0); } }
-.splash{ position:fixed; top:0; left:0; width:100vw; height:100vh; z-index:99999; display:flex; flex-direction:column; align-items:center; justify-content:center; background: linear-gradient(180deg, #f0f4ef 0%, #ffffff 60%); animation: lotusFadeOut 0.8s ease-in 3.2s forwards; }
-.splash-lotus{ position:relative; width:120px; height:120px; margin-bottom:1.5rem; animation: lotusBloom 1.8s ease-out forwards; }
-.splash-lotus svg{ width:120px; height:120px; }
-.splash-title{ font-family:'Nunito',sans-serif; font-size:1.8rem; font-weight:800; color:#3d5a3a; animation: lotusText 0.8s ease-out 1.2s both; }
-.splash-sub{ font-size:.95rem; color:#64748b; margin-top:.3rem; animation: lotusText 0.8s ease-out 1.6s both; }
-.splash-hint{ font-size:.8rem; color:#94a3b8; margin-top:1.5rem; animation: lotusText 0.8s ease-out 2.2s both; }
+@keyframes lotusBloom{
+  0%{ transform: scale(0) rotate(-20deg); opacity:0; filter:blur(4px); }
+  50%{ transform: scale(1.15) rotate(5deg); opacity:1; filter:blur(0); }
+  70%{ transform: scale(0.95) rotate(-2deg); opacity:1; }
+  100%{ transform: scale(1) rotate(0deg); opacity:1; }
+}
+@keyframes lotusFadeOut{
+  0%{ opacity:1; }
+  100%{ opacity:0; pointer-events:none; }
+}
+@keyframes petalL{ 0%{ transform: rotate(0deg) scale(0); opacity:0; } 100%{ transform: rotate(-18deg) scale(1); opacity:1; } }
+@keyframes petalR{ 0%{ transform: rotate(0deg) scale(0); opacity:0; } 100%{ transform: rotate(18deg) scale(1); opacity:1; } }
+@keyframes petalL2{ 0%{ transform: rotate(0deg) scale(0); opacity:0; } 100%{ transform: rotate(-38deg) scale(1); opacity:1; } }
+@keyframes petalR2{ 0%{ transform: rotate(0deg) scale(0); opacity:0; } 100%{ transform: rotate(38deg) scale(1); opacity:1; } }
+@keyframes petalL3{ 0%{ transform: rotate(0deg) scale(0); opacity:0; } 100%{ transform: rotate(-55deg) scale(1); opacity:1; } }
+@keyframes petalR3{ 0%{ transform: rotate(0deg) scale(0); opacity:0; } 100%{ transform: rotate(55deg) scale(1); opacity:1; } }
+@keyframes leafL{ 0%{ transform: rotate(0deg) scale(0); opacity:0; } 100%{ transform: rotate(-20deg) scale(1); opacity:0.7; } }
+@keyframes leafR{ 0%{ transform: rotate(0deg) scale(0); opacity:0; } 100%{ transform: rotate(20deg) scale(1); opacity:0.7; } }
+@keyframes glowPulse{ 0%,100%{ filter: drop-shadow(0 0 8px rgba(236,72,153,.3)); } 50%{ filter: drop-shadow(0 0 18px rgba(236,72,153,.5)); } }
+@keyframes lotusText{ 0%{ opacity:0; transform:translateY(18px); } 100%{ opacity:1; transform:translateY(0); } }
+@keyframes lotusWelcome{ 0%{ opacity:0; transform:translateY(10px) scale(0.95); } 100%{ opacity:1; transform:translateY(0) scale(1); } }
+.splash{ position:fixed; top:0; left:0; width:100vw; height:100vh; z-index:99999; display:flex; flex-direction:column; align-items:center; justify-content:center; background: linear-gradient(180deg, #f8f4f0 0%, #fdf8f5 30%, #ffffff 70%); animation: lotusFadeOut 0.8s ease-in 3.5s forwards; }
+.splash-lotus{ position:relative; width:160px; height:140px; margin-bottom:1rem; animation: lotusBloom 2s ease-out forwards, glowPulse 2s ease-in-out 2s infinite; }
+.splash-lotus svg{ width:160px; height:140px; overflow:visible; }
+.splash-welcome{ font-family:'Nunito',sans-serif; font-size:1.1rem; font-weight:600; color:#be185d; letter-spacing:.3px; animation: lotusWelcome 0.8s ease-out 1.4s both; }
+.splash-title{ font-family:'Nunito',sans-serif; font-size:2rem; font-weight:800; color:#1e293b; animation: lotusText 0.8s ease-out 1.8s both; }
+.splash-sub{ font-size:.95rem; color:#64748b; margin-top:.3rem; animation: lotusText 0.8s ease-out 2.2s both; }
+.splash-hint{ font-size:.8rem; color:#94a3b8; margin-top:1.8rem; animation: lotusText 0.8s ease-out 2.8s both; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -263,25 +280,56 @@ def main():
         st.markdown("""
         <div class="splash">
           <div class="splash-lotus">
-            <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
-              <!-- center petal -->
-              <ellipse cx="60" cy="45" rx="14" ry="30" fill="#8EA58C" opacity="0.9" style="animation: petalOpen1 1s ease-out 0.3s both; transform-origin: 60px 75px;"/>
-              <!-- left petals -->
-              <ellipse cx="60" cy="45" rx="12" ry="28" fill="#a3b8a1" opacity="0.8" style="animation: petalOpen3 1s ease-out 0.5s both; transform-origin: 60px 75px;"/>
-              <ellipse cx="60" cy="48" rx="10" ry="24" fill="#c7d9c5" opacity="0.7" style="animation: petalOpen3 1s ease-out 0.7s both; transform-origin: 60px 75px;"/>
-              <!-- right petals -->
-              <ellipse cx="60" cy="45" rx="12" ry="28" fill="#a3b8a1" opacity="0.8" style="animation: petalOpen4 1s ease-out 0.5s both; transform-origin: 60px 75px;"/>
-              <ellipse cx="60" cy="48" rx="10" ry="24" fill="#c7d9c5" opacity="0.7" style="animation: petalOpen4 1s ease-out 0.7s both; transform-origin: 60px 75px;"/>
-              <!-- outer petals -->
-              <ellipse cx="60" cy="50" rx="8" ry="20" fill="#e8ede7" opacity="0.6" style="animation: petalOpen3 1s ease-out 0.9s both; transform-origin: 60px 75px;"/>
-              <ellipse cx="60" cy="50" rx="8" ry="20" fill="#e8ede7" opacity="0.6" style="animation: petalOpen4 1s ease-out 0.9s both; transform-origin: 60px 75px;"/>
-              <!-- center dot -->
-              <circle cx="60" cy="65" r="5" fill="#10b981" opacity="0.9"/>
+            <svg viewBox="0 0 200 180" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <radialGradient id="petalGrad" cx="50%" cy="30%" r="70%">
+                  <stop offset="0%" style="stop-color:#fce7f3;stop-opacity:1"/>
+                  <stop offset="40%" style="stop-color:#f9a8d4;stop-opacity:0.9"/>
+                  <stop offset="100%" style="stop-color:#ec4899;stop-opacity:0.7"/>
+                </radialGradient>
+                <radialGradient id="petalGrad2" cx="50%" cy="30%" r="70%">
+                  <stop offset="0%" style="stop-color:#fdf2f8;stop-opacity:1"/>
+                  <stop offset="40%" style="stop-color:#fbcfe8;stop-opacity:0.85"/>
+                  <stop offset="100%" style="stop-color:#f472b6;stop-opacity:0.65"/>
+                </radialGradient>
+                <radialGradient id="centerGrad" cx="50%" cy="50%" r="50%">
+                  <stop offset="0%" style="stop-color:#fbbf24;stop-opacity:1"/>
+                  <stop offset="100%" style="stop-color:#f59e0b;stop-opacity:0.8"/>
+                </radialGradient>
+                <radialGradient id="leafGrad" cx="50%" cy="70%" r="60%">
+                  <stop offset="0%" style="stop-color:#86efac;stop-opacity:0.9"/>
+                  <stop offset="100%" style="stop-color:#22c55e;stop-opacity:0.7"/>
+                </radialGradient>
+                <filter id="softShadow">
+                  <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#be185d" flood-opacity="0.15"/>
+                </filter>
+              </defs>
+              <!-- Leaves -->
+              <ellipse cx="70" cy="145" rx="30" ry="10" fill="url(#leafGrad)" style="animation: leafL 0.8s ease-out 0.2s both; transform-origin: 100px 145px;"/>
+              <ellipse cx="130" cy="145" rx="30" ry="10" fill="url(#leafGrad)" style="animation: leafR 0.8s ease-out 0.2s both; transform-origin: 100px 145px;"/>
+              <!-- Outer petals (widest) -->
+              <ellipse cx="100" cy="70" rx="16" ry="42" fill="url(#petalGrad2)" filter="url(#softShadow)" style="animation: petalL3 0.9s ease-out 0.3s both; transform-origin: 100px 112px;"/>
+              <ellipse cx="100" cy="70" rx="16" ry="42" fill="url(#petalGrad2)" filter="url(#softShadow)" style="animation: petalR3 0.9s ease-out 0.3s both; transform-origin: 100px 112px;"/>
+              <!-- Middle outer petals -->
+              <ellipse cx="100" cy="65" rx="17" ry="44" fill="url(#petalGrad)" filter="url(#softShadow)" style="animation: petalL2 0.9s ease-out 0.5s both; transform-origin: 100px 109px;"/>
+              <ellipse cx="100" cy="65" rx="17" ry="44" fill="url(#petalGrad)" filter="url(#softShadow)" style="animation: petalR2 0.9s ease-out 0.5s both; transform-origin: 100px 109px;"/>
+              <!-- Inner petals -->
+              <ellipse cx="100" cy="62" rx="15" ry="40" fill="url(#petalGrad)" filter="url(#softShadow)" style="animation: petalL 0.9s ease-out 0.7s both; transform-origin: 100px 102px;"/>
+              <ellipse cx="100" cy="62" rx="15" ry="40" fill="url(#petalGrad)" filter="url(#softShadow)" style="animation: petalR 0.9s ease-out 0.7s both; transform-origin: 100px 102px;"/>
+              <!-- Center petals (tallest) -->
+              <ellipse cx="100" cy="58" rx="12" ry="38" fill="url(#petalGrad)" style="animation: petalL 0.8s ease-out 0.9s both; transform-origin: 100px 96px;"/>
+              <ellipse cx="100" cy="58" rx="12" ry="38" fill="url(#petalGrad)" style="animation: petalR 0.8s ease-out 0.9s both; transform-origin: 100px 96px;"/>
+              <!-- Center bud -->
+              <ellipse cx="100" cy="65" rx="8" ry="20" fill="#fce7f3" opacity="0.9"/>
+              <!-- Center pistil -->
+              <circle cx="100" cy="95" r="6" fill="url(#centerGrad)"/>
+              <circle cx="100" cy="95" r="3" fill="#fbbf24" opacity="0.8"/>
             </svg>
           </div>
+          <div class="splash-welcome">Selamat Datang Kak Wintari</div>
           <div class="splash-title">RAB Checker</div>
           <div class="splash-sub">Sistem Pemeriksaan Hitungan Otomatis</div>
-          <div class="splash-hint">Lotus terbuka &#8212; siap memeriksa</div>
+          <div class="splash-hint">&#127800; Sedang menyiapkan sistem...</div>
         </div>
         """, unsafe_allow_html=True)
         st.session_state.splash_done = True
