@@ -191,6 +191,27 @@ div[data-baseweb="menu"] div[role="option"][aria-selected="true"]{ background:#e
 [data-testid="stTable"] tr:nth-child(even) td{ background:#f8fafc !important;}
 hr{ border:none; height:1px; background: linear-gradient(90deg, transparent, #c7d9c5, transparent); margin:1.2rem 0;}
 @media (max-width: 768px){ .how{ grid-template-columns: 1fr; } .hero h1{ font-size:1.6rem;} }
+/* Lotus Splash Screen */
+@keyframes lotusBloom{
+  0%{ transform: scale(0) rotate(-30deg); opacity:0; }
+  60%{ transform: scale(1.1) rotate(5deg); opacity:1; }
+  100%{ transform: scale(1) rotate(0deg); opacity:1; }
+}
+@keyframes lotusFadeOut{
+  0%{ opacity:1; }
+  100%{ opacity:0; pointer-events:none; }
+}
+@keyframes petalOpen1{ 0%{ transform: rotate(0deg) translateY(10px); opacity:0; } 100%{ transform: rotate(-25deg) translateY(0); opacity:1; } }
+@keyframes petalOpen2{ 0%{ transform: rotate(0deg) translateY(10px); opacity:0; } 100%{ transform: rotate(25deg) translateY(0); opacity:1; } }
+@keyframes petalOpen3{ 0%{ transform: rotate(0deg) translateY(10px); opacity:0; } 100%{ transform: rotate(-50deg) translateY(0); opacity:1; } }
+@keyframes petalOpen4{ 0%{ transform: rotate(0deg) translateY(10px); opacity:0; } 100%{ transform: rotate(50deg) translateY(0); opacity:1; } }
+@keyframes lotusText{ 0%{ opacity:0; transform:translateY(15px); } 100%{ opacity:1; transform:translateY(0); } }
+.splash{ position:fixed; top:0; left:0; width:100vw; height:100vh; z-index:99999; display:flex; flex-direction:column; align-items:center; justify-content:center; background: linear-gradient(180deg, #f0f4ef 0%, #ffffff 60%); animation: lotusFadeOut 0.8s ease-in 3.2s forwards; }
+.splash-lotus{ position:relative; width:120px; height:120px; margin-bottom:1.5rem; animation: lotusBloom 1.8s ease-out forwards; }
+.splash-lotus svg{ width:120px; height:120px; }
+.splash-title{ font-family:'Nunito',sans-serif; font-size:1.8rem; font-weight:800; color:#3d5a3a; animation: lotusText 0.8s ease-out 1.2s both; }
+.splash-sub{ font-size:.95rem; color:#64748b; margin-top:.3rem; animation: lotusText 0.8s ease-out 1.6s both; }
+.splash-hint{ font-size:.8rem; color:#94a3b8; margin-top:1.5rem; animation: lotusText 0.8s ease-out 2.2s both; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -236,6 +257,35 @@ def format_currency(value):
         return str(value)
 
 def main():
+    if 'splash_done' not in st.session_state:
+        st.session_state.splash_done = False
+    if not st.session_state.splash_done:
+        st.markdown("""
+        <div class="splash">
+          <div class="splash-lotus">
+            <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+              <!-- center petal -->
+              <ellipse cx="60" cy="45" rx="14" ry="30" fill="#8EA58C" opacity="0.9" style="animation: petalOpen1 1s ease-out 0.3s both; transform-origin: 60px 75px;"/>
+              <!-- left petals -->
+              <ellipse cx="60" cy="45" rx="12" ry="28" fill="#a3b8a1" opacity="0.8" style="animation: petalOpen3 1s ease-out 0.5s both; transform-origin: 60px 75px;"/>
+              <ellipse cx="60" cy="48" rx="10" ry="24" fill="#c7d9c5" opacity="0.7" style="animation: petalOpen3 1s ease-out 0.7s both; transform-origin: 60px 75px;"/>
+              <!-- right petals -->
+              <ellipse cx="60" cy="45" rx="12" ry="28" fill="#a3b8a1" opacity="0.8" style="animation: petalOpen4 1s ease-out 0.5s both; transform-origin: 60px 75px;"/>
+              <ellipse cx="60" cy="48" rx="10" ry="24" fill="#c7d9c5" opacity="0.7" style="animation: petalOpen4 1s ease-out 0.7s both; transform-origin: 60px 75px;"/>
+              <!-- outer petals -->
+              <ellipse cx="60" cy="50" rx="8" ry="20" fill="#e8ede7" opacity="0.6" style="animation: petalOpen3 1s ease-out 0.9s both; transform-origin: 60px 75px;"/>
+              <ellipse cx="60" cy="50" rx="8" ry="20" fill="#e8ede7" opacity="0.6" style="animation: petalOpen4 1s ease-out 0.9s both; transform-origin: 60px 75px;"/>
+              <!-- center dot -->
+              <circle cx="60" cy="65" r="5" fill="#10b981" opacity="0.9"/>
+            </svg>
+          </div>
+          <div class="splash-title">RAB Checker</div>
+          <div class="splash-sub">Sistem Pemeriksaan Hitungan Otomatis</div>
+          <div class="splash-hint">Lotus terbuka &#8212; siap memeriksa</div>
+        </div>
+        """, unsafe_allow_html=True)
+        st.session_state.splash_done = True
+
     st.markdown("""
     <div class="hero">
       <h1>&#128202; RAB Checker &#8212; Cek Hitungan Otomatis</h1>
