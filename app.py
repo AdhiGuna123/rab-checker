@@ -225,8 +225,8 @@ hr{ border:none; height:1px; background: linear-gradient(90deg, transparent, #c7
 .splash{ position:fixed; top:0; left:0; width:100vw; height:100vh; z-index:99999; display:flex; flex-direction:column; align-items:center; justify-content:center; background: linear-gradient(180deg, #f8f4f0 0%, #fdf8f5 30%, #ffffff 70%); animation: lotusFadeOut 0.8s ease-in 3.5s forwards; }
 .splash-lotus{ position:relative; width:160px; height:140px; margin-bottom:1rem; animation: lotusBloom 2s ease-out forwards, glowPulse 2s ease-in-out 2s infinite; }
 .splash-lotus svg{ width:160px; height:140px; overflow:visible; }
-.splash-welcome{ font-family:'Nunito',sans-serif; font-size:1.1rem; font-weight:600; color:#be185d; letter-spacing:.3px; animation: lotusWelcome 0.8s ease-out 1.4s both; }
-.splash-title{ font-family:'Nunito',sans-serif; font-size:2rem; font-weight:800; color:#1e293b; animation: lotusText 0.8s ease-out 1.8s both; }
+.splash-welcome{ font-family:'Nunito',sans-serif; font-size:.9rem; font-weight:600; color:#be185d; letter-spacing:.3px; animation: lotusWelcome 0.8s ease-out 1.4s both; }
+.splash-title{ font-family:'Nunito',sans-serif; font-size:2.6rem; font-weight:800; color:#1e293b; animation: lotusText 0.8s ease-out 1.8s both; }
 .splash-sub{ font-size:.95rem; color:#64748b; margin-top:.3rem; animation: lotusText 0.8s ease-out 2.2s both; }
 .splash-hint{ font-size:.8rem; color:#94a3b8; margin-top:1.8rem; animation: lotusText 0.8s ease-out 2.8s both; }
 </style>
