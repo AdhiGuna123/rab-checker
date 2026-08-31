@@ -197,10 +197,6 @@ hr{ border:none; height:1px; background: linear-gradient(90deg, transparent, #c7
   60%{ transform: scale(1.1) rotate(5deg); opacity:1; }
   100%{ transform: scale(1) rotate(0deg); opacity:1; }
 }
-@keyframes lotusFadeOut{
-  0%{ opacity:1; }
-  100%{ opacity:0; pointer-events:none; }
-}
 @keyframes lotusBloom{
   0%{ transform: scale(0) rotate(-20deg); opacity:0; filter:blur(4px); }
   50%{ transform: scale(1.15) rotate(5deg); opacity:1; filter:blur(0); }
@@ -208,8 +204,9 @@ hr{ border:none; height:1px; background: linear-gradient(90deg, transparent, #c7
   100%{ transform: scale(1) rotate(0deg); opacity:1; }
 }
 @keyframes lotusFadeOut{
-  0%{ opacity:1; }
-  100%{ opacity:0; pointer-events:none; }
+  0%{ opacity:1; visibility:visible; }
+  99%{ opacity:0; visibility:visible; }
+  100%{ opacity:0; visibility:hidden; pointer-events:none; }
 }
 @keyframes petalL{ 0%{ transform: rotate(0deg) scale(0); opacity:0; } 100%{ transform: rotate(-18deg) scale(1); opacity:1; } }
 @keyframes petalR{ 0%{ transform: rotate(0deg) scale(0); opacity:0; } 100%{ transform: rotate(18deg) scale(1); opacity:1; } }
@@ -222,13 +219,19 @@ hr{ border:none; height:1px; background: linear-gradient(90deg, transparent, #c7
 @keyframes glowPulse{ 0%,100%{ filter: drop-shadow(0 0 8px rgba(236,72,153,.3)); } 50%{ filter: drop-shadow(0 0 18px rgba(236,72,153,.5)); } }
 @keyframes lotusText{ 0%{ opacity:0; transform:translateY(18px); } 100%{ opacity:1; transform:translateY(0); } }
 @keyframes lotusWelcome{ 0%{ opacity:0; transform:translateY(10px) scale(0.95); } 100%{ opacity:1; transform:translateY(0) scale(1); } }
-.splash{ position:fixed; top:0; left:0; width:100vw; height:100vh; z-index:99999; display:flex; flex-direction:column; align-items:center; justify-content:center; background: linear-gradient(180deg, #f8f4f0 0%, #fdf8f5 30%, #ffffff 70%); animation: lotusFadeOut 0.8s ease-in 3.5s forwards; }
+.splash{ position:fixed; top:0; left:0; width:100%; height:100%; z-index:99999; display:flex; flex-direction:column; align-items:center; justify-content:center; background: linear-gradient(180deg, #f8f4f0 0%, #fdf8f5 30%, #ffffff 70%); animation: lotusFadeOut 0.8s ease-in 3.5s forwards; }
 .splash-lotus{ position:relative; width:160px; height:140px; margin-bottom:1rem; animation: lotusBloom 2s ease-out forwards, glowPulse 2s ease-in-out 2s infinite; }
 .splash-lotus svg{ width:160px; height:140px; overflow:visible; }
 .splash-welcome{ font-family:'Nunito',sans-serif; font-size:.9rem; font-weight:600; color:#be185d; letter-spacing:.3px; animation: lotusWelcome 0.8s ease-out 1.4s both; }
 .splash-title{ font-family:'Nunito',sans-serif; font-size:2.6rem; font-weight:800; color:#1e293b; animation: lotusText 0.8s ease-out 1.8s both; }
 .splash-sub{ font-size:.95rem; color:#64748b; margin-top:.3rem; animation: lotusText 0.8s ease-out 2.2s both; }
 .splash-hint{ font-size:.8rem; color:#94a3b8; margin-top:1.8rem; animation: lotusText 0.8s ease-out 2.8s both; }
+@media (max-width: 768px){
+  .splash-lotus svg{ width:120px; height:105px; }
+  .splash-title{ font-size:1.8rem; }
+  .splash-welcome{ font-size:.8rem; }
+  .splash-sub{ font-size:.85rem; }
+}
 </style>
 """, unsafe_allow_html=True)
 
