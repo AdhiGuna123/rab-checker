@@ -316,6 +316,12 @@ def main():
           <div class="splash-sub">Sistem Pemeriksaan Hitungan Otomatis</div>
           <div class="splash-hint">&#127800; Sedang menyiapkan sistem...</div>
         </div>
+        <script>
+        setTimeout(function(){
+          var el = document.querySelector('.splash');
+          if(el) el.remove();
+        }, 4200);
+        </script>
         """, unsafe_allow_html=True)
         st.session_state.splash_done = True
 
