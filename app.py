@@ -130,46 +130,80 @@ st.markdown("""
 .stRadio [role="radiogroup"] label p{ color:#1e293b !important; font-weight:700 !important;}
 .stRadio [role="radiogroup"] label:has(input:checked){ background:#5a7a57 !important; color:white !important; border-color:#5a7a57 !important;}
 .stRadio [role="radiogroup"] label:has(input:checked) p{ color:white !important;}
-[data-testid="stMultiSelect"]{ background:white; border-radius:12px;}
-[data-testid="stMultiSelect"] span{ color:#1e293b !important;}
-/* Selectbox & Multiselect &#8212; paksa light */
-[data-testid="stSelectbox"],
-[data-testid="stMultiSelect"]{
-  background: white !important;
+/* Force light theme on all BaseWeb widgets */
+[data-baseweb="select"],
+[data-baseweb="tag"],
+[data-baseweb="input"],
+[data-baseweb="menu"],
+[data-baseweb="textarea"]{
+  color-scheme: light !important;
 }
-[data-testid="stSelectbox"] [data-baseweb="select"],
-[data-testid="stMultiSelect"] [data-baseweb="select"]{
+[data-baseweb="select"]{ background:#ffffff !important; }
+[data-baseweb="select"] *{ color-scheme: light !important; background: transparent !important; }
+[data-baseweb="input"]{ color-scheme: light !important; background: transparent !important; }
+[data-baseweb="tag"]{ color-scheme: light !important; }
+[data-baseweb="menu"]{ color-scheme: light !important; }
+
+/* Selectbox — white bg, sage border */
+[data-testid="stSelectbox"]{ background: white !important; }
+[data-testid="stSelectbox"] [data-baseweb="select"]{
   background: #ffffff !important;
   border-color: #c7d9c5 !important;
   color: #1e293b !important;
 }
-[data-testid="stSelectbox"] [data-baseweb="select"] *,
+[data-testid="stSelectbox"] [data-baseweb="select"] *{
+  color: #1e293b !important;
+  background: transparent !important;
+}
+[data-testid="stSelectbox"] [data-baseweb="select"] svg{ color: #8EA58C !important; }
+
+/* Multiselect — white bg, sage chips */
+[data-testid="stMultiSelect"]{ background: white !important; border: 1px solid #c7d9c5 !important; border-radius: 12px !important; }
+[data-testid="stMultiSelect"] [data-baseweb="select"]{
+  background: #ffffff !important;
+  border-color: transparent !important;
+  color: #1e293b !important;
+}
 [data-testid="stMultiSelect"] [data-baseweb="select"] *{
   color: #1e293b !important;
   background: transparent !important;
 }
-[data-testid="stSelectbox"] [data-baseweb="select"] svg,
-[data-testid="stMultiSelect"] [data-baseweb="select"] svg{
-  color: #8EA58C !important;
+/* Multiselect chips — sage green, NOT red */
+[data-testid="stMultiSelect"] [data-baseweb="tag"]{
+  background: #f0f4ef !important;
+  color: #3d5a3a !important;
+  border: 1px solid #c7d9c5 !important;
+  border-radius: 8px !important;
 }
-/* Multiselect chips &#8212; light */
-[data-testid="stMultiSelect"] [data-baseweb="tag"]{ background:#eef2ff !important; color:#5a7a57 !important; border:1px solid #c7d9c5 !important; }
-[data-testid="stMultiSelect"] [data-baseweb="tag"] span{ color:#5a7a57 !important; }
-[data-testid="stMultiSelect"] [data-baseweb="input"]{ color:#1e293b !important; }
-[data-testid="stMultiSelect"] [data-baseweb="input"]::placeholder{ color:#94a3b8 !important; }
-[data-testid="stMultiSelect"] div[role="listbox"]{ background:white !important; }
-[data-testid="stMultiSelect"] div[role="option"]{ color:#1e293b !important; }
-/* Dropdown menu &#8212; light */
-div[data-baseweb="menu"]{ background:#ffffff !important; border:1px solid #e2e8f0 !important; box-shadow: 0 8px 24px rgba(0,0,0,.12) !important; }
-div[data-baseweb="menu"] div[role="option"]{ color:#1e293b !important; }
+[data-testid="stMultiSelect"] [data-baseweb="tag"] *{
+  color: #3d5a3a !important;
+  background: transparent !important;
+}
+[data-testid="stMultiSelect"] [data-baseweb="tag"]:hover{
+  background: #e8ede7 !important;
+}
+/* Multiselect X button */
+[data-testid="stMultiSelect"] [data-baseweb="tag"] [aria-label="remove"]{
+  color: #6b8a68 !important;
+}
+[data-testid="stMultiSelect"] [data-baseweb="tag"] [aria-label="remove"]:hover{
+  color: #dc2626 !important;
+}
+/* Multiselect input */
+[data-testid="stMultiSelect"] [data-baseweb="input"]{ color: #1e293b !important; }
+[data-testid="stMultiSelect"] [data-baseweb="input"]::placeholder{ color: #94a3b8 !important; }
+/* Multiselect dropdown */
+[data-testid="stMultiSelect"] div[role="listbox"]{ background: white !important; }
+[data-testid="stMultiSelect"] div[role="option"]{ color: #1e293b !important; }
+[data-testid="stMultiSelect"] div[role="option"]:hover,
+[data-testid="stMultiSelect"] div[role="option"]:focus,
+[data-testid="stMultiSelect"] div[role="option"][aria-selected="true"]{ background: #f0f4ef !important; color: #3d5a3a !important; }
+/* Dropdown menu — white */
+div[data-baseweb="menu"]{ background: #ffffff !important; border: 1px solid #e2e8f0 !important; border-radius: 12px !important; box-shadow: 0 8px 24px rgba(0,0,0,.08) !important; }
+div[data-baseweb="menu"] div[role="option"]{ color: #1e293b !important; }
 div[data-baseweb="menu"] div[role="option"]:hover,
 div[data-baseweb="menu"] div[role="option"]:focus,
-div[data-baseweb="menu"] div[role="option"][aria-selected="true"]{ background:#eef2ff !important; color:#5a7a57 !important; }
-/* Force light on all baseweb internals */
-[data-baseweb="select"]{ background:#ffffff !important; }
-[data-baseweb="select"] *{ color-scheme: light !important; }
-[data-baseweb="input"]{ color-scheme: light !important; }
-[data-baseweb="tag"]{ color-scheme: light !important; }
+div[data-baseweb="menu"] div[role="option"][aria-selected="true"]{ background: #f0f4ef !important; color: #3d5a3a !important; }
 [data-baseweb="menu"]{ color-scheme: light !important; }
 /* Tabel &#8212; paksa PUTIH di theme gelap Streamlit */
 [data-testid="stDataFrame"], [data-testid="stDataFrame"] > div, [data-testid="stDataFrame"] div{ background:#ffffff !important; }
@@ -436,18 +470,8 @@ def main():
 
             col_sheet, col_model = st.columns([3, 5])
             with col_sheet:
-                st.markdown("**&#128196; Pilih Sheet**")
-                st.caption("Klik nama sheet untuk melihat hasilnya nanti")
-                
-                # Build tab HTML
-                tabs_html = '<div class="sheet-tabs">'
-                for i, sn in enumerate(sheet_names):
-                    active = 'active' if i == 0 else ''
-                    tabs_html += f'<div class="sheet-tab {active}" id="tab_{i}">&#128196; {sn}</div>'
-                tabs_html += '</div>'
-                st.markdown(tabs_html, unsafe_allow_html=True)
-                
-                # Still use multiselect for actual selection (hidden label)
+                st.markdown("**&#128196; Sheet**")
+                st.caption("Pilih sheet yang ingin diperiksa")
                 picks = st.multiselect("Pilih sheet", sheet_names, default=sheet_names, label_visibility="collapsed")
                 sheets_to_check = picks if picks else sheet_names
 
