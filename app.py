@@ -891,6 +891,21 @@ def display_results():
 
             # Tombol alternatif: override kolom manual
             
+            # Header sheet untuk section perbandingan
+            _sheet_errors_count = sum(1 for e in (errors or []) if e.get('sheet') == sheet_name)
+            _sheet_status_icon = "&#10004;&#65039;" if _sheet_errors_count == 0 else "&#128308;"
+            _sheet_status_text = "Semua benar" if _sheet_errors_count == 0 else f"{_sheet_errors_count} ada selisih"
+            _sheet_status_color = "#065f46" if _sheet_errors_count == 0 else "#991b1b"
+            st.markdown(f"""
+            <div style="background: linear-gradient(135deg, #f0f4ef 0%, #ffffff 100%); border:2px solid #c7d9c5; border-radius:16px; padding:1rem 1.2rem; margin:1.2rem 0 .6rem 0; display:flex; align-items:center; gap:.8rem;">
+              <div style="font-size:2rem;">&#128196;</div>
+              <div style="flex:1;">
+                <div style="font-family:'Nunito',sans-serif; font-size:1.3rem; font-weight:800; color:#1e293b;">{sheet_name}</div>
+                <div style="font-size:.85rem; color:{_sheet_status_color}; font-weight:600;">{_sheet_status_icon} {_sheet_status_text} &nbsp;&#8226;&nbsp; {len(items)} item</div>
+              </div>
+            </div>
+            """, unsafe_allow_html=True)
+            
             # Ambil nilai dari Excel (dari data per sheet)
             excel_sheets_data = st.session_state.get('excel_sheets_data', {})
             sheet_data = excel_sheets_data.get(sheet_name, {})
