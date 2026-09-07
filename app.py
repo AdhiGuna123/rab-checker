@@ -414,8 +414,8 @@ def main():
             col_sheet, col_model = st.columns([3, 5])
             with col_sheet:
                 st.markdown("**&#128196; Sheet**")
-                sheet_mode = st.radio("Sheet", ["&#128194; Semua", "&#128269; Pilih"], horizontal=True, label_visibility="collapsed")
-                if sheet_mode == "&#128269; Pilih":
+                sheet_mode = st.radio("Sheet", ["\U0001F4C1 Semua", "\U0001F50D Pilih"], horizontal=True, label_visibility="collapsed")
+                if sheet_mode == "\U0001F50D Pilih":
                     picks = st.multiselect("Pilih sheet", sheet_names, default=[sheet_names[0]] if sheet_names else [], label_visibility="collapsed")
                     sheets_to_check = picks if picks else sheet_names
                 else:
@@ -424,15 +424,15 @@ def main():
             with col_model:
                 st.markdown("**&#128295; Model Case**")
                 st.caption("Pilih jika auto-deteksi salah. Biasanya biarkan Auto saja.")
-                model_case = st.selectbox("Model Case", ["Auto &#8212; deteksi otomatis", "1 &#8212; Tanpa PPN", "2 &#8212; PPN hanya di 1 bagian", "3 &#8212; Normal (PPN di akhir)", "4 &#8212; PPN 1 di akhir (2 bagian: Total A+Total B)", "5 &#8212; PPN 1 di akhir (3+ bagian: dinamis)"], key="adv_model_case", label_visibility="collapsed")
+                model_case = st.selectbox("Model Case", ["Auto \u2014 deteksi otomatis", "1 \u2014 Tanpa PPN", "2 \u2014 PPN hanya di 1 bagian", "3 \u2014 Normal (PPN di akhir)", "4 \u2014 PPN 1 di akhir (2 bagian: Total A+Total B)", "5 \u2014 PPN 1 di akhir (3+ bagian: dinamis)"], key="adv_model_case", label_visibility="collapsed")
 
             model_map = {
-                "Auto &#8212; deteksi otomatis": ("auto", "auto"),
-                "1 &#8212; Tanpa PPN": ("none", "auto"),
-                "2 &#8212; PPN hanya di 1 bagian": ("single", "auto"),
-                "3 &#8212; Normal (PPN di akhir)": ("auto", "auto"),
-                "4 &#8212; PPN 1 di akhir (2 bagian: Total A+Total B)": ("combined", "auto"),
-                "5 &#8212; PPN 1 di akhir (3+ bagian: dinamis)": ("combined", "auto"),
+                "Auto \u2014 deteksi otomatis": ("auto", "auto"),
+                "1 \u2014 Tanpa PPN": ("none", "auto"),
+                "2 \u2014 PPN hanya di 1 bagian": ("single", "auto"),
+                "3 \u2014 Normal (PPN di akhir)": ("auto", "auto"),
+                "4 \u2014 PPN 1 di akhir (2 bagian: Total A+Total B)": ("combined", "auto"),
+                "5 \u2014 PPN 1 di akhir (3+ bagian: dinamis)": ("combined", "auto"),
             }
             adv_ppn_mapped, adv_total_mapped = model_map[model_case]
 
@@ -458,7 +458,7 @@ def main():
                     if 'A' <= ch <= 'Z': n = n*26 + (ord(ch)-64)
                     else: return None
                 return n if n else None
-            if model_case != "Auto &#8212; deteksi otomatis":
+            if model_case != "Auto \u2014 deteksi otomatis":
                 ppn_mode_final = adv_ppn_mapped
                 total_mode_final = adv_total_mapped
             else:
